@@ -1,0 +1,2 @@
+message: Hello helm4j!
+replicaCount: 1

@@ -1,0 +1,10 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: helm4j:latest
+    container_name: helm4j-app
+    environment:
+      - JAVA_OPTS=-Xmx512m -Xms256m
+    restart: no

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: hello
+version: 0.1.0
+description: Test chart for helm4j
+appVersion: "1.0"
+type: application
