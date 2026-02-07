@@ -1,38 +1,32 @@
 package dev.nthings.helm4j.options;
 
 /** Options accepted by {@code helm show}. */
-public final class ShowOptions {
+public record ShowOptions(
+    String version,
+    String repositoryUrl,
+    String username,
+    String password,
+    boolean plainHttp,
+    boolean insecureSkipTlsVerification,
+    String keyringPath,
+    String certificateFile,
+    String keyFile,
+    String certificateAuthorityFile,
+    boolean passCredentialsToAllHosts,
+    boolean verifySignatures,
+    boolean includePreReleaseVersions,
+    String valuesJsonPath) {
 
-  private final String version;
-  private final String repositoryUrl;
-  private final String username;
-  private final String password;
-  private final Boolean plainHttp;
-  private final Boolean insecureSkipTlsVerification;
-  private final String keyringPath;
-  private final String certificateFile;
-  private final String keyFile;
-  private final String certificateAuthorityFile;
-  private final Boolean passCredentialsToAllHosts;
-  private final Boolean verifySignatures;
-  private final Boolean includePreReleaseVersions;
-  private final String valuesJsonPath;
-
-  private ShowOptions(Builder builder) {
-    this.version = builder.version;
-    this.repositoryUrl = builder.repositoryUrl;
-    this.username = builder.username;
-    this.password = builder.password;
-    this.plainHttp = builder.plainHttp;
-    this.insecureSkipTlsVerification = builder.insecureSkipTlsVerification;
-    this.keyringPath = builder.keyringPath;
-    this.certificateFile = builder.certificateFile;
-    this.keyFile = builder.keyFile;
-    this.certificateAuthorityFile = builder.certificateAuthorityFile;
-    this.passCredentialsToAllHosts = builder.passCredentialsToAllHosts;
-    this.verifySignatures = builder.verifySignatures;
-    this.includePreReleaseVersions = builder.includePreReleaseVersions;
-    this.valuesJsonPath = builder.valuesJsonPath;
+  public ShowOptions {
+    version = normalize(version);
+    repositoryUrl = normalize(repositoryUrl);
+    username = normalize(username);
+    password = normalize(password);
+    keyringPath = normalize(keyringPath);
+    certificateFile = normalize(certificateFile);
+    keyFile = normalize(keyFile);
+    certificateAuthorityFile = normalize(certificateAuthorityFile);
+    valuesJsonPath = normalize(valuesJsonPath);
   }
 
   public static ShowOptions defaults() {
@@ -43,60 +37,12 @@ public final class ShowOptions {
     return new Builder();
   }
 
-  public String version() {
-    return version;
-  }
-
-  public String repositoryUrl() {
-    return repositoryUrl;
-  }
-
-  public String username() {
-    return username;
-  }
-
-  public String password() {
-    return password;
-  }
-
-  public Boolean plainHttp() {
-    return plainHttp;
-  }
-
-  public Boolean insecureSkipTlsVerification() {
-    return insecureSkipTlsVerification;
-  }
-
-  public String keyringPath() {
-    return keyringPath;
-  }
-
-  public String certificateFile() {
-    return certificateFile;
-  }
-
-  public String keyFile() {
-    return keyFile;
-  }
-
-  public String certificateAuthorityFile() {
-    return certificateAuthorityFile;
-  }
-
-  public Boolean passCredentialsToAllHosts() {
-    return passCredentialsToAllHosts;
-  }
-
-  public Boolean verifySignatures() {
-    return verifySignatures;
-  }
-
-  public Boolean includePreReleaseVersions() {
-    return includePreReleaseVersions;
-  }
-
-  public String valuesJsonPath() {
-    return valuesJsonPath;
+  private static String normalize(String value) {
+    if (value == null) {
+      return null;
+    }
+    var trimmed = value.trim();
+    return trimmed.isEmpty() ? null : trimmed;
   }
 
   public static final class Builder {
@@ -104,15 +50,15 @@ public final class ShowOptions {
     private String repositoryUrl;
     private String username;
     private String password;
-    private Boolean plainHttp;
-    private Boolean insecureSkipTlsVerification;
+    private boolean plainHttp;
+    private boolean insecureSkipTlsVerification;
     private String keyringPath;
     private String certificateFile;
     private String keyFile;
     private String certificateAuthorityFile;
-    private Boolean passCredentialsToAllHosts;
-    private Boolean verifySignatures;
-    private Boolean includePreReleaseVersions;
+    private boolean passCredentialsToAllHosts;
+    private boolean verifySignatures;
+    private boolean includePreReleaseVersions;
     private String valuesJsonPath;
 
     private Builder() {}
@@ -188,7 +134,21 @@ public final class ShowOptions {
     }
 
     public ShowOptions build() {
-      return new ShowOptions(this);
+      return new ShowOptions(
+          version,
+          repositoryUrl,
+          username,
+          password,
+          plainHttp,
+          insecureSkipTlsVerification,
+          keyringPath,
+          certificateFile,
+          keyFile,
+          certificateAuthorityFile,
+          passCredentialsToAllHosts,
+          verifySignatures,
+          includePreReleaseVersions,
+          valuesJsonPath);
     }
   }
 }

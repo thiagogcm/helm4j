@@ -1,7 +1,8 @@
-package dev.nthings.helm4j.client;
+package dev.nthings.helm4j.bindings;
 
 import java.util.List;
 
+import dev.nthings.helm4j.model.ChartCrds;
 import dev.nthings.helm4j.model.ChartDetails;
 import dev.nthings.helm4j.model.ChartMetadata;
 import dev.nthings.helm4j.model.ChartReadme;
@@ -12,11 +13,11 @@ import dev.nthings.helm4j.model.ShowMode;
 import dev.nthings.helm4j.options.SearchOptions;
 import dev.nthings.helm4j.options.ShowOptions;
 
-final class NativePayloadMapper {
+public final class NativePayloadMapper {
 
   private NativePayloadMapper() {}
 
-  static NativeShowOptions toNativeShowOptions(ShowOptions options) {
+  public static NativeShowOptions toNativeShowOptions(ShowOptions options) {
     return new NativeShowOptions(
         options.version(),
         options.repositoryUrl(),
@@ -34,7 +35,7 @@ final class NativePayloadMapper {
         options.valuesJsonPath());
   }
 
-  static NativeSearchOptions toNativeSearchOptions(SearchOptions options) {
+  public static NativeSearchOptions toNativeSearchOptions(SearchOptions options) {
     return new NativeSearchOptions(
         options.query(),
         options.regularExpression(),
@@ -44,7 +45,7 @@ final class NativePayloadMapper {
         options.failIfNoResults());
   }
 
-  static ChartMetadata toChartMetadata(NativeShowPayload payload, String chartReference) {
+  public static ChartMetadata toChartMetadata(NativeShowPayload payload, String chartReference) {
     var sections = sectionsOrEmpty(payload.sections());
     return new ChartMetadata(
         chartReferenceOf(payload, chartReference),
@@ -53,7 +54,7 @@ final class NativePayloadMapper {
         textOrEmpty(payload.cliOutput()));
   }
 
-  static ChartValues toChartValues(NativeShowPayload payload, String chartReference) {
+  public static ChartValues toChartValues(NativeShowPayload payload, String chartReference) {
     var sections = sectionsOrEmpty(payload.sections());
     return new ChartValues(
         chartReferenceOf(payload, chartReference),
@@ -62,7 +63,7 @@ final class NativePayloadMapper {
         textOrEmpty(payload.cliOutput()));
   }
 
-  static ChartReadme toChartReadme(NativeShowPayload payload, String chartReference) {
+  public static ChartReadme toChartReadme(NativeShowPayload payload, String chartReference) {
     var sections = sectionsOrEmpty(payload.sections());
     return new ChartReadme(
         chartReferenceOf(payload, chartReference),
@@ -71,7 +72,7 @@ final class NativePayloadMapper {
         textOrEmpty(payload.cliOutput()));
   }
 
-  static ChartDetails toChartDetails(NativeShowPayload payload, String chartReference) {
+  public static ChartDetails toChartDetails(NativeShowPayload payload, String chartReference) {
     var sections = sectionsOrEmpty(payload.sections());
     return new ChartDetails(
         chartReferenceOf(payload, chartReference),
@@ -83,7 +84,16 @@ final class NativePayloadMapper {
         textOrEmpty(payload.cliOutput()));
   }
 
-  static SearchResultSet toSearchResultSet(NativeSearchPayload payload) {
+  public static ChartCrds toChartCrds(NativeShowPayload payload, String chartReference) {
+    var sections = sectionsOrEmpty(payload.sections());
+    return new ChartCrds(
+        chartReferenceOf(payload, chartReference),
+        resolvedPathOf(payload),
+        listOrEmpty(sections.crds()),
+        textOrEmpty(payload.cliOutput()));
+  }
+
+  public static SearchResultSet toSearchResultSet(NativeSearchPayload payload) {
     var charts =
         listOrEmpty(payload.results()).stream()
             .map(
@@ -99,9 +109,9 @@ final class NativePayloadMapper {
     return new SearchResultSet(charts);
   }
 
-  static void ensureMode(ShowMode expectedMode, String rawMode) {
+  public static void ensureMode(ShowMode expectedMode, String rawMode) {
     var actualMode = ShowMode.fromString(rawMode);
-    if (actualMode != expectedMode) {
+    if (actualMode == null || actualMode != expectedMode) {
       throw new IllegalStateException(
           "Native response mode mismatch: expected="
               + expectedMode.toJson()
@@ -114,11 +124,11 @@ final class NativePayloadMapper {
     return value == null ? new NativeShowSections(null, null, null, null) : value;
   }
 
-  static String chartReferenceOf(NativeShowPayload payload, String fallback) {
+  public static String chartReferenceOf(NativeShowPayload payload, String fallback) {
     return payload.chartRef() == null ? fallback : payload.chartRef();
   }
 
-  static String resolvedPathOf(NativeShowPayload payload) {
+  public static String resolvedPathOf(NativeShowPayload payload) {
     return textOrEmpty(payload.chartPath());
   }
 

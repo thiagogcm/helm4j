@@ -14,33 +14,50 @@ import (
 	"helm.sh/helm/v4/pkg/action"
 )
 
+type SearchError struct {
+	Stage string `json:"stage,omitempty"`
+	Error string `json:"error"`
+}
+
 //export FreeString
 func FreeString(str *C.char) {
 	C.free(unsafe.Pointer(str))
 }
 
 //export HelmShowChart
-func HelmShowChart(chartRef *C.char, options *C.char) *C.char {
+func HelmShowChart(chartRef *C.char, options *C.char) (result *C.char) {
+	defer recoverShowPanic(&result, action.ShowChart, chartRef)
 	return dispatchShow(action.ShowChart, chartRef, options)
 }
 
 //export HelmShowValues
-func HelmShowValues(chartRef *C.char, options *C.char) *C.char {
+func HelmShowValues(chartRef *C.char, options *C.char) (result *C.char) {
+	defer recoverShowPanic(&result, action.ShowValues, chartRef)
 	return dispatchShow(action.ShowValues, chartRef, options)
 }
 
 //export HelmShowReadme
-func HelmShowReadme(chartRef *C.char, options *C.char) *C.char {
+func HelmShowReadme(chartRef *C.char, options *C.char) (result *C.char) {
+	defer recoverShowPanic(&result, action.ShowReadme, chartRef)
 	return dispatchShow(action.ShowReadme, chartRef, options)
 }
 
 //export HelmShowAll
-func HelmShowAll(chartRef *C.char, options *C.char) *C.char {
+func HelmShowAll(chartRef *C.char, options *C.char) (result *C.char) {
+	defer recoverShowPanic(&result, action.ShowAll, chartRef)
 	return dispatchShow(action.ShowAll, chartRef, options)
 }
 
+//export HelmShowCRDs
+func HelmShowCRDs(chartRef *C.char, options *C.char) (result *C.char) {
+	defer recoverShowPanic(&result, action.ShowCRDs, chartRef)
+	return dispatchShow(action.ShowCRDs, chartRef, options)
+}
+
 //export HelmSearch
-func HelmSearch(options *C.char) *C.char {
+func HelmSearch(options *C.char) (result *C.char) {
+	defer recoverSearchPanic(&result)
+
 	goOptions := goString(options)
 	opts, err := parseSearchOptions(goOptions)
 	if err != nil {
@@ -58,6 +75,19 @@ func HelmSearch(options *C.char) *C.char {
 	}
 
 	return toCString(resp)
+}
+
+func recoverShowPanic(result **C.char, mode action.ShowOutputFormat, chartRef *C.char) {
+	if recovered := recover(); recovered != nil {
+		*result =
+			toCString(encodeShowError(mode, goString(chartRef), "panic", fmt.Errorf("panic: %v", recovered)))
+	}
+}
+
+func recoverSearchPanic(result **C.char) {
+	if recovered := recover(); recovered != nil {
+		*result = toCString(encodeSearchError("panic", fmt.Errorf("panic: %v", recovered)))
+	}
 }
 
 func dispatchShow(mode action.ShowOutputFormat, chartRef *C.char, options *C.char) *C.char {
@@ -113,13 +143,17 @@ func encodeShowError(mode action.ShowOutputFormat, chartRef string, stage string
 		Error:    err.Error(),
 	})
 	if marshalErr != nil {
-		return fmt.Sprintf(`{"error":"%s","stage":"%s","mode":"%s"}`, marshalErr.Error(), stage, mode)
+		return `{"error":"failed to encode show error payload","stage":"marshalError"}`
 	}
 	return payload
 }
 
 func encodeSearchError(stage string, err error) string {
-	return fmt.Sprintf(`{"error":"%s","stage":"%s"}`, err.Error(), stage)
+	payload, marshalErr := marshalJSON(SearchError{Stage: stage, Error: err.Error()})
+	if marshalErr != nil {
+		return `{"error":"failed to encode search error payload","stage":"marshalError"}`
+	}
+	return payload
 }
 
 func main() {}

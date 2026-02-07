@@ -1,5 +1,8 @@
 package dev.nthings.helm4j.client;
 
+import dev.nthings.helm4j.bindings.NativeHelmBindings;
+import dev.nthings.helm4j.model.ShowMode;
+
 import org.junit.jupiter.api.Test;
 
 import tools.jackson.databind.ObjectMapper;
@@ -19,11 +22,25 @@ class HelmClientFactoryTest {
   }
 
   @Test
+  void factoryRejectsNullBindings() {
+    assertThrows(
+        NullPointerException.class, () -> HelmClientFactory.create().withNativeBindings(null));
+  }
+
+  @Test
   void factoryUsesProvidedMapper() throws Exception {
     var mapper = JsonMapper.builder().build();
     var client = HelmClientFactory.create().withObjectMapper(mapper).newClient();
 
     assertSame(mapper, extractMapper(client));
+  }
+
+  @Test
+  void factoryUsesProvidedBindings() throws Exception {
+    var bindings = new NoOpBindings();
+    var client = HelmClientFactory.create().withNativeBindings(bindings).newClient();
+
+    assertSame(bindings, extractBindings(client));
   }
 
   @Test
@@ -44,5 +61,24 @@ class HelmClientFactoryTest {
     var mapperField = HelmClient.class.getDeclaredField("mapper");
     mapperField.setAccessible(true);
     return (ObjectMapper) mapperField.get(client);
+  }
+
+  private static NativeHelmBindings extractBindings(HelmClient client) throws Exception {
+    var bindingsField = HelmClient.class.getDeclaredField("bindings");
+    bindingsField.setAccessible(true);
+    return (NativeHelmBindings) bindingsField.get(client);
+  }
+
+  private static final class NoOpBindings implements NativeHelmBindings {
+    @Override
+    public String show(
+        ShowMode mode, String chartReference, String optionsJson) {
+      return "{}";
+    }
+
+    @Override
+    public String search(String optionsJson) {
+      return "{\"results\":[]}";
+    }
   }
 }

@@ -25,6 +25,20 @@ class ModelMappingTest {
   }
 
   @Test
+  void chartCrdsDefensivelyCopiesCrds() {
+    var crds = new ArrayList<String>();
+    crds.add("widgets.example.com");
+
+    var response = new ChartCrds("repo/hello", "/tmp/hello", crds, "raw");
+
+    crds.clear();
+    assertEquals(1, response.customResourceDefinitions().size());
+    assertThrows(
+        UnsupportedOperationException.class,
+        () -> response.customResourceDefinitions().add("new.example.com"));
+  }
+
+  @Test
   void searchResultSetDefensivelyCopiesCharts() {
     var charts = new ArrayList<ChartSummary>();
     charts.add(new ChartSummary("repo/nginx", "1.0.0", "2.1.0", "Nginx chart", 99));

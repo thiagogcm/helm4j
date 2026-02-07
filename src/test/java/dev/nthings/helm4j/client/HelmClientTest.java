@@ -1,9 +1,11 @@
 package dev.nthings.helm4j.client;
 
-import java.lang.foreign.Arena;
-import java.lang.foreign.MemorySegment;
+import java.util.EnumMap;
+import java.util.Map;
 
+import dev.nthings.helm4j.bindings.NativeHelmBindings;
 import dev.nthings.helm4j.exceptions.HelmException;
+import dev.nthings.helm4j.model.ShowMode;
 import dev.nthings.helm4j.options.SearchOptions;
 import dev.nthings.helm4j.options.ShowOptions;
 
@@ -18,20 +20,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class HelmClientTest {
 
-  private final Arena arena = Arena.ofAuto();
-
   @Test
   void showMethodsDecodePayloads() {
-    var client =
-        new HelmClient(
-            JsonMapper.builder().build(),
-            jsonShowInvoker(showPayload("chart")),
-            jsonShowInvoker(showPayload("values")),
-            jsonShowInvoker(showPayload("readme")),
-            jsonShowInvoker(showPayload("all")),
-            jsonSearchInvoker("{\"results\":[]}"),
-            ptr -> {});
+    var bindings = new StubBindings();
+    bindings.putShowResponse(ShowMode.CHART, showPayload("chart"));
+    bindings.putShowResponse(ShowMode.VALUES, showPayload("values"));
+    bindings.putShowResponse(ShowMode.README, showPayload("readme"));
+    bindings.putShowResponse(ShowMode.ALL, showPayload("all"));
+    bindings.putShowResponse(ShowMode.CRDS, showPayload("crds"));
 
+    var client = new HelmClient(JsonMapper.builder().build(), bindings);
     var options = ShowOptions.builder().repositoryUrl("https://example.com/charts").build();
 
     var chart = client.showChart("hello", options);
@@ -51,22 +49,22 @@ class HelmClientTest {
     assertEquals("message: hello", all.valuesYaml());
     assertEquals("# hello", all.readmeText());
     assertEquals(1, all.customResourceDefinitions().size());
+
+    var crds = client.showCrds("hello", options);
+    assertEquals(1, crds.customResourceDefinitions().size());
+    assertEquals("widgets.example.com", crds.customResourceDefinitions().getFirst());
   }
 
   @Test
   void searchDecodesPayload() {
-    var client =
-        new HelmClient(
-            JsonMapper.builder().build(),
-            jsonShowInvoker(showPayload("all")),
-            jsonShowInvoker(showPayload("all")),
-            jsonShowInvoker(showPayload("all")),
-            jsonShowInvoker(showPayload("all")),
-            jsonSearchInvoker(
-                """
-                {"results":[{"name":"repo/hello","version":"1.2.3","appVersion":"2.0.0","description":"sample","score":42}]}
-                """),
-            ptr -> {});
+    var bindings = new StubBindings();
+    bindings.putShowResponse(ShowMode.ALL, showPayload("all"));
+    bindings.setSearchResponse(
+        """
+        {"results":[{"name":"repo/hello","version":"1.2.3","appVersion":"2.0.0","description":"sample","score":42}]}
+        """);
+
+    var client = new HelmClient(JsonMapper.builder().build(), bindings);
 
     var response = client.search(SearchOptions.builder().query("hello").build());
     assertEquals(1, response.size());
@@ -76,34 +74,25 @@ class HelmClientTest {
 
   @Test
   void searchStringOverloadUsesQuery() {
-    var client =
-        new HelmClient(
-            JsonMapper.builder().build(),
-            jsonShowInvoker(showPayload("all")),
-            jsonShowInvoker(showPayload("all")),
-            jsonShowInvoker(showPayload("all")),
-            jsonShowInvoker(showPayload("all")),
-            jsonSearchInvoker("{\"results\":[]}"),
-            ptr -> {});
+    var bindings = new StubBindings();
+    bindings.setSearchResponse("{\"results\":[]}");
+    var client = new HelmClient(JsonMapper.builder().build(), bindings);
 
     var response = client.search("hello");
     assertTrue(response.isEmpty());
+    assertTrue(bindings.lastSearchOptionsJson().contains("\"keyword\":\"hello\""));
   }
 
   @Test
   void showErrorPayloadThrowsHelmException() {
-    var client =
-        new HelmClient(
-            JsonMapper.builder().build(),
-            jsonShowInvoker(
-                """
-                {"error":"boom","stage":"runShow","mode":"chart","chartRef":"hello","chartPath":"/tmp/hello"}
-                """),
-            jsonShowInvoker(showPayload("values")),
-            jsonShowInvoker(showPayload("readme")),
-            jsonShowInvoker(showPayload("all")),
-            jsonSearchInvoker("{\"results\":[]}"),
-            ptr -> {});
+    var bindings = new StubBindings();
+    bindings.putShowResponse(
+        ShowMode.CHART,
+        """
+        {"error":"boom","stage":"runShow","mode":"chart","chartRef":"hello","chartPath":"/tmp/hello"}
+        """);
+
+    var client = new HelmClient(JsonMapper.builder().build(), bindings);
 
     var ex =
         assertThrows(
@@ -119,15 +108,10 @@ class HelmClientTest {
 
   @Test
   void searchErrorPayloadThrowsHelmException() {
-    var client =
-        new HelmClient(
-            JsonMapper.builder().build(),
-            jsonShowInvoker(showPayload("chart")),
-            jsonShowInvoker(showPayload("values")),
-            jsonShowInvoker(showPayload("readme")),
-            jsonShowInvoker(showPayload("all")),
-            jsonSearchInvoker("{\"error\":\"not found\",\"stage\":\"searchRepo\"}"),
-            ptr -> {});
+    var bindings = new StubBindings();
+    bindings.setSearchResponse("{\"error\":\"not found\",\"stage\":\"searchRepo\"}");
+
+    var client = new HelmClient(JsonMapper.builder().build(), bindings);
 
     var ex =
         assertThrows(
@@ -139,27 +123,16 @@ class HelmClientTest {
 
   @Test
   void invalidNativeJsonFailsFast() {
-    var badShowClient =
-        new HelmClient(
-            JsonMapper.builder().build(),
-            jsonShowInvoker("not-json"),
-            jsonShowInvoker(showPayload("values")),
-            jsonShowInvoker(showPayload("readme")),
-            jsonShowInvoker(showPayload("all")),
-            jsonSearchInvoker("{\"results\":[]}"),
-            ptr -> {});
+    var badShowBindings = new StubBindings();
+    badShowBindings.putShowResponse(ShowMode.CHART, "not-json");
 
+    var badShowClient = new HelmClient(JsonMapper.builder().build(), badShowBindings);
     assertThrows(IllegalStateException.class, () -> badShowClient.showChart("hello"));
 
-    var badSearchClient =
-        new HelmClient(
-            JsonMapper.builder().build(),
-            jsonShowInvoker(showPayload("chart")),
-            jsonShowInvoker(showPayload("values")),
-            jsonShowInvoker(showPayload("readme")),
-            jsonShowInvoker(showPayload("all")),
-            jsonSearchInvoker("not-json"),
-            ptr -> {});
+    var badSearchBindings = new StubBindings();
+    badSearchBindings.setSearchResponse("not-json");
+
+    var badSearchClient = new HelmClient(JsonMapper.builder().build(), badSearchBindings);
 
     assertThrows(
         IllegalStateException.class,
@@ -168,30 +141,21 @@ class HelmClientTest {
 
   @Test
   void unexpectedModeFailsFast() {
-    var client =
-        new HelmClient(
-            JsonMapper.builder().build(),
-            jsonShowInvoker(showPayload("values")),
-            jsonShowInvoker(showPayload("values")),
-            jsonShowInvoker(showPayload("readme")),
-            jsonShowInvoker(showPayload("all")),
-            jsonSearchInvoker("{\"results\":[]}"),
-            ptr -> {});
+    var bindings = new StubBindings();
+    bindings.putShowResponse(ShowMode.CHART, showPayload("values"));
+
+    var client = new HelmClient(JsonMapper.builder().build(), bindings);
 
     assertThrows(IllegalStateException.class, () -> client.showChart("hello"));
   }
 
   @Test
   void nullInputsAreRejected() {
-    var client =
-        new HelmClient(
-            JsonMapper.builder().build(),
-            jsonShowInvoker(showPayload("chart")),
-            jsonShowInvoker(showPayload("values")),
-            jsonShowInvoker(showPayload("readme")),
-            jsonShowInvoker(showPayload("all")),
-            jsonSearchInvoker("{\"results\":[]}"),
-            ptr -> {});
+    var bindings = new StubBindings();
+    bindings.putShowResponse(ShowMode.CHART, showPayload("chart"));
+    bindings.setSearchResponse("{\"results\":[]}");
+
+    var client = new HelmClient(JsonMapper.builder().build(), bindings);
 
     assertThrows(NullPointerException.class, () -> client.showChart(null));
     assertThrows(NullPointerException.class, () -> client.showAll("hello", null));
@@ -199,16 +163,12 @@ class HelmClientTest {
   }
 
   @Test
-  void nullNativePointerYieldsDecodeError() {
-    var client =
-        new HelmClient(
-            JsonMapper.builder().build(),
-            (chartRef, options) -> MemorySegment.NULL,
-            jsonShowInvoker(showPayload("values")),
-            jsonShowInvoker(showPayload("readme")),
-            jsonShowInvoker(showPayload("all")),
-            options -> MemorySegment.NULL,
-            ptr -> {});
+  void emptyNativePayloadFailsFast() {
+    var bindings = new StubBindings();
+    bindings.putShowResponse(ShowMode.CHART, " ");
+    bindings.setSearchResponse("");
+
+    var client = new HelmClient(JsonMapper.builder().build(), bindings);
 
     assertThrows(IllegalStateException.class, () -> client.showChart("hello"));
     assertThrows(IllegalStateException.class, () -> client.search("hello"));
@@ -216,16 +176,12 @@ class HelmClientTest {
 
   @Test
   void immutableCollectionsReturnedToConsumers() {
-    var client =
-        new HelmClient(
-            JsonMapper.builder().build(),
-            jsonShowInvoker(showPayload("chart")),
-            jsonShowInvoker(showPayload("values")),
-            jsonShowInvoker(showPayload("readme")),
-            jsonShowInvoker(showPayload("all")),
-            jsonSearchInvoker(
-                "{\"results\":[{\"name\":\"x\",\"version\":\"1\",\"appVersion\":\"1\",\"description\":\"d\",\"score\":1}]}"),
-            ptr -> {});
+    var bindings = new StubBindings();
+    bindings.putShowResponse(ShowMode.ALL, showPayload("all"));
+    bindings.setSearchResponse(
+        "{\"results\":[{\"name\":\"x\",\"version\":\"1\",\"appVersion\":\"1\",\"description\":\"d\",\"score\":1}]}");
+
+    var client = new HelmClient(JsonMapper.builder().build(), bindings);
 
     var all = client.showAll("hello");
     assertThrows(
@@ -236,19 +192,40 @@ class HelmClientTest {
     assertThrows(UnsupportedOperationException.class, () -> search.charts().clear());
   }
 
-  private HelmClient.NativeShowInvoker jsonShowInvoker(String json) {
-    return (chartRef, options) -> arena.allocateFrom(json);
-  }
-
-  private HelmClient.NativeSearchInvoker jsonSearchInvoker(String json) {
-    return options -> arena.allocateFrom(json);
-  }
-
   private static String showPayload(String mode) {
     return String.format(
         """
         {"mode":"%s","chartRef":"hello","chartPath":"/tmp/hello","sections":{"chart":"name: hello","values":"message: hello","readme":"# hello","crds":["widgets.example.com"]},"cliOutput":"ok"}
         """,
         mode);
+  }
+
+  private static final class StubBindings implements NativeHelmBindings {
+    private final Map<ShowMode, String> showResponses = new EnumMap<>(ShowMode.class);
+    private String searchResponse = "{\"results\":[]}";
+    private String lastSearchOptionsJson;
+
+    @Override
+    public String show(ShowMode mode, String chartReference, String optionsJson) {
+      return showResponses.getOrDefault(mode, showPayload(mode.toJson()));
+    }
+
+    @Override
+    public String search(String optionsJson) {
+      lastSearchOptionsJson = optionsJson;
+      return searchResponse;
+    }
+
+    void putShowResponse(ShowMode mode, String payload) {
+      showResponses.put(mode, payload);
+    }
+
+    void setSearchResponse(String payload) {
+      searchResponse = payload;
+    }
+
+    String lastSearchOptionsJson() {
+      return lastSearchOptionsJson;
+    }
   }
 }

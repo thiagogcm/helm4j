@@ -1,10 +1,12 @@
 package dev.nthings.helm4j.client;
 
-import java.lang.foreign.Arena;
-import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 
-import dev.nthings.helm4j.jextract.libhelm4j_h;
+import dev.nthings.helm4j.bindings.NativeHelmBindings;
+import dev.nthings.helm4j.bindings.NativePayloadCodec;
+import dev.nthings.helm4j.bindings.NativePayloadMapper;
+import dev.nthings.helm4j.bindings.NativeShowPayload;
+import dev.nthings.helm4j.model.ChartCrds;
 import dev.nthings.helm4j.model.ChartDetails;
 import dev.nthings.helm4j.model.ChartMetadata;
 import dev.nthings.helm4j.model.ChartReadme;
@@ -22,48 +24,20 @@ import tools.jackson.databind.ObjectMapper;
 /**
  * Consumer-facing Java API for Helm operations backed by native bindings.
  *
- * <p>This class hides FFM and native payload details behind typed Java options and results.
+ * <p>This class hides native payload details behind typed Java options and results.
  */
 public final class HelmClient {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(HelmClient.class);
 
   private final ObjectMapper mapper;
-  private final NativeShowInvoker showChartInvoker;
-  private final NativeShowInvoker showValuesInvoker;
-  private final NativeShowInvoker showReadmeInvoker;
-  private final NativeShowInvoker showAllInvoker;
-  private final NativeSearchInvoker searchInvoker;
+  private final NativeHelmBindings bindings;
   private final NativePayloadCodec payloadCodec;
 
-  HelmClient(ObjectMapper mapper) {
-    this(
-        mapper,
-        (chartRef, options) -> libhelm4j_h.HelmShowChart(chartRef, options),
-        (chartRef, options) -> libhelm4j_h.HelmShowValues(chartRef, options),
-        (chartRef, options) -> libhelm4j_h.HelmShowReadme(chartRef, options),
-        (chartRef, options) -> libhelm4j_h.HelmShowAll(chartRef, options),
-        options -> libhelm4j_h.HelmSearch(options),
-        libhelm4j_h::FreeString);
-  }
-
-  HelmClient(
-      ObjectMapper mapper,
-      NativeShowInvoker showChartInvoker,
-      NativeShowInvoker showValuesInvoker,
-      NativeShowInvoker showReadmeInvoker,
-      NativeShowInvoker showAllInvoker,
-      NativeSearchInvoker searchInvoker,
-      NativeStringReleaser stringReleaser) {
+  HelmClient(ObjectMapper mapper, NativeHelmBindings bindings) {
     this.mapper = Objects.requireNonNull(mapper, "mapper");
-    this.showChartInvoker = Objects.requireNonNull(showChartInvoker, "showChartInvoker");
-    this.showValuesInvoker = Objects.requireNonNull(showValuesInvoker, "showValuesInvoker");
-    this.showReadmeInvoker = Objects.requireNonNull(showReadmeInvoker, "showReadmeInvoker");
-    this.showAllInvoker = Objects.requireNonNull(showAllInvoker, "showAllInvoker");
-    this.searchInvoker = Objects.requireNonNull(searchInvoker, "searchInvoker");
-    this.payloadCodec =
-        new NativePayloadCodec(
-            this.mapper, Objects.requireNonNull(stringReleaser, "stringReleaser"));
+    this.bindings = Objects.requireNonNull(bindings, "bindings");
+    this.payloadCodec = new NativePayloadCodec(this.mapper);
   }
 
   /** Show chart metadata (equivalent to {@code helm show chart}). */
@@ -73,7 +47,7 @@ public final class HelmClient {
 
   /** Show chart metadata (equivalent to {@code helm show chart}). */
   public ChartMetadata showChart(String chartReference, ShowOptions options) {
-    var payload = runShow(chartReference, options, showChartInvoker, ShowMode.CHART);
+    var payload = runShow(chartReference, options, ShowMode.CHART);
     return NativePayloadMapper.toChartMetadata(payload, chartReference);
   }
 
@@ -84,7 +58,7 @@ public final class HelmClient {
 
   /** Show values (equivalent to {@code helm show values}). */
   public ChartValues showValues(String chartReference, ShowOptions options) {
-    var payload = runShow(chartReference, options, showValuesInvoker, ShowMode.VALUES);
+    var payload = runShow(chartReference, options, ShowMode.VALUES);
     return NativePayloadMapper.toChartValues(payload, chartReference);
   }
 
@@ -95,7 +69,7 @@ public final class HelmClient {
 
   /** Show README (equivalent to {@code helm show readme}). */
   public ChartReadme showReadme(String chartReference, ShowOptions options) {
-    var payload = runShow(chartReference, options, showReadmeInvoker, ShowMode.README);
+    var payload = runShow(chartReference, options, ShowMode.README);
     return NativePayloadMapper.toChartReadme(payload, chartReference);
   }
 
@@ -106,8 +80,19 @@ public final class HelmClient {
 
   /** Show all chart sections (equivalent to {@code helm show all}). */
   public ChartDetails showAll(String chartReference, ShowOptions options) {
-    var payload = runShow(chartReference, options, showAllInvoker, ShowMode.ALL);
+    var payload = runShow(chartReference, options, ShowMode.ALL);
     return NativePayloadMapper.toChartDetails(payload, chartReference);
+  }
+
+  /** Show CRDs (equivalent to {@code helm show crds}). */
+  public ChartCrds showCrds(String chartReference) {
+    return showCrds(chartReference, ShowOptions.defaults());
+  }
+
+  /** Show CRDs (equivalent to {@code helm show crds}). */
+  public ChartCrds showCrds(String chartReference, ShowOptions options) {
+    var payload = runShow(chartReference, options, ShowMode.CRDS);
+    return NativePayloadMapper.toChartCrds(payload, chartReference);
   }
 
   /** Search chart repositories (equivalent to {@code helm search repo}). */
@@ -120,58 +105,35 @@ public final class HelmClient {
     Objects.requireNonNull(options, "options");
     LOGGER.debug("Running helm search for query='{}'", options.query());
 
-    try (var arena = Arena.ofConfined()) {
-      var payload = NativePayloadMapper.toNativeSearchOptions(options);
-      var nativeOptions = arena.allocateFrom(payloadCodec.toJson(payload));
-      var resultPtr = searchInvoker.invoke(nativeOptions);
-      var nativeResponse = payloadCodec.decodeSearchResponse(resultPtr);
-      var response = NativePayloadMapper.toSearchResultSet(nativeResponse);
+    var payload = NativePayloadMapper.toNativeSearchOptions(options);
+    var optionsJson = payloadCodec.toJson(payload);
+    var responseJson = bindings.search(optionsJson);
+    var nativeResponse = payloadCodec.decodeSearchResponse(responseJson);
+    var response = NativePayloadMapper.toSearchResultSet(nativeResponse);
 
-      LOGGER.debug("Helm search completed with {} result(s)", response.size());
-      return response;
-    }
+    LOGGER.debug("Helm search completed with {} result(s)", response.size());
+    return response;
   }
 
   private NativeShowPayload runShow(
-      String chartReference,
-      ShowOptions options,
-      NativeShowInvoker invoker,
-      ShowMode expectedMode) {
+      String chartReference, ShowOptions options, ShowMode expectedMode) {
     Objects.requireNonNull(chartReference, "chartReference");
     Objects.requireNonNull(options, "options");
 
     LOGGER.debug(
         "Running helm show '{}' for chartReference='{}'", expectedMode.toJson(), chartReference);
 
-    try (var arena = Arena.ofConfined()) {
-      var chart = arena.allocateFrom(chartReference);
-      var payload = NativePayloadMapper.toNativeShowOptions(options);
-      var nativeOptions = arena.allocateFrom(payloadCodec.toJson(payload));
-      var resultPtr = invoker.invoke(chart, nativeOptions);
-      var response = payloadCodec.decodeShowResponse(resultPtr);
-      NativePayloadMapper.ensureMode(expectedMode, response.mode());
+    var payload = NativePayloadMapper.toNativeShowOptions(options);
+    var optionsJson = payloadCodec.toJson(payload);
+    var responseJson = bindings.show(expectedMode, chartReference, optionsJson);
+    var response = payloadCodec.decodeShowResponse(responseJson);
+    NativePayloadMapper.ensureMode(expectedMode, response.mode());
 
-      LOGGER.debug(
-          "Helm show '{}' completed for chartReference='{}' (resolvedPath='{}')",
-          expectedMode.toJson(),
-          NativePayloadMapper.chartReferenceOf(response, chartReference),
-          NativePayloadMapper.resolvedPathOf(response));
-      return response;
-    }
-  }
-
-  @FunctionalInterface
-  interface NativeShowInvoker {
-    MemorySegment invoke(MemorySegment chartRef, MemorySegment options);
-  }
-
-  @FunctionalInterface
-  interface NativeSearchInvoker {
-    MemorySegment invoke(MemorySegment options);
-  }
-
-  @FunctionalInterface
-  interface NativeStringReleaser {
-    void free(MemorySegment pointer);
+    LOGGER.debug(
+        "Helm show '{}' completed for chartReference='{}' (resolvedPath='{}')",
+        expectedMode.toJson(),
+        NativePayloadMapper.chartReferenceOf(response, chartReference),
+        NativePayloadMapper.resolvedPathOf(response));
+    return response;
   }
 }

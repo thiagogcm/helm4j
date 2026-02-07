@@ -92,6 +92,7 @@ extern char* HelmShowChart(char* chartRef, char* options);
 extern char* HelmShowValues(char* chartRef, char* options);
 extern char* HelmShowReadme(char* chartRef, char* options);
 extern char* HelmShowAll(char* chartRef, char* options);
+extern char* HelmShowCRDs(char* chartRef, char* options);
 extern char* HelmSearch(char* options);
 
 #ifdef __cplusplus

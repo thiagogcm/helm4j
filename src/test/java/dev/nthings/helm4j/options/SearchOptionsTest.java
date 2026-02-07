@@ -30,15 +30,15 @@ class SearchOptionsTest {
   }
 
   @Test
-  void builderDefaultsToNullValues() {
+  void defaultsUseDeterministicBooleansAndNullStrings() {
     var options = SearchOptions.defaults();
 
     assertNull(options.query());
-    assertNull(options.regularExpression());
-    assertNull(options.includeAllVersions());
-    assertNull(options.includePreReleaseVersions());
+    assertFalse(options.regularExpression());
+    assertFalse(options.includeAllVersions());
+    assertFalse(options.includePreReleaseVersions());
     assertNull(options.versionConstraint());
-    assertNull(options.failIfNoResults());
+    assertFalse(options.failIfNoResults());
   }
 
   @Test
@@ -55,5 +55,13 @@ class SearchOptionsTest {
     assertFalse(options.includeAllVersions());
     assertFalse(options.includePreReleaseVersions());
     assertFalse(options.failIfNoResults());
+  }
+
+  @Test
+  void blankStringsAreNormalizedToNull() {
+    var options = SearchOptions.builder().query("  ").versionConstraint(" ").build();
+
+    assertNull(options.query());
+    assertNull(options.versionConstraint());
   }
 }

@@ -23,6 +23,9 @@ var values =
         ShowOptions.builder().version("19.0.0").includePreReleaseVersions(false).build());
 System.out.println(values.valuesYaml());
 
+var crds = client.showCrds("bitnami/nginx");
+System.out.println(crds.customResourceDefinitions().size());
+
 var search =
     client.search(
         SearchOptions.builder()
@@ -48,6 +51,7 @@ jextract -Djava.library.path=$LLVM_HOME -Ilibhelm4j -l:libhelm4j/libhelm4j.so \
   --include-function HelmShowValues \
   --include-function HelmShowReadme \
   --include-function HelmShowAll \
+  --include-function HelmShowCRDs \
   --include-function HelmSearch \
   --output src/main/generated --target-package dev.nthings.helm4j.jextract libhelm4j/libhelm4j.h
 ```

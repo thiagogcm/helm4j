@@ -1,22 +1,17 @@
 package dev.nthings.helm4j.options;
 
 /** Options accepted by {@code helm search repo}. */
-public final class SearchOptions {
+public record SearchOptions(
+    String query,
+    boolean regularExpression,
+    boolean includeAllVersions,
+    boolean includePreReleaseVersions,
+    String versionConstraint,
+    boolean failIfNoResults) {
 
-  private final String query;
-  private final Boolean regularExpression;
-  private final Boolean includeAllVersions;
-  private final Boolean includePreReleaseVersions;
-  private final String versionConstraint;
-  private final Boolean failIfNoResults;
-
-  private SearchOptions(Builder builder) {
-    this.query = builder.query;
-    this.regularExpression = builder.regularExpression;
-    this.includeAllVersions = builder.includeAllVersions;
-    this.includePreReleaseVersions = builder.includePreReleaseVersions;
-    this.versionConstraint = builder.versionConstraint;
-    this.failIfNoResults = builder.failIfNoResults;
+  public SearchOptions {
+    query = normalize(query);
+    versionConstraint = normalize(versionConstraint);
   }
 
   public static SearchOptions defaults() {
@@ -27,37 +22,21 @@ public final class SearchOptions {
     return new Builder();
   }
 
-  public String query() {
-    return query;
-  }
-
-  public Boolean regularExpression() {
-    return regularExpression;
-  }
-
-  public Boolean includeAllVersions() {
-    return includeAllVersions;
-  }
-
-  public Boolean includePreReleaseVersions() {
-    return includePreReleaseVersions;
-  }
-
-  public String versionConstraint() {
-    return versionConstraint;
-  }
-
-  public Boolean failIfNoResults() {
-    return failIfNoResults;
+  private static String normalize(String value) {
+    if (value == null) {
+      return null;
+    }
+    var trimmed = value.trim();
+    return trimmed.isEmpty() ? null : trimmed;
   }
 
   public static final class Builder {
     private String query;
-    private Boolean regularExpression;
-    private Boolean includeAllVersions;
-    private Boolean includePreReleaseVersions;
+    private boolean regularExpression;
+    private boolean includeAllVersions;
+    private boolean includePreReleaseVersions;
     private String versionConstraint;
-    private Boolean failIfNoResults;
+    private boolean failIfNoResults;
 
     private Builder() {}
 
@@ -92,7 +71,13 @@ public final class SearchOptions {
     }
 
     public SearchOptions build() {
-      return new SearchOptions(this);
+      return new SearchOptions(
+          query,
+          regularExpression,
+          includeAllVersions,
+          includePreReleaseVersions,
+          versionConstraint,
+          failIfNoResults);
     }
   }
 }

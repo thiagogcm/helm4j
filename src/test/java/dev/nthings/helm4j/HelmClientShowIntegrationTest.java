@@ -69,6 +69,21 @@ class HelmClientShowIntegrationTest {
 
   @Test
   @EnabledIf("nativeLibraryAvailable")
+  @DisplayName("showCrds should return CRDs for a local chart")
+  void showCrdsLocalChart() {
+    var chartPath = localChartPath();
+    var response = client.showCrds(chartPath.toString(), ShowOptions.defaults());
+
+    assertEquals(chartPath.toString(), response.chartReference());
+    assertFalse(response.customResourceDefinitions().isEmpty());
+    assertTrue(
+        response.customResourceDefinitions().stream()
+            .anyMatch(crd -> crd.contains("widgets.example.com")));
+    assertFalse(response.rawOutput().isBlank());
+  }
+
+  @Test
+  @EnabledIf("nativeLibraryAvailable")
   @DisplayName("blank chart reference should raise HelmException")
   void showWithBlankRefFails() {
     var ex = assertThrows(HelmException.class, () -> client.showChart("  "));

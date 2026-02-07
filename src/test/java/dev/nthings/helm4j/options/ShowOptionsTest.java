@@ -46,22 +46,22 @@ class ShowOptionsTest {
   }
 
   @Test
-  void builderDefaultsToNullValues() {
+  void defaultsUseDeterministicBooleansAndNullStrings() {
     var options = ShowOptions.defaults();
 
     assertNull(options.version());
     assertNull(options.repositoryUrl());
     assertNull(options.username());
     assertNull(options.password());
-    assertNull(options.plainHttp());
-    assertNull(options.insecureSkipTlsVerification());
+    assertFalse(options.plainHttp());
+    assertFalse(options.insecureSkipTlsVerification());
     assertNull(options.keyringPath());
     assertNull(options.certificateFile());
     assertNull(options.keyFile());
     assertNull(options.certificateAuthorityFile());
-    assertNull(options.passCredentialsToAllHosts());
-    assertNull(options.verifySignatures());
-    assertNull(options.includePreReleaseVersions());
+    assertFalse(options.passCredentialsToAllHosts());
+    assertFalse(options.verifySignatures());
+    assertFalse(options.includePreReleaseVersions());
     assertNull(options.valuesJsonPath());
   }
 
@@ -81,5 +81,23 @@ class ShowOptionsTest {
     assertFalse(options.passCredentialsToAllHosts());
     assertFalse(options.verifySignatures());
     assertFalse(options.includePreReleaseVersions());
+  }
+
+  @Test
+  void blankStringsAreNormalizedToNull() {
+    var options =
+        ShowOptions.builder()
+            .version("  ")
+            .repositoryUrl(" ")
+            .username(" ")
+            .password(" ")
+            .valuesJsonPath(" ")
+            .build();
+
+    assertNull(options.version());
+    assertNull(options.repositoryUrl());
+    assertNull(options.username());
+    assertNull(options.password());
+    assertNull(options.valuesJsonPath());
   }
 }
