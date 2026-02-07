@@ -34,10 +34,10 @@ class HelmClientFactoryTest {
     assertNotNull(mapper);
     var response =
         mapper.readValue(
-            "{\"results\":[],\"extra\":\"ignored\"}",
-            dev.nthings.helm4j.model.SearchResponse.class);
+            "{\"charts\":[],\"extra\":\"ignored\"}",
+            dev.nthings.helm4j.model.SearchResultSet.class);
     assertNotNull(response);
-    assertTrue(response.results().isEmpty());
+    assertTrue(response.isEmpty());
   }
 
   private static ObjectMapper extractMapper(HelmClient client) throws Exception {

@@ -1,104 +1,93 @@
 package dev.nthings.helm4j.options;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 /** Options accepted by {@code helm search repo}. */
-@JsonInclude(JsonInclude.Include.NON_NULL)
 public final class SearchOptions {
 
-  @JsonProperty("keyword")
-  private final String keyword;
-
-  @JsonProperty("regexp")
-  private final Boolean regexp;
-
-  @JsonProperty("versions")
-  private final Boolean versions;
-
-  @JsonProperty("devel")
-  private final Boolean devel;
-
-  @JsonProperty("version")
-  private final String version;
-
-  @JsonProperty("failOnNoResult")
-  private final Boolean failOnNoResult;
+  private final String query;
+  private final Boolean regularExpression;
+  private final Boolean includeAllVersions;
+  private final Boolean includePreReleaseVersions;
+  private final String versionConstraint;
+  private final Boolean failIfNoResults;
 
   private SearchOptions(Builder builder) {
-    this.keyword = builder.keyword;
-    this.regexp = builder.regexp;
-    this.versions = builder.versions;
-    this.devel = builder.devel;
-    this.version = builder.version;
-    this.failOnNoResult = builder.failOnNoResult;
+    this.query = builder.query;
+    this.regularExpression = builder.regularExpression;
+    this.includeAllVersions = builder.includeAllVersions;
+    this.includePreReleaseVersions = builder.includePreReleaseVersions;
+    this.versionConstraint = builder.versionConstraint;
+    this.failIfNoResults = builder.failIfNoResults;
+  }
+
+  public static SearchOptions defaults() {
+    return builder().build();
   }
 
   public static Builder builder() {
     return new Builder();
   }
 
-  public String keyword() {
-    return keyword;
+  public String query() {
+    return query;
   }
 
-  public Boolean regexp() {
-    return regexp;
+  public Boolean regularExpression() {
+    return regularExpression;
   }
 
-  public Boolean versions() {
-    return versions;
+  public Boolean includeAllVersions() {
+    return includeAllVersions;
   }
 
-  public Boolean devel() {
-    return devel;
+  public Boolean includePreReleaseVersions() {
+    return includePreReleaseVersions;
   }
 
-  public String version() {
-    return version;
+  public String versionConstraint() {
+    return versionConstraint;
   }
 
-  public Boolean failOnNoResult() {
-    return failOnNoResult;
+  public Boolean failIfNoResults() {
+    return failIfNoResults;
   }
 
   public static final class Builder {
-    private String keyword;
-    private Boolean regexp;
-    private Boolean versions;
-    private Boolean devel;
-    private String version;
-    private Boolean failOnNoResult;
+    private String query;
+    private Boolean regularExpression;
+    private Boolean includeAllVersions;
+    private Boolean includePreReleaseVersions;
+    private String versionConstraint;
+    private Boolean failIfNoResults;
 
     private Builder() {}
 
-    public Builder keyword(String keyword) {
-      this.keyword = keyword;
+    public Builder query(String query) {
+      this.query = query;
       return this;
     }
 
-    public Builder regexp(boolean regexp) {
-      this.regexp = regexp;
+    public Builder regularExpression(boolean regularExpression) {
+      this.regularExpression = regularExpression;
       return this;
     }
 
-    public Builder versions(boolean versions) {
-      this.versions = versions;
+    public Builder includeAllVersions(boolean includeAllVersions) {
+      this.includeAllVersions = includeAllVersions;
       return this;
     }
 
-    public Builder devel(boolean devel) {
-      this.devel = devel;
+    public Builder includePreReleaseVersions(boolean includePreReleaseVersions) {
+      this.includePreReleaseVersions = includePreReleaseVersions;
       return this;
     }
 
-    public Builder version(String version) {
-      this.version = version;
+    public Builder versionConstraint(String versionConstraint) {
+      this.versionConstraint = versionConstraint;
       return this;
     }
 
-    public Builder failOnNoResult(boolean failOnNoResult) {
-      this.failOnNoResult = failOnNoResult;
+    public Builder failIfNoResults(boolean failIfNoResults) {
+      this.failIfNoResults = failIfNoResults;
       return this;
     }
 

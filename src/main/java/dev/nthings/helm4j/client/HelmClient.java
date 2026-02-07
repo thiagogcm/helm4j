@@ -2,12 +2,22 @@ package dev.nthings.helm4j.client;
 
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
+import java.util.List;
 import java.util.Objects;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import dev.nthings.helm4j.exceptions.HelmException;
 import dev.nthings.helm4j.jextract.libhelm4j_h;
-import dev.nthings.helm4j.model.SearchResponse;
-import dev.nthings.helm4j.model.ShowResponse;
+import dev.nthings.helm4j.model.ChartDetails;
+import dev.nthings.helm4j.model.ChartMetadata;
+import dev.nthings.helm4j.model.ChartReadme;
+import dev.nthings.helm4j.model.ChartSummary;
+import dev.nthings.helm4j.model.ChartValues;
+import dev.nthings.helm4j.model.SearchResultSet;
+import dev.nthings.helm4j.model.ShowMode;
 import dev.nthings.helm4j.options.SearchOptions;
 import dev.nthings.helm4j.options.ShowOptions;
 
@@ -19,14 +29,14 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * Idiomatic Java wrapper over the native libhelm4j bindings generated via jextract.
+ * Consumer-facing Java API for Helm operations backed by native bindings.
  *
- * <p>The native layer returns JSON strings; this class turns them into typed DTOs and throws {@link
- * HelmException} on errors.
+ * <p>This class hides FFM and native payload details behind typed Java options and results.
  */
 public final class HelmClient {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(HelmClient.class);
+
   private final ObjectMapper mapper;
   private final NativeShowInvoker showChartInvoker;
   private final NativeShowInvoker showValuesInvoker;
@@ -64,61 +74,131 @@ public final class HelmClient {
   }
 
   /** Show chart metadata (equivalent to {@code helm show chart}). */
-  public ShowResponse showChart(String chartRef, ShowOptions options) {
-    return doShow(chartRef, options, showChartInvoker, "chart");
+  public ChartMetadata showChart(String chartReference) {
+    return showChart(chartReference, ShowOptions.defaults());
+  }
+
+  /** Show chart metadata (equivalent to {@code helm show chart}). */
+  public ChartMetadata showChart(String chartReference, ShowOptions options) {
+    var payload = runShow(chartReference, options, showChartInvoker, ShowMode.CHART);
+    var sections = sectionsOrEmpty(payload.sections());
+    return new ChartMetadata(
+        chartReferenceOf(payload, chartReference),
+        resolvedPathOf(payload),
+        textOrEmpty(sections.chart()),
+        textOrEmpty(payload.cliOutput()));
   }
 
   /** Show values (equivalent to {@code helm show values}). */
-  public ShowResponse showValues(String chartRef, ShowOptions options) {
-    return doShow(chartRef, options, showValuesInvoker, "values");
+  public ChartValues showValues(String chartReference) {
+    return showValues(chartReference, ShowOptions.defaults());
+  }
+
+  /** Show values (equivalent to {@code helm show values}). */
+  public ChartValues showValues(String chartReference, ShowOptions options) {
+    var payload = runShow(chartReference, options, showValuesInvoker, ShowMode.VALUES);
+    var sections = sectionsOrEmpty(payload.sections());
+    return new ChartValues(
+        chartReferenceOf(payload, chartReference),
+        resolvedPathOf(payload),
+        textOrEmpty(sections.values()),
+        textOrEmpty(payload.cliOutput()));
   }
 
   /** Show README (equivalent to {@code helm show readme}). */
-  public ShowResponse showReadme(String chartRef, ShowOptions options) {
-    return doShow(chartRef, options, showReadmeInvoker, "readme");
+  public ChartReadme showReadme(String chartReference) {
+    return showReadme(chartReference, ShowOptions.defaults());
   }
 
-  /** Show all sections (equivalent to {@code helm show all}). */
-  public ShowResponse showAll(String chartRef, ShowOptions options) {
-    return doShow(chartRef, options, showAllInvoker, "all");
+  /** Show README (equivalent to {@code helm show readme}). */
+  public ChartReadme showReadme(String chartReference, ShowOptions options) {
+    var payload = runShow(chartReference, options, showReadmeInvoker, ShowMode.README);
+    var sections = sectionsOrEmpty(payload.sections());
+    return new ChartReadme(
+        chartReferenceOf(payload, chartReference),
+        resolvedPathOf(payload),
+        textOrEmpty(sections.readme()),
+        textOrEmpty(payload.cliOutput()));
+  }
+
+  /** Show all chart sections (equivalent to {@code helm show all}). */
+  public ChartDetails showAll(String chartReference) {
+    return showAll(chartReference, ShowOptions.defaults());
+  }
+
+  /** Show all chart sections (equivalent to {@code helm show all}). */
+  public ChartDetails showAll(String chartReference, ShowOptions options) {
+    var payload = runShow(chartReference, options, showAllInvoker, ShowMode.ALL);
+    var sections = sectionsOrEmpty(payload.sections());
+    return new ChartDetails(
+        chartReferenceOf(payload, chartReference),
+        resolvedPathOf(payload),
+        textOrEmpty(sections.chart()),
+        textOrEmpty(sections.values()),
+        textOrEmpty(sections.readme()),
+        listOrEmpty(sections.crds()),
+        textOrEmpty(payload.cliOutput()));
   }
 
   /** Search chart repositories (equivalent to {@code helm search repo}). */
-  public SearchResponse search(SearchOptions options) {
+  public SearchResultSet search(String query) {
+    return search(SearchOptions.builder().query(query).build());
+  }
+
+  /** Search chart repositories (equivalent to {@code helm search repo}). */
+  public SearchResultSet search(SearchOptions options) {
     Objects.requireNonNull(options, "options");
-    LOGGER.debug("Running helm search for keyword='{}'", options.keyword());
+    LOGGER.debug("Running helm search for query='{}'", options.query());
 
     try (var arena = Arena.ofConfined()) {
-      var opts = arena.allocateFrom(toJson(options));
+      var payload = nativeSearchOptions(options);
+      var opts = arena.allocateFrom(toJson(payload));
       var resultPtr = searchInvoker.invoke(opts);
-      var response = decodeSearchResponse(resultPtr);
-      var resultCount = response.results() == null ? 0 : response.results().size();
-      LOGGER.debug("Helm search completed with {} result(s)", resultCount);
-      return response;
+      var nativeResponse = decodeSearchResponse(resultPtr);
+      var charts =
+          listOrEmpty(nativeResponse.results()).stream()
+              .map(
+                  result ->
+                      new ChartSummary(
+                          textOrEmpty(result.name()),
+                          textOrEmpty(result.version()),
+                          textOrEmpty(result.appVersion()),
+                          textOrEmpty(result.description()),
+                          intOrZero(result.score())))
+              .toList();
+
+      LOGGER.debug("Helm search completed with {} result(s)", charts.size());
+      return new SearchResultSet(charts);
     }
   }
 
-  private ShowResponse doShow(
-      String chartRef, ShowOptions options, NativeShowInvoker invoker, String mode) {
-    Objects.requireNonNull(chartRef, "chartRef");
+  private NativeShowPayload runShow(
+      String chartReference,
+      ShowOptions options,
+      NativeShowInvoker invoker,
+      ShowMode expectedMode) {
+    Objects.requireNonNull(chartReference, "chartReference");
     Objects.requireNonNull(options, "options");
-    LOGGER.debug("Running helm show '{}' for chartRef='{}'", mode, chartRef);
+
+    LOGGER.debug(
+        "Running helm show '{}' for chartReference='{}'", expectedMode.toJson(), chartReference);
 
     try (var arena = Arena.ofConfined()) {
-      var chart = arena.allocateFrom(chartRef);
-      var opts = arena.allocateFrom(toJson(options));
+      var chart = arena.allocateFrom(chartReference);
+      var opts = arena.allocateFrom(toJson(nativeShowOptions(options)));
       var resultPtr = invoker.invoke(chart, opts);
-      var response = decodeShowResponse(resultPtr);
+      var payload = decodeShowResponse(resultPtr);
+      ensureMode(expectedMode, payload.mode());
       LOGGER.debug(
-          "Helm show '{}' completed for chartRef='{}' (resolvedPath='{}')",
-          mode,
-          response.chartRef(),
-          response.chartPath());
-      return response;
+          "Helm show '{}' completed for chartReference='{}' (resolvedPath='{}')",
+          expectedMode.toJson(),
+          chartReferenceOf(payload, chartReference),
+          resolvedPathOf(payload));
+      return payload;
     }
   }
 
-  private ShowResponse decodeShowResponse(MemorySegment resultPtr) {
+  private NativeShowPayload decodeShowResponse(MemorySegment resultPtr) {
     var json = readAndFree(resultPtr);
     var root = parseTree(json);
     if (root.hasNonNull("error")) {
@@ -137,10 +217,10 @@ public final class HelmClient {
           message);
       throw new HelmException(message, stage, mode, chartRef, chartPath);
     }
-    return readValue(json, ShowResponse.class);
+    return readValue(json, NativeShowPayload.class);
   }
 
-  private SearchResponse decodeSearchResponse(MemorySegment resultPtr) {
+  private NativeSearchPayload decodeSearchResponse(MemorySegment resultPtr) {
     var json = readAndFree(resultPtr);
     var root = parseTree(json);
     if (root.hasNonNull("error")) {
@@ -149,7 +229,7 @@ public final class HelmClient {
       LOGGER.error("Native helm search failure: stage='{}', message='{}'", stage, message);
       throw new HelmException(message, stage, null, null, null);
     }
-    return readValue(json, SearchResponse.class);
+    return readValue(json, NativeSearchPayload.class);
   }
 
   private String readAndFree(MemorySegment ptr) {
@@ -157,7 +237,7 @@ public final class HelmClient {
       LOGGER.error("Native layer returned a null response pointer");
       return "";
     }
-    // Interpret as unbounded C string before freeing.
+
     var value = ptr.reinterpret(Long.MAX_VALUE).getString(0);
     stringReleaser.free(ptr);
     return value;
@@ -196,6 +276,69 @@ public final class HelmClient {
     }
   }
 
+  private static void ensureMode(ShowMode expectedMode, String rawMode) {
+    var actualMode = ShowMode.fromString(rawMode);
+    if (actualMode != expectedMode) {
+      throw new IllegalStateException(
+          "Native response mode mismatch: expected="
+              + expectedMode.toJson()
+              + ", actual="
+              + textOrEmpty(rawMode));
+    }
+  }
+
+  private static NativeShowOptions nativeShowOptions(ShowOptions options) {
+    return new NativeShowOptions(
+        options.version(),
+        options.repositoryUrl(),
+        options.username(),
+        options.password(),
+        options.plainHttp(),
+        options.insecureSkipTlsVerification(),
+        options.keyringPath(),
+        options.certificateFile(),
+        options.keyFile(),
+        options.certificateAuthorityFile(),
+        options.passCredentialsToAllHosts(),
+        options.verifySignatures(),
+        options.includePreReleaseVersions(),
+        options.valuesJsonPath());
+  }
+
+  private static NativeSearchOptions nativeSearchOptions(SearchOptions options) {
+    return new NativeSearchOptions(
+        options.query(),
+        options.regularExpression(),
+        options.includeAllVersions(),
+        options.includePreReleaseVersions(),
+        options.versionConstraint(),
+        options.failIfNoResults());
+  }
+
+  private static NativeShowSections sectionsOrEmpty(NativeShowSections value) {
+    return value == null ? new NativeShowSections(null, null, null, null) : value;
+  }
+
+  private static String chartReferenceOf(NativeShowPayload payload, String fallback) {
+    return payload.chartRef() == null ? fallback : payload.chartRef();
+  }
+
+  private static String resolvedPathOf(NativeShowPayload payload) {
+    return textOrEmpty(payload.chartPath());
+  }
+
+  private static int intOrZero(Integer value) {
+    return value == null ? 0 : value;
+  }
+
+  private static String textOrEmpty(String value) {
+    return value == null ? "" : value;
+  }
+
+  private static <T> List<T> listOrEmpty(List<T> value) {
+    return value == null ? List.of() : List.copyOf(value);
+  }
+
   private static String abbreviate(String value, int maxLength) {
     if (value == null) {
       return "";
@@ -205,6 +348,58 @@ public final class HelmClient {
     }
     return value.substring(0, maxLength) + "...";
   }
+
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  private record NativeShowOptions(
+      @JsonProperty("version") String version,
+      @JsonProperty("repo") String repositoryUrl,
+      @JsonProperty("username") String username,
+      @JsonProperty("password") String password,
+      @JsonProperty("plainHttp") Boolean plainHttp,
+      @JsonProperty("insecureSkipTlsVerify") Boolean insecureSkipTlsVerification,
+      @JsonProperty("keyring") String keyringPath,
+      @JsonProperty("certFile") String certificateFile,
+      @JsonProperty("keyFile") String keyFile,
+      @JsonProperty("caFile") String certificateAuthorityFile,
+      @JsonProperty("passCredentialsAll") Boolean passCredentialsToAllHosts,
+      @JsonProperty("verify") Boolean verifySignatures,
+      @JsonProperty("devel") Boolean includePreReleaseVersions,
+      @JsonProperty("jsonpath") String valuesJsonPath) {}
+
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  private record NativeSearchOptions(
+      @JsonProperty("keyword") String query,
+      @JsonProperty("regexp") Boolean regularExpression,
+      @JsonProperty("versions") Boolean includeAllVersions,
+      @JsonProperty("devel") Boolean includePreReleaseVersions,
+      @JsonProperty("version") String versionConstraint,
+      @JsonProperty("failOnNoResult") Boolean failIfNoResults) {}
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  private record NativeShowPayload(
+      @JsonProperty("mode") String mode,
+      @JsonProperty("chartRef") String chartRef,
+      @JsonProperty("chartPath") String chartPath,
+      @JsonProperty("sections") NativeShowSections sections,
+      @JsonProperty("cliOutput") String cliOutput) {}
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  private record NativeShowSections(
+      @JsonProperty("chart") String chart,
+      @JsonProperty("values") String values,
+      @JsonProperty("readme") String readme,
+      @JsonProperty("crds") List<String> crds) {}
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  private record NativeSearchPayload(@JsonProperty("results") List<NativeSearchResult> results) {}
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  private record NativeSearchResult(
+      @JsonProperty("name") String name,
+      @JsonProperty("version") String version,
+      @JsonProperty("appVersion") String appVersion,
+      @JsonProperty("description") String description,
+      @JsonProperty("score") Integer score) {}
 
   @FunctionalInterface
   interface NativeShowInvoker {

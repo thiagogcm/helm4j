@@ -22,11 +22,11 @@ class HelmClientSearchIntegrationTest {
   @EnabledIf("nativeLibraryAvailable")
   @DisplayName("search should return an empty list when no repositories are configured")
   void searchWithoutReposIsEmpty() {
-    var response = client.search(SearchOptions.builder().keyword("nginx").build());
+    var response = client.search(SearchOptions.builder().query("nginx").build());
 
     assertNotNull(response);
-    assertNotNull(response.results());
-    assertTrue(response.results().stream().allMatch(result -> result.name() != null));
+    assertNotNull(response.charts());
+    assertTrue(response.charts().stream().allMatch(result -> result.name() != null));
     // The environment running the tests may or may not have helm repos configured;
     // we only assert the contract that a response is returned without throwing.
   }

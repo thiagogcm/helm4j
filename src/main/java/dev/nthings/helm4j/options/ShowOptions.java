@@ -1,69 +1,42 @@
 package dev.nthings.helm4j.options;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-/** Java mirror of the Go ShowOptions struct passed to the native layer. */
-@JsonInclude(JsonInclude.Include.NON_NULL)
+/** Options accepted by {@code helm show}. */
 public final class ShowOptions {
 
-  @JsonProperty("version")
   private final String version;
-
-  @JsonProperty("repo")
-  private final String repoUrl;
-
-  @JsonProperty("username")
+  private final String repositoryUrl;
   private final String username;
-
-  @JsonProperty("password")
   private final String password;
-
-  @JsonProperty("plainHttp")
   private final Boolean plainHttp;
-
-  @JsonProperty("insecureSkipTlsVerify")
-  private final Boolean insecureSkipTlsVerify;
-
-  @JsonProperty("keyring")
-  private final String keyring;
-
-  @JsonProperty("certFile")
-  private final String certFile;
-
-  @JsonProperty("keyFile")
+  private final Boolean insecureSkipTlsVerification;
+  private final String keyringPath;
+  private final String certificateFile;
   private final String keyFile;
-
-  @JsonProperty("caFile")
-  private final String caFile;
-
-  @JsonProperty("passCredentialsAll")
-  private final Boolean passCredentialsAll;
-
-  @JsonProperty("verify")
-  private final Boolean verify;
-
-  @JsonProperty("devel")
-  private final Boolean devel;
-
-  @JsonProperty("jsonpath")
-  private final String jsonPathTemplate;
+  private final String certificateAuthorityFile;
+  private final Boolean passCredentialsToAllHosts;
+  private final Boolean verifySignatures;
+  private final Boolean includePreReleaseVersions;
+  private final String valuesJsonPath;
 
   private ShowOptions(Builder builder) {
     this.version = builder.version;
-    this.repoUrl = builder.repoUrl;
+    this.repositoryUrl = builder.repositoryUrl;
     this.username = builder.username;
     this.password = builder.password;
     this.plainHttp = builder.plainHttp;
-    this.insecureSkipTlsVerify = builder.insecureSkipTlsVerify;
-    this.keyring = builder.keyring;
-    this.certFile = builder.certFile;
+    this.insecureSkipTlsVerification = builder.insecureSkipTlsVerification;
+    this.keyringPath = builder.keyringPath;
+    this.certificateFile = builder.certificateFile;
     this.keyFile = builder.keyFile;
-    this.caFile = builder.caFile;
-    this.passCredentialsAll = builder.passCredentialsAll;
-    this.verify = builder.verify;
-    this.devel = builder.devel;
-    this.jsonPathTemplate = builder.jsonPathTemplate;
+    this.certificateAuthorityFile = builder.certificateAuthorityFile;
+    this.passCredentialsToAllHosts = builder.passCredentialsToAllHosts;
+    this.verifySignatures = builder.verifySignatures;
+    this.includePreReleaseVersions = builder.includePreReleaseVersions;
+    this.valuesJsonPath = builder.valuesJsonPath;
+  }
+
+  public static ShowOptions defaults() {
+    return builder().build();
   }
 
   public static Builder builder() {
@@ -74,8 +47,8 @@ public final class ShowOptions {
     return version;
   }
 
-  public String repoUrl() {
-    return repoUrl;
+  public String repositoryUrl() {
+    return repositoryUrl;
   }
 
   public String username() {
@@ -90,57 +63,57 @@ public final class ShowOptions {
     return plainHttp;
   }
 
-  public Boolean insecureSkipTlsVerify() {
-    return insecureSkipTlsVerify;
+  public Boolean insecureSkipTlsVerification() {
+    return insecureSkipTlsVerification;
   }
 
-  public String keyring() {
-    return keyring;
+  public String keyringPath() {
+    return keyringPath;
   }
 
-  public String certFile() {
-    return certFile;
+  public String certificateFile() {
+    return certificateFile;
   }
 
   public String keyFile() {
     return keyFile;
   }
 
-  public String caFile() {
-    return caFile;
+  public String certificateAuthorityFile() {
+    return certificateAuthorityFile;
   }
 
-  public Boolean passCredentialsAll() {
-    return passCredentialsAll;
+  public Boolean passCredentialsToAllHosts() {
+    return passCredentialsToAllHosts;
   }
 
-  public Boolean verify() {
-    return verify;
+  public Boolean verifySignatures() {
+    return verifySignatures;
   }
 
-  public Boolean devel() {
-    return devel;
+  public Boolean includePreReleaseVersions() {
+    return includePreReleaseVersions;
   }
 
-  public String jsonPathTemplate() {
-    return jsonPathTemplate;
+  public String valuesJsonPath() {
+    return valuesJsonPath;
   }
 
   public static final class Builder {
     private String version;
-    private String repoUrl;
+    private String repositoryUrl;
     private String username;
     private String password;
     private Boolean plainHttp;
-    private Boolean insecureSkipTlsVerify;
-    private String keyring;
-    private String certFile;
+    private Boolean insecureSkipTlsVerification;
+    private String keyringPath;
+    private String certificateFile;
     private String keyFile;
-    private String caFile;
-    private Boolean passCredentialsAll;
-    private Boolean verify;
-    private Boolean devel;
-    private String jsonPathTemplate;
+    private String certificateAuthorityFile;
+    private Boolean passCredentialsToAllHosts;
+    private Boolean verifySignatures;
+    private Boolean includePreReleaseVersions;
+    private String valuesJsonPath;
 
     private Builder() {}
 
@@ -149,8 +122,8 @@ public final class ShowOptions {
       return this;
     }
 
-    public Builder repoUrl(String repoUrl) {
-      this.repoUrl = repoUrl;
+    public Builder repositoryUrl(String repositoryUrl) {
+      this.repositoryUrl = repositoryUrl;
       return this;
     }
 
@@ -169,18 +142,18 @@ public final class ShowOptions {
       return this;
     }
 
-    public Builder insecureSkipTlsVerify(boolean insecureSkipTlsVerify) {
-      this.insecureSkipTlsVerify = insecureSkipTlsVerify;
+    public Builder insecureSkipTlsVerification(boolean insecureSkipTlsVerification) {
+      this.insecureSkipTlsVerification = insecureSkipTlsVerification;
       return this;
     }
 
-    public Builder keyring(String keyring) {
-      this.keyring = keyring;
+    public Builder keyringPath(String keyringPath) {
+      this.keyringPath = keyringPath;
       return this;
     }
 
-    public Builder certFile(String certFile) {
-      this.certFile = certFile;
+    public Builder certificateFile(String certificateFile) {
+      this.certificateFile = certificateFile;
       return this;
     }
 
@@ -189,28 +162,28 @@ public final class ShowOptions {
       return this;
     }
 
-    public Builder caFile(String caFile) {
-      this.caFile = caFile;
+    public Builder certificateAuthorityFile(String certificateAuthorityFile) {
+      this.certificateAuthorityFile = certificateAuthorityFile;
       return this;
     }
 
-    public Builder passCredentialsAll(boolean passCredentialsAll) {
-      this.passCredentialsAll = passCredentialsAll;
+    public Builder passCredentialsToAllHosts(boolean passCredentialsToAllHosts) {
+      this.passCredentialsToAllHosts = passCredentialsToAllHosts;
       return this;
     }
 
-    public Builder verify(boolean verify) {
-      this.verify = verify;
+    public Builder verifySignatures(boolean verifySignatures) {
+      this.verifySignatures = verifySignatures;
       return this;
     }
 
-    public Builder devel(boolean devel) {
-      this.devel = devel;
+    public Builder includePreReleaseVersions(boolean includePreReleaseVersions) {
+      this.includePreReleaseVersions = includePreReleaseVersions;
       return this;
     }
 
-    public Builder jsonPathTemplate(String jsonPathTemplate) {
-      this.jsonPathTemplate = jsonPathTemplate;
+    public Builder valuesJsonPath(String valuesJsonPath) {
+      this.valuesJsonPath = valuesJsonPath;
       return this;
     }
 

@@ -1,74 +1,38 @@
 package dev.nthings.helm4j.model;
 
+import java.util.ArrayList;
+
 import org.junit.jupiter.api.Test;
 
-import tools.jackson.databind.json.JsonMapper;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ModelMappingTest {
 
   @Test
-  void showResponseDeserializesAndIgnoresUnknownFields() throws Exception {
-    var mapper = JsonMapper.builder().build();
+  void chartDetailsDefensivelyCopiesCrds() {
+    var crds = new ArrayList<String>();
+    crds.add("widgets.example.com");
 
-    var response =
-        mapper.readValue(
-            """
-            {
-              "mode":"all",
-              "chartRef":"repo/hello",
-              "chartPath":"/tmp/hello",
-              "sections":{
-                "chart":"name: hello",
-                "values":"message: hello",
-                "readme":"# hello",
-                "crds":["widgets.example.com"]
-              },
-              "cliOutput":"ok",
-              "unknown":"ignored"
-            }
-            """,
-            ShowResponse.class);
+    var details =
+        new ChartDetails("repo/hello", "/tmp/hello", "meta", "values", "readme", crds, "raw");
 
-    assertEquals(ShowMode.ALL, response.mode());
-    assertEquals("repo/hello", response.chartRef());
-    assertEquals("/tmp/hello", response.chartPath());
-    assertNotNull(response.sections());
-    assertEquals("name: hello", response.sections().chart());
-    assertEquals(1, response.sections().crds().size());
+    crds.add("gadgets.example.com");
+    assertEquals(1, details.customResourceDefinitions().size());
+    assertThrows(
+        UnsupportedOperationException.class,
+        () -> details.customResourceDefinitions().add("new.example.com"));
   }
 
   @Test
-  void searchResponseDeserializesAndIgnoresUnknownFields() throws Exception {
-    var mapper = JsonMapper.builder().build();
+  void searchResultSetDefensivelyCopiesCharts() {
+    var charts = new ArrayList<ChartSummary>();
+    charts.add(new ChartSummary("repo/nginx", "1.0.0", "2.1.0", "Nginx chart", 99));
 
-    var response =
-        mapper.readValue(
-            """
-            {
-              "results":[
-                {
-                  "name":"repo/nginx",
-                  "version":"1.0.0",
-                  "appVersion":"2.1.0",
-                  "description":"Nginx chart",
-                  "score":99,
-                  "unknown":"ignored"
-                }
-              ],
-              "other":"ignored"
-            }
-            """,
-            SearchResponse.class);
+    var response = new SearchResultSet(charts);
 
-    assertEquals(1, response.results().size());
-    var first = response.results().getFirst();
-    assertEquals("repo/nginx", first.name());
-    assertEquals("1.0.0", first.version());
-    assertEquals("2.1.0", first.appVersion());
-    assertEquals("Nginx chart", first.description());
-    assertEquals(99, first.score());
+    charts.clear();
+    assertEquals(1, response.size());
+    assertThrows(UnsupportedOperationException.class, () -> response.charts().clear());
   }
 }

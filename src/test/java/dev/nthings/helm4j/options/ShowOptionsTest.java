@@ -14,55 +14,55 @@ class ShowOptionsTest {
     var options =
         ShowOptions.builder()
             .version("1.2.3")
-            .repoUrl("https://example.com/charts")
+            .repositoryUrl("https://example.com/charts")
             .username("demo")
             .password("secret")
             .plainHttp(true)
-            .insecureSkipTlsVerify(true)
-            .keyring("/tmp/keyring.gpg")
-            .certFile("/tmp/cert.pem")
+            .insecureSkipTlsVerification(true)
+            .keyringPath("/tmp/keyring.gpg")
+            .certificateFile("/tmp/cert.pem")
             .keyFile("/tmp/key.pem")
-            .caFile("/tmp/ca.pem")
-            .passCredentialsAll(true)
-            .verify(true)
-            .devel(true)
-            .jsonPathTemplate("{.name}")
+            .certificateAuthorityFile("/tmp/ca.pem")
+            .passCredentialsToAllHosts(true)
+            .verifySignatures(true)
+            .includePreReleaseVersions(true)
+            .valuesJsonPath("{.name}")
             .build();
 
     assertEquals("1.2.3", options.version());
-    assertEquals("https://example.com/charts", options.repoUrl());
+    assertEquals("https://example.com/charts", options.repositoryUrl());
     assertEquals("demo", options.username());
     assertEquals("secret", options.password());
     assertTrue(options.plainHttp());
-    assertTrue(options.insecureSkipTlsVerify());
-    assertEquals("/tmp/keyring.gpg", options.keyring());
-    assertEquals("/tmp/cert.pem", options.certFile());
+    assertTrue(options.insecureSkipTlsVerification());
+    assertEquals("/tmp/keyring.gpg", options.keyringPath());
+    assertEquals("/tmp/cert.pem", options.certificateFile());
     assertEquals("/tmp/key.pem", options.keyFile());
-    assertEquals("/tmp/ca.pem", options.caFile());
-    assertTrue(options.passCredentialsAll());
-    assertTrue(options.verify());
-    assertTrue(options.devel());
-    assertEquals("{.name}", options.jsonPathTemplate());
+    assertEquals("/tmp/ca.pem", options.certificateAuthorityFile());
+    assertTrue(options.passCredentialsToAllHosts());
+    assertTrue(options.verifySignatures());
+    assertTrue(options.includePreReleaseVersions());
+    assertEquals("{.name}", options.valuesJsonPath());
   }
 
   @Test
   void builderDefaultsToNullValues() {
-    var options = ShowOptions.builder().build();
+    var options = ShowOptions.defaults();
 
     assertNull(options.version());
-    assertNull(options.repoUrl());
+    assertNull(options.repositoryUrl());
     assertNull(options.username());
     assertNull(options.password());
     assertNull(options.plainHttp());
-    assertNull(options.insecureSkipTlsVerify());
-    assertNull(options.keyring());
-    assertNull(options.certFile());
+    assertNull(options.insecureSkipTlsVerification());
+    assertNull(options.keyringPath());
+    assertNull(options.certificateFile());
     assertNull(options.keyFile());
-    assertNull(options.caFile());
-    assertNull(options.passCredentialsAll());
-    assertNull(options.verify());
-    assertNull(options.devel());
-    assertNull(options.jsonPathTemplate());
+    assertNull(options.certificateAuthorityFile());
+    assertNull(options.passCredentialsToAllHosts());
+    assertNull(options.verifySignatures());
+    assertNull(options.includePreReleaseVersions());
+    assertNull(options.valuesJsonPath());
   }
 
   @Test
@@ -70,16 +70,16 @@ class ShowOptionsTest {
     var options =
         ShowOptions.builder()
             .plainHttp(false)
-            .insecureSkipTlsVerify(false)
-            .passCredentialsAll(false)
-            .verify(false)
-            .devel(false)
+            .insecureSkipTlsVerification(false)
+            .passCredentialsToAllHosts(false)
+            .verifySignatures(false)
+            .includePreReleaseVersions(false)
             .build();
 
     assertFalse(options.plainHttp());
-    assertFalse(options.insecureSkipTlsVerify());
-    assertFalse(options.passCredentialsAll());
-    assertFalse(options.verify());
-    assertFalse(options.devel());
+    assertFalse(options.insecureSkipTlsVerification());
+    assertFalse(options.passCredentialsToAllHosts());
+    assertFalse(options.verifySignatures());
+    assertFalse(options.includePreReleaseVersions());
   }
 }

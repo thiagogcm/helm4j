@@ -13,47 +13,47 @@ class SearchOptionsTest {
   void builderSetsAllFields() {
     var options =
         SearchOptions.builder()
-            .keyword("grafana")
-            .regexp(true)
-            .versions(true)
-            .devel(true)
-            .version(">=1.0.0")
-            .failOnNoResult(true)
+            .query("grafana")
+            .regularExpression(true)
+            .includeAllVersions(true)
+            .includePreReleaseVersions(true)
+            .versionConstraint(">=1.0.0")
+            .failIfNoResults(true)
             .build();
 
-    assertEquals("grafana", options.keyword());
-    assertTrue(options.regexp());
-    assertTrue(options.versions());
-    assertTrue(options.devel());
-    assertEquals(">=1.0.0", options.version());
-    assertTrue(options.failOnNoResult());
+    assertEquals("grafana", options.query());
+    assertTrue(options.regularExpression());
+    assertTrue(options.includeAllVersions());
+    assertTrue(options.includePreReleaseVersions());
+    assertEquals(">=1.0.0", options.versionConstraint());
+    assertTrue(options.failIfNoResults());
   }
 
   @Test
   void builderDefaultsToNullValues() {
-    var options = SearchOptions.builder().build();
+    var options = SearchOptions.defaults();
 
-    assertNull(options.keyword());
-    assertNull(options.regexp());
-    assertNull(options.versions());
-    assertNull(options.devel());
-    assertNull(options.version());
-    assertNull(options.failOnNoResult());
+    assertNull(options.query());
+    assertNull(options.regularExpression());
+    assertNull(options.includeAllVersions());
+    assertNull(options.includePreReleaseVersions());
+    assertNull(options.versionConstraint());
+    assertNull(options.failIfNoResults());
   }
 
   @Test
   void builderCanSetFalseFlags() {
     var options =
         SearchOptions.builder()
-            .regexp(false)
-            .versions(false)
-            .devel(false)
-            .failOnNoResult(false)
+            .regularExpression(false)
+            .includeAllVersions(false)
+            .includePreReleaseVersions(false)
+            .failIfNoResults(false)
             .build();
 
-    assertFalse(options.regexp());
-    assertFalse(options.versions());
-    assertFalse(options.devel());
-    assertFalse(options.failOnNoResult());
+    assertFalse(options.regularExpression());
+    assertFalse(options.includeAllVersions());
+    assertFalse(options.includePreReleaseVersions());
+    assertFalse(options.failIfNoResults());
   }
 }

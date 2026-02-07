@@ -4,7 +4,6 @@ import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
 
 import dev.nthings.helm4j.exceptions.HelmException;
-import dev.nthings.helm4j.model.ShowMode;
 import dev.nthings.helm4j.options.SearchOptions;
 import dev.nthings.helm4j.options.ShowOptions;
 
@@ -13,8 +12,9 @@ import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class HelmClientTest {
 
@@ -32,16 +32,25 @@ class HelmClientTest {
             jsonSearchInvoker("{\"results\":[]}"),
             ptr -> {});
 
-    var options = ShowOptions.builder().repoUrl("https://example.com/charts").build();
-    assertEquals(ShowMode.CHART, client.showChart("hello", options).mode());
-    assertEquals(ShowMode.VALUES, client.showValues("hello", options).mode());
-    assertEquals(ShowMode.README, client.showReadme("hello", options).mode());
+    var options = ShowOptions.builder().repositoryUrl("https://example.com/charts").build();
+
+    var chart = client.showChart("hello", options);
+    assertEquals("hello", chart.chartReference());
+    assertEquals("name: hello", chart.metadataYaml());
+
+    var values = client.showValues("hello", options);
+    assertEquals("hello", values.chartReference());
+    assertEquals("message: hello", values.valuesYaml());
+
+    var readme = client.showReadme("hello", options);
+    assertEquals("hello", readme.chartReference());
+    assertEquals("# hello", readme.readmeText());
 
     var all = client.showAll("hello", options);
-    assertEquals(ShowMode.ALL, all.mode());
-    assertNotNull(all.sections());
-    assertEquals("name: hello", all.sections().chart());
-    assertEquals("message: hello", all.sections().values());
+    assertEquals("name: hello", all.metadataYaml());
+    assertEquals("message: hello", all.valuesYaml());
+    assertEquals("# hello", all.readmeText());
+    assertEquals(1, all.customResourceDefinitions().size());
   }
 
   @Test
@@ -59,10 +68,26 @@ class HelmClientTest {
                 """),
             ptr -> {});
 
-    var response = client.search(SearchOptions.builder().keyword("hello").build());
-    assertEquals(1, response.results().size());
-    assertEquals("repo/hello", response.results().getFirst().name());
-    assertEquals("1.2.3", response.results().getFirst().version());
+    var response = client.search(SearchOptions.builder().query("hello").build());
+    assertEquals(1, response.size());
+    assertEquals("repo/hello", response.charts().getFirst().name());
+    assertEquals("1.2.3", response.charts().getFirst().version());
+  }
+
+  @Test
+  void searchStringOverloadUsesQuery() {
+    var client =
+        new HelmClient(
+            JsonMapper.builder().build(),
+            jsonShowInvoker(showPayload("all")),
+            jsonShowInvoker(showPayload("all")),
+            jsonShowInvoker(showPayload("all")),
+            jsonShowInvoker(showPayload("all")),
+            jsonSearchInvoker("{\"results\":[]}"),
+            ptr -> {});
+
+    var response = client.search("hello");
+    assertTrue(response.isEmpty());
   }
 
   @Test
@@ -85,7 +110,7 @@ class HelmClientTest {
             HelmException.class,
             () ->
                 client.showChart(
-                    "hello", ShowOptions.builder().repoUrl("https://example.com").build()));
+                    "hello", ShowOptions.builder().repositoryUrl("https://example.com").build()));
     assertEquals("boom", ex.getMessage());
     assertEquals("runShow", ex.stage());
     assertEquals("chart", ex.mode());
@@ -107,7 +132,7 @@ class HelmClientTest {
     var ex =
         assertThrows(
             HelmException.class,
-            () -> client.search(SearchOptions.builder().keyword("missing").build()));
+            () -> client.search(SearchOptions.builder().query("missing").build()));
     assertEquals("not found", ex.getMessage());
     assertEquals("searchRepo", ex.stage());
   }
@@ -124,9 +149,7 @@ class HelmClientTest {
             jsonSearchInvoker("{\"results\":[]}"),
             ptr -> {});
 
-    assertThrows(
-        IllegalStateException.class,
-        () -> badShowClient.showChart("hello", ShowOptions.builder().build()));
+    assertThrows(IllegalStateException.class, () -> badShowClient.showChart("hello"));
 
     var badSearchClient =
         new HelmClient(
@@ -140,27 +163,22 @@ class HelmClientTest {
 
     assertThrows(
         IllegalStateException.class,
-        () -> badSearchClient.search(SearchOptions.builder().keyword("hello").build()));
+        () -> badSearchClient.search(SearchOptions.builder().query("hello").build()));
   }
 
   @Test
-  void invalidTypedPayloadFailsToDecode() {
+  void unexpectedModeFailsFast() {
     var client =
         new HelmClient(
             JsonMapper.builder().build(),
-            jsonShowInvoker(
-                """
-                {"mode":"unknown","chartRef":"hello","chartPath":"/tmp/hello","sections":{},"cliOutput":"ok"}
-                """),
+            jsonShowInvoker(showPayload("values")),
             jsonShowInvoker(showPayload("values")),
             jsonShowInvoker(showPayload("readme")),
             jsonShowInvoker(showPayload("all")),
             jsonSearchInvoker("{\"results\":[]}"),
             ptr -> {});
 
-    assertThrows(
-        IllegalStateException.class,
-        () -> client.showChart("hello", ShowOptions.builder().build()));
+    assertThrows(IllegalStateException.class, () -> client.showChart("hello"));
   }
 
   @Test
@@ -175,10 +193,9 @@ class HelmClientTest {
             jsonSearchInvoker("{\"results\":[]}"),
             ptr -> {});
 
-    assertThrows(
-        NullPointerException.class, () -> client.showChart(null, ShowOptions.builder().build()));
+    assertThrows(NullPointerException.class, () -> client.showChart(null));
     assertThrows(NullPointerException.class, () -> client.showAll("hello", null));
-    assertThrows(NullPointerException.class, () -> client.search(null));
+    assertThrows(NullPointerException.class, () -> client.search((SearchOptions) null));
   }
 
   @Test
@@ -193,12 +210,30 @@ class HelmClientTest {
             options -> MemorySegment.NULL,
             ptr -> {});
 
+    assertThrows(IllegalStateException.class, () -> client.showChart("hello"));
+    assertThrows(IllegalStateException.class, () -> client.search("hello"));
+  }
+
+  @Test
+  void immutableCollectionsReturnedToConsumers() {
+    var client =
+        new HelmClient(
+            JsonMapper.builder().build(),
+            jsonShowInvoker(showPayload("chart")),
+            jsonShowInvoker(showPayload("values")),
+            jsonShowInvoker(showPayload("readme")),
+            jsonShowInvoker(showPayload("all")),
+            jsonSearchInvoker(
+                "{\"results\":[{\"name\":\"x\",\"version\":\"1\",\"appVersion\":\"1\",\"description\":\"d\",\"score\":1}]}"),
+            ptr -> {});
+
+    var all = client.showAll("hello");
     assertThrows(
-        IllegalStateException.class,
-        () -> client.showChart("hello", ShowOptions.builder().build()));
-    assertThrows(
-        IllegalStateException.class,
-        () -> client.search(SearchOptions.builder().keyword("hello").build()));
+        UnsupportedOperationException.class, () -> all.customResourceDefinitions().add("x"));
+
+    var search = client.search("x");
+    assertFalse(search.charts().isEmpty());
+    assertThrows(UnsupportedOperationException.class, () -> search.charts().clear());
   }
 
   private HelmClient.NativeShowInvoker jsonShowInvoker(String json) {

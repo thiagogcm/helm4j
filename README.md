@@ -1,6 +1,38 @@
 # Helm4j
 
-Helm4j is a Java library that provides bindings to the Helm package manager for Kubernetes using Go's c-shared build mode and Java's FFM APIs with Jextract codegen tool.
+Helm4j is a Java library that provides bindings to Helm for Kubernetes, backed by Go `c-shared` binaries and Java FFM APIs.
+
+## Public API (Java 25)
+
+`HelmClient` exposes a Java-first surface and hides native/jextract payload details.
+
+```java
+import dev.nthings.helm4j.client.HelmClient;
+import dev.nthings.helm4j.client.HelmClientFactory;
+import dev.nthings.helm4j.options.SearchOptions;
+import dev.nthings.helm4j.options.ShowOptions;
+
+var client = HelmClientFactory.create().newClient();
+
+var chart = client.showChart("bitnami/nginx");
+System.out.println(chart.metadataYaml());
+
+var values =
+    client.showValues(
+        "bitnami/nginx",
+        ShowOptions.builder().version("19.0.0").includePreReleaseVersions(false).build());
+System.out.println(values.valuesYaml());
+
+var search =
+    client.search(
+        SearchOptions.builder()
+            .query("nginx")
+            .includeAllVersions(false)
+            .versionConstraint(">=1.0.0")
+            .build());
+
+search.first().ifPresent(result -> System.out.println(result.name()));
+```
 
 ## Build libhelm4j and generate bindings
 
