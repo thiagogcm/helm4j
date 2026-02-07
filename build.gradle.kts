@@ -1,12 +1,8 @@
 plugins {
     java
-    application
     jacoco
     alias(libs.plugins.spotless)
-    alias(libs.plugins.graalvm)
-    alias(libs.plugins.cyclonedx)
     alias(libs.plugins.versionsPlugin)
-    alias(libs.plugins.shadow)
 }
 
 group = "dev.nthings.helm4j"
@@ -15,11 +11,6 @@ version = "1.0-SNAPSHOT"
 repositories {
     mavenCentral()
     gradlePluginPortal()
-}
-
-application {
-    mainClass = "dev.nthings.helm4j.App"
-    applicationDefaultJvmArgs = listOf("--enable-native-access=ALL-UNNAMED")
 }
 
 java {
@@ -37,16 +28,8 @@ sourceSets {
 }
 
 dependencies {
-    // Logging
+    // Logging API
     implementation(libs.slf4j.api)
-    implementation(libs.jul.slf4j)
-    implementation(platform(libs.log4j.bom))
-    implementation(libs.log4j.api)
-    implementation(libs.log4j.core)
-    implementation(libs.log4j.slf4j2.impl)
-
-    // Guava
-    implementation(libs.guava)
 
     // Jackson
     implementation(platform(libs.jackson.bom))
@@ -61,15 +44,29 @@ dependencies {
     // Mockito
     testImplementation(libs.mockito.core)
     testImplementation(libs.mockito.junit.jupiter)
+
+    // Test logging backend
+    testRuntimeOnly(platform(libs.log4j.bom))
+    testRuntimeOnly(libs.log4j.api)
+    testRuntimeOnly(libs.log4j.core)
+    testRuntimeOnly(libs.log4j.slf4j2.impl)
 }
+
+val jacocoExcludes = listOf("dev/nthings/helm4j/jextract/**")
 
 tasks.test {
     useJUnitPlatform()
     jvmArgs("--enable-native-access=ALL-UNNAMED")
+    finalizedBy(tasks.jacocoTestReport)
 }
 
 tasks.jacocoTestReport {
     dependsOn(tasks.test)
+    classDirectories.setFrom(
+        sourceSets.main.get().output.asFileTree.matching {
+            exclude(jacocoExcludes)
+        }
+    )
     reports {
         xml.required = true
         html.required = true
@@ -77,18 +74,25 @@ tasks.jacocoTestReport {
 }
 
 tasks.jacocoTestCoverageVerification {
+    dependsOn(tasks.test)
+    classDirectories.setFrom(
+        sourceSets.main.get().output.asFileTree.matching {
+            exclude(jacocoExcludes)
+        }
+    )
     violationRules {
         rule {
             limit {
-                minimum = "0.6".toBigDecimal()
+                counter = "LINE"
+                value = "COVEREDRATIO"
+                minimum = "0.85".toBigDecimal()
             }
         }
     }
 }
 
-tasks.shadowJar {
-    duplicatesStrategy = DuplicatesStrategy.INCLUDE
-    mergeServiceFiles()
+tasks.check {
+    dependsOn(tasks.jacocoTestCoverageVerification)
 }
 
 spotless {
@@ -134,74 +138,4 @@ spotless {
         trimTrailingWhitespace()
         endWithNewline()
     }
-}
-
-// GraalVM Native Image configuration
-graalvmNative {
-    metadataRepository {
-        enabled.set(true)
-        version.set("0.3.33")
-    }
-
-    binaries {
-        all {
-            buildArgs.addAll(listOf(
-                "-H:ConfigurationFileDirectories=${project.layout.buildDirectory.get().asFile}/native/agent-config",
-                "--add-exports=java.base/sun.security.util=ALL-UNNAMED",
-                "--add-opens=java.base/java.io=ALL-UNNAMED"
-            ))
-        }
-
-        named("main") {
-            verbose.set(true)
-            imageName.set("${project.name}")
-            mainClass.set("dev.nthings.helm4j.App")
-        }
-    }
-}
-
-tasks.cyclonedxDirectBom {
-    includeConfigs.set(listOf("runtimeClasspath", "compileClasspath"))
-    includeMetadataResolution.set(true)
-    includeBuildSystem.set(true)
-}
-
-// --- Native image metadata collection via tracing agent ---
-val agentSessionDir = layout.buildDirectory.dir("native/agent-output/run")
-val agentMergedDir = layout.buildDirectory.dir("native/agent-config")
-
-tasks.register<JavaExec>("runWithAgent") {
-    group = "native"
-    description = "Run the app with GraalVM native-image agent to collect metadata."
-
-    // Ensure we run with a GraalVM JDK that provides the agent library
-    javaLauncher.set(javaToolchains.launcherFor {
-        languageVersion.set(JavaLanguageVersion.of(25))
-        vendor.set(JvmVendorSpec.GRAAL_VM)
-    })
-
-    mainClass.set(application.mainClass)
-    classpath = sourceSets.main.get().runtimeClasspath
-    workingDir = project.projectDir
-
-    // Collect metadata into build/native/agent-output/run (plugin will also accept this layout)
-    jvmArgs = listOf(
-        "-agentlib:native-image-agent=config-output-dir=${agentSessionDir.get().asFile.absolutePath},builtin-caller-filter=true,builtin-heuristic-filter=true,experimental-unsafe-allocation-support=true,track-reflection-metadata=true"
-    )
-}
-
-tasks.register<Copy>("copyNativeAgentConfig") {
-    group = "native"
-    description = "Merge native-agent JSON configs into a single directory for native-image."
-    dependsOn("runWithAgent")
-
-    from(fileTree(agentSessionDir) {
-        include("**/*.json")
-    })
-    into(agentMergedDir)
-}
-
-// Ensure nativeCompile consumes the collected configuration
-tasks.named("nativeCompile") {
-    dependsOn("copyNativeAgentConfig")
 }
