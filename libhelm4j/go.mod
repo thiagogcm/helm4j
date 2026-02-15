@@ -1,11 +1,11 @@
 module github.com/thiagogcm/libhelm4j
 
-go 1.25.7
+go 1.26
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	go.yaml.in/yaml/v3 v3.0.4
-	helm.sh/helm/v4 v4.1.0
+	helm.sh/helm/v4 v4.1.1
 	k8s.io/cli-runtime v0.35.0
 )
 
