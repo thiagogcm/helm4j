@@ -9,6 +9,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -87,16 +88,31 @@ func buildRegistryClient(settings *cli.EnvSettings, opts registryOptions) (*regi
 		if err != nil {
 			return nil, err
 		}
-		clientOpts = append(clientOpts, registry.ClientOptHTTPClient(&http.Client{Transport: &http.Transport{TLSClientConfig: tlsConfig}}))
+
+		retryTransport := registry.NewTransport(settings.Debug)
+		httpTransport, err := unwrapHTTPTransport(retryTransport.Base)
+		if err != nil {
+			return nil, err
+		}
+		httpTransport.TLSClientConfig = tlsConfig
+
+		clientOpts = append(clientOpts, registry.ClientOptHTTPClient(&http.Client{Transport: retryTransport}))
 	}
 
 	return registry.NewClient(clientOpts...)
 }
 
 func buildTLSConfig(opts registryOptions) (*tls.Config, error) {
-	tlsConf := &tls.Config{InsecureSkipVerify: opts.InsecureSkipTLSVerify} // #nosec G402
+	tlsConf := &tls.Config{ // #nosec G402
+		InsecureSkipVerify: opts.InsecureSkipTLSVerify,
+		MinVersion:         tls.VersionTLS12,
+	}
 
 	if opts.CertFile != "" || opts.KeyFile != "" {
+		if opts.CertFile == "" || opts.KeyFile == "" {
+			return nil, errors.New("both certFile and keyFile must be provided together")
+		}
+
 		cert, err := tls.LoadX509KeyPair(opts.CertFile, opts.KeyFile)
 		if err != nil {
 			return nil, fmt.Errorf("load client certificate: %w", err)
@@ -117,6 +133,21 @@ func buildTLSConfig(opts registryOptions) (*tls.Config, error) {
 	}
 
 	return tlsConf, nil
+}
+
+func unwrapHTTPTransport(roundTripper http.RoundTripper) (*http.Transport, error) {
+	if roundTripper == nil {
+		return nil, errors.New("registry transport is nil")
+	}
+
+	switch transport := roundTripper.(type) {
+	case *http.Transport:
+		return transport, nil
+	case *registry.LoggingTransport:
+		return unwrapHTTPTransport(transport.RoundTripper)
+	default:
+		return nil, fmt.Errorf("unsupported registry transport %T", roundTripper)
+	}
 }
 
 // locateAndLoadChart resolves the chart reference to disk and loads it.

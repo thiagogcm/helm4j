@@ -211,16 +211,19 @@ func buildShowSections(client *action.Show, ch *chart.Chart) (ShowSections, erro
 
 func findReadmeFile(files []*common.File) (file *common.File) {
 	for _, file := range files {
-		for _, name := range readmeFileNames {
-			if file == nil {
-				continue
-			}
-			if strings.EqualFold(file.Name, name) {
-				return file
-			}
+		if file == nil {
+			continue
+		}
+
+		if _, ok := readmeFileNames[strings.ToLower(file.Name)]; ok {
+			return file
 		}
 	}
 	return nil
 }
 
-var readmeFileNames = []string{"readme.md", "readme.txt", "readme"}
+var readmeFileNames = map[string]struct{}{
+	"readme.md":  {},
+	"readme.txt": {},
+	"readme":     {},
+}

@@ -21,6 +21,15 @@ type SearchError struct {
 	Error string `json:"error"`
 }
 
+const (
+	stageParseOptions   = "parseOptions"
+	stageRunShow        = "runShow"
+	stageRunSearch      = "runSearch"
+	stageMarshalPayload = "marshalResponse"
+	stagePanic          = "panic"
+	stageMarshalError   = "marshalError"
+)
+
 //export FreeString
 func FreeString(str *C.char) {
 	C.free(unsafe.Pointer(str))
@@ -64,22 +73,22 @@ func HelmSearch(options *C.char) (result *C.char) {
 	searchLog.Debug("handling native helm search request")
 
 	goOptions := goString(options)
-	opts, err := parseSearchOptions(goOptions)
+	opts, err := parseOptions[SearchOptions](goOptions)
 	if err != nil {
 		searchLog.Warn("failed to parse search options", slog.Any("error", err))
-		return toCString(encodeSearchError("parseOptions", err))
+		return toCString(encodeSearchError(stageParseOptions, err))
 	}
 
 	results, err := runSearch(opts)
 	if err != nil {
 		searchLog.Warn("search operation failed", slog.Any("error", err))
-		return toCString(encodeSearchError("runSearch", err))
+		return toCString(encodeSearchError(stageRunSearch, err))
 	}
 
 	resp, err := marshalJSON(SearchResponse{Results: results})
 	if err != nil {
 		searchLog.Error("failed to marshal search response", slog.Any("error", err))
-		return toCString(encodeSearchError("marshalResponse", err))
+		return toCString(encodeSearchError(stageMarshalPayload, err))
 	}
 
 	searchLog.Debug("native helm search request completed", slog.Int("resultCount", len(results)))
@@ -98,7 +107,7 @@ func recoverShowPanic(result **C.char, mode action.ShowOutputFormat, chartRef *C
 			slog.Any("panic", recovered),
 			slog.String("stack", string(debug.Stack())),
 		)
-		*result = toCString(encodeShowError(mode, goChartRef, "panic", fmt.Errorf("panic: %v", recovered)))
+		*result = toCString(encodeShowError(mode, goChartRef, stagePanic, fmt.Errorf("panic: %v", recovered)))
 	}
 }
 
@@ -110,7 +119,7 @@ func recoverSearchPanic(result **C.char) {
 			slog.Any("panic", recovered),
 			slog.String("stack", string(debug.Stack())),
 		)
-		*result = toCString(encodeSearchError("panic", fmt.Errorf("panic: %v", recovered)))
+		*result = toCString(encodeSearchError(stagePanic, fmt.Errorf("panic: %v", recovered)))
 	}
 }
 
@@ -128,14 +137,14 @@ func dispatchShow(mode action.ShowOutputFormat, chartRef *C.char, options *C.cha
 	parsedOpts, err := parseShowOptions(goOptions)
 	if err != nil {
 		showLog.Warn("failed to parse show options", slog.Any("error", err))
-		payload := encodeShowError(mode, goChart, "parseOptions", err)
+		payload := encodeShowError(mode, goChart, stageParseOptions, err)
 		return toCString(payload)
 	}
 
 	result, err := runShow(mode, goChart, parsedOpts)
 	if err != nil {
 		showLog.Warn("show operation failed", slog.Any("error", err))
-		payload := encodeShowError(mode, goChart, "runShow", err)
+		payload := encodeShowError(mode, goChart, stageRunShow, err)
 		return toCString(payload)
 	}
 
@@ -144,27 +153,19 @@ func dispatchShow(mode action.ShowOutputFormat, chartRef *C.char, options *C.cha
 	return toCString(result)
 }
 
-func parseSearchOptions(raw string) (SearchOptions, error) {
-	if strings.TrimSpace(raw) == "" {
-		return SearchOptions{}, nil
-	}
-
-	var options SearchOptions
-	if err := json.Unmarshal([]byte(raw), &options); err != nil {
-		return SearchOptions{}, fmt.Errorf("decode options: %w", err)
-	}
-
-	return options, nil
+func parseShowOptions(raw string) (ShowOptions, error) {
+	return parseOptions[ShowOptions](raw)
 }
 
-func parseShowOptions(raw string) (ShowOptions, error) {
+func parseOptions[T any](raw string) (T, error) {
+	var zero T
 	if strings.TrimSpace(raw) == "" {
-		return ShowOptions{}, nil
+		return zero, nil
 	}
 
-	var options ShowOptions
+	var options T
 	if err := json.Unmarshal([]byte(raw), &options); err != nil {
-		return ShowOptions{}, fmt.Errorf("decode options: %w", err)
+		return zero, fmt.Errorf("decode options: %w", err)
 	}
 
 	return options, nil
@@ -185,7 +186,7 @@ func encodeShowError(mode action.ShowOutputFormat, chartRef string, stage string
 			slog.String("stage", stage),
 			slog.Any("error", marshalErr),
 		)
-		return `{"error":"failed to encode show error payload","stage":"marshalError"}`
+		return `{"error":"failed to encode show error payload","stage":"` + stageMarshalError + `"}`
 	}
 	return payload
 }
@@ -198,7 +199,7 @@ func encodeSearchError(stage string, err error) string {
 			slog.String("stage", stage),
 			slog.Any("error", marshalErr),
 		)
-		return `{"error":"failed to encode search error payload","stage":"marshalError"}`
+		return `{"error":"failed to encode search error payload","stage":"` + stageMarshalError + `"}`
 	}
 	return payload
 }

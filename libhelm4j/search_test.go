@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -26,19 +27,39 @@ func TestSetNativeLogLevelFromEnv(t *testing.T) {
 	}
 }
 
-func TestRunSearchMissingRepositoryConfigReturnsEmptyResults(t *testing.T) {
+func TestRunSearchMissingRepositoryConfigReturnsError(t *testing.T) {
 	testHome := t.TempDir()
 	repoConfig := filepath.Join(testHome, "repositories.yaml")
 	repoCache := filepath.Join(testHome, "repository-cache")
 
 	configureSearchTestEnv(t, testHome, repoConfig, repoCache)
 
-	results, err := runSearch(SearchOptions{Keyword: "demo"})
-	if err != nil {
-		t.Fatalf("expected missing repository config to return empty results, got error: %v", err)
+	_, err := runSearch(SearchOptions{Keyword: "demo"})
+	if err == nil {
+		t.Fatal("expected missing repository config to return an error")
 	}
-	if len(results) != 0 {
-		t.Fatalf("expected no results, got %d", len(results))
+	if !errors.Is(err, errNoRepositoriesConfigured) {
+		t.Fatalf("expected no repositories configured error, got: %v", err)
+	}
+}
+
+func TestRunSearchEmptyRepositoryConfigReturnsError(t *testing.T) {
+	testHome := t.TempDir()
+	repoConfig := filepath.Join(testHome, "repositories.yaml")
+	repoCache := filepath.Join(testHome, "repository-cache")
+
+	if err := os.WriteFile(repoConfig, []byte("repositories: []\n"), 0o600); err != nil {
+		t.Fatalf("write empty repository config: %v", err)
+	}
+
+	configureSearchTestEnv(t, testHome, repoConfig, repoCache)
+
+	_, err := runSearch(SearchOptions{Keyword: "demo"})
+	if err == nil {
+		t.Fatal("expected empty repository config to return an error")
+	}
+	if !errors.Is(err, errNoRepositoriesConfigured) {
+		t.Fatalf("expected no repositories configured error, got: %v", err)
 	}
 }
 
