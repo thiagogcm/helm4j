@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"go.yaml.in/yaml/v3"
@@ -57,12 +59,21 @@ type ShowError struct {
 }
 
 func runShow(mode action.ShowOutputFormat, chartRef string, opts ShowOptions) (string, error) {
+	showLog := nativeLogger.With(
+		slog.String("operation", "show"),
+		slog.String("mode", mode.String()),
+		slog.String("chartRef", chartRef),
+	)
+
 	if strings.TrimSpace(chartRef) == "" {
-		return "", fmt.Errorf("chart reference is required")
+		return "", errors.New("chart reference is required")
 	}
+
+	showLog.Debug("running helm show")
 
 	env, err := newHelmEnv()
 	if err != nil {
+		showLog.Warn("failed to initialize helm environment", slog.Any("error", err))
 		return "", fmt.Errorf("bootstrap helm: %w", err)
 	}
 
@@ -76,6 +87,7 @@ func runShow(mode action.ShowOutputFormat, chartRef string, opts ShowOptions) (s
 		Password:              opts.Password,
 	})
 	if err != nil {
+		showLog.Warn("failed to initialize registry client", slog.Any("error", err))
 		return "", fmt.Errorf("registry client: %w", err)
 	}
 	env.Config.RegistryClient = regClient
@@ -86,18 +98,27 @@ func runShow(mode action.ShowOutputFormat, chartRef string, opts ShowOptions) (s
 
 	chartPath, ch, err := locateAndLoadChart(client, env.Settings, chartRef)
 	if err != nil {
+		showLog.Warn("failed to locate or load chart", slog.Any("error", err))
 		return "", err
 	}
 
 	sections, err := buildShowSections(client, ch)
 	if err != nil {
+		showLog.Warn("failed to build show sections", slog.Any("error", err))
 		return "", err
 	}
 
 	cliOut, err := client.Run(chartPath)
 	if err != nil {
+		showLog.Warn("helm show command failed", slog.Any("error", err))
 		return "", fmt.Errorf("helm show: %w", err)
 	}
+
+	showLog.Debug(
+		"helm show command completed",
+		slog.String("chartPath", chartPath),
+		slog.Int("cliOutputLength", len(cliOut)),
+	)
 
 	resp := ShowResponse{
 		Mode:      mode.String(),
@@ -109,8 +130,11 @@ func runShow(mode action.ShowOutputFormat, chartRef string, opts ShowOptions) (s
 
 	result, err := marshalJSON(resp)
 	if err != nil {
+		showLog.Warn("failed to marshal show response", slog.Any("error", err))
 		return "", err
 	}
+
+	showLog.Debug("helm show completed successfully")
 
 	return result, nil
 }

@@ -1,7 +1,10 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
+	"log/slog"
 	"path/filepath"
 
 	"github.com/Masterminds/semver/v3"
@@ -35,6 +38,14 @@ type SearchResponse struct {
 }
 
 func runSearch(opts SearchOptions) ([]SearchResult, error) {
+	nativeLogger.Debug(
+		"running helm search",
+		slog.Bool("regexp", opts.Regexp),
+		slog.Bool("versions", opts.Versions),
+		slog.Bool("devel", opts.Devel),
+		slog.Bool("failOnNoResult", opts.FailOnNoResult),
+	)
+
 	env, err := newHelmEnv()
 	if err != nil {
 		return nil, fmt.Errorf("bootstrap helm: %w", err)
@@ -45,7 +56,21 @@ func runSearch(opts SearchOptions) ([]SearchResult, error) {
 
 	rf, err := repo.LoadFile(repoFile)
 	if err != nil {
-		// If repo file doesn't exist or is empty, return empty results
+		if errors.Is(err, fs.ErrNotExist) {
+			nativeLogger.Debug(
+				"repository configuration missing; returning empty search results",
+				slog.String("repoFile", repoFile),
+			)
+			return []SearchResult{}, nil
+		}
+		return nil, fmt.Errorf("load repository config %q: %w", repoFile, err)
+	}
+
+	if len(rf.Repositories) == 0 {
+		nativeLogger.Debug(
+			"repository configuration is empty; returning empty search results",
+			slog.String("repoFile", repoFile),
+		)
 		return []SearchResult{}, nil
 	}
 
@@ -55,6 +80,20 @@ func runSearch(opts SearchOptions) ([]SearchResult, error) {
 		f := filepath.Join(repoCacheDir, helmpath.CacheIndexFile(n))
 		ind, err := repo.LoadIndexFile(f)
 		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				nativeLogger.Warn(
+					"repository index not found; skipping repository",
+					slog.String("repository", n),
+					slog.String("indexFile", f),
+				)
+			} else {
+				nativeLogger.Warn(
+					"failed to load repository index; skipping repository",
+					slog.String("repository", n),
+					slog.String("indexFile", f),
+					slog.Any("error", err),
+				)
+			}
 			continue
 		}
 		i.AddRepo(n, ind, opts.Versions || len(opts.Version) > 0)
@@ -94,6 +133,12 @@ func runSearch(opts SearchOptions) ([]SearchResult, error) {
 		}
 		v, err := semver.NewVersion(r.Chart.Version)
 		if err != nil {
+			nativeLogger.Debug(
+				"skipping chart with invalid version",
+				slog.String("name", r.Name),
+				slog.String("version", r.Chart.Version),
+				slog.Any("error", err),
+			)
 			continue
 		}
 		if constraint.Check(v) {
@@ -103,7 +148,7 @@ func runSearch(opts SearchOptions) ([]SearchResult, error) {
 	}
 
 	if len(filtered) == 0 && opts.FailOnNoResult {
-		return nil, fmt.Errorf("no results found")
+		return nil, errors.New("no results found")
 	}
 
 	searchResults := make([]SearchResult, len(filtered))
@@ -116,6 +161,8 @@ func runSearch(opts SearchOptions) ([]SearchResult, error) {
 			Score:       r.Score,
 		}
 	}
+
+	nativeLogger.Debug("helm search completed", slog.Int("resultCount", len(searchResults)))
 
 	return searchResults, nil
 }

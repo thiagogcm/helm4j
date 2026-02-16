@@ -8,6 +8,8 @@ import "C"
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
+	"runtime/debug"
 	"strings"
 	"unsafe"
 
@@ -58,34 +60,56 @@ func HelmShowCRDs(chartRef *C.char, options *C.char) (result *C.char) {
 func HelmSearch(options *C.char) (result *C.char) {
 	defer recoverSearchPanic(&result)
 
+	searchLog := nativeLogger.With(slog.String("operation", "search"))
+	searchLog.Debug("handling native helm search request")
+
 	goOptions := goString(options)
 	opts, err := parseSearchOptions(goOptions)
 	if err != nil {
+		searchLog.Warn("failed to parse search options", slog.Any("error", err))
 		return toCString(encodeSearchError("parseOptions", err))
 	}
 
 	results, err := runSearch(opts)
 	if err != nil {
+		searchLog.Warn("search operation failed", slog.Any("error", err))
 		return toCString(encodeSearchError("runSearch", err))
 	}
 
 	resp, err := marshalJSON(SearchResponse{Results: results})
 	if err != nil {
+		searchLog.Error("failed to marshal search response", slog.Any("error", err))
 		return toCString(encodeSearchError("marshalResponse", err))
 	}
+
+	searchLog.Debug("native helm search request completed", slog.Int("resultCount", len(results)))
 
 	return toCString(resp)
 }
 
 func recoverShowPanic(result **C.char, mode action.ShowOutputFormat, chartRef *C.char) {
 	if recovered := recover(); recovered != nil {
-		*result =
-			toCString(encodeShowError(mode, goString(chartRef), "panic", fmt.Errorf("panic: %v", recovered)))
+		goChartRef := goString(chartRef)
+		nativeLogger.Error(
+			"panic recovered in helm show",
+			slog.String("operation", "show"),
+			slog.String("mode", mode.String()),
+			slog.String("chartRef", goChartRef),
+			slog.Any("panic", recovered),
+			slog.String("stack", string(debug.Stack())),
+		)
+		*result = toCString(encodeShowError(mode, goChartRef, "panic", fmt.Errorf("panic: %v", recovered)))
 	}
 }
 
 func recoverSearchPanic(result **C.char) {
 	if recovered := recover(); recovered != nil {
+		nativeLogger.Error(
+			"panic recovered in helm search",
+			slog.String("operation", "search"),
+			slog.Any("panic", recovered),
+			slog.String("stack", string(debug.Stack())),
+		)
 		*result = toCString(encodeSearchError("panic", fmt.Errorf("panic: %v", recovered)))
 	}
 }
@@ -93,18 +117,29 @@ func recoverSearchPanic(result **C.char) {
 func dispatchShow(mode action.ShowOutputFormat, chartRef *C.char, options *C.char) *C.char {
 	goChart := goString(chartRef)
 	goOptions := goString(options)
+	showLog := nativeLogger.With(
+		slog.String("operation", "show"),
+		slog.String("mode", mode.String()),
+		slog.String("chartRef", goChart),
+	)
+
+	showLog.Debug("handling native helm show request")
 
 	parsedOpts, err := parseShowOptions(goOptions)
 	if err != nil {
+		showLog.Warn("failed to parse show options", slog.Any("error", err))
 		payload := encodeShowError(mode, goChart, "parseOptions", err)
 		return toCString(payload)
 	}
 
 	result, err := runShow(mode, goChart, parsedOpts)
 	if err != nil {
+		showLog.Warn("show operation failed", slog.Any("error", err))
 		payload := encodeShowError(mode, goChart, "runShow", err)
 		return toCString(payload)
 	}
+
+	showLog.Debug("native helm show request completed")
 
 	return toCString(result)
 }
@@ -143,6 +178,13 @@ func encodeShowError(mode action.ShowOutputFormat, chartRef string, stage string
 		Error:    err.Error(),
 	})
 	if marshalErr != nil {
+		nativeLogger.Error(
+			"failed to encode show error payload",
+			slog.String("mode", mode.String()),
+			slog.String("chartRef", chartRef),
+			slog.String("stage", stage),
+			slog.Any("error", marshalErr),
+		)
 		return `{"error":"failed to encode show error payload","stage":"marshalError"}`
 	}
 	return payload
@@ -151,6 +193,11 @@ func encodeShowError(mode action.ShowOutputFormat, chartRef string, stage string
 func encodeSearchError(stage string, err error) string {
 	payload, marshalErr := marshalJSON(SearchError{Stage: stage, Error: err.Error()})
 	if marshalErr != nil {
+		nativeLogger.Error(
+			"failed to encode search error payload",
+			slog.String("stage", stage),
+			slog.Any("error", marshalErr),
+		)
 		return `{"error":"failed to encode search error payload","stage":"marshalError"}`
 	}
 	return payload

@@ -71,8 +71,7 @@ class HelmClientFactoryTest {
 
   private static final class NoOpBindings implements NativeHelmBindings {
     @Override
-    public String show(
-        ShowMode mode, String chartReference, String optionsJson) {
+    public String show(ShowMode mode, String chartReference, String optionsJson) {
       return "{}";
     }
 

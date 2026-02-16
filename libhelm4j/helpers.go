@@ -10,6 +10,8 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -38,20 +40,40 @@ type registryOptions struct {
 // newHelmEnv provisions a fresh Helm CLI environment and configuration.
 // It mirrors the initialization used by the helm CLI so future actions can reuse it.
 func newHelmEnv() (*helmEnv, error) {
+	debugEnabled := setNativeLogLevelFromEnv()
+
 	settings := cli.New()
-	cfg := action.NewConfiguration()
+	settings.Debug = debugEnabled
+
+	cfg := action.NewConfiguration(action.ConfigurationSetLogger(nativeLogger.Handler()))
 	if err := cfg.Init(settings.RESTClientGetter(), settings.Namespace(), os.Getenv("HELM_DRIVER")); err != nil {
 		return nil, fmt.Errorf("init action configuration: %w", err)
 	}
+
+	nativeLogger.Debug("initialized helm environment", slog.String("namespace", settings.Namespace()))
+
 	return &helmEnv{Settings: settings, Config: cfg}, nil
 }
 
 // buildRegistryClient constructs a registry client honoring common Helm flags.
 func buildRegistryClient(settings *cli.EnvSettings, opts registryOptions) (*registry.Client, error) {
+	writer := io.Discard
+	if settings.Debug {
+		writer = os.Stderr
+	}
+
+	nativeLogger.Debug(
+		"building registry client",
+		slog.Bool("plainHTTP", opts.PlainHTTP),
+		slog.Bool("insecureSkipTLSVerify", opts.InsecureSkipTLSVerify),
+		slog.Bool("hasClientCert", opts.CertFile != "" || opts.KeyFile != ""),
+		slog.Bool("hasCAFile", opts.CaFile != ""),
+	)
+
 	clientOpts := []registry.ClientOption{
 		registry.ClientOptDebug(settings.Debug),
 		registry.ClientOptEnableCache(true),
-		registry.ClientOptWriter(os.Stderr),
+		registry.ClientOptWriter(writer),
 		registry.ClientOptCredentialsFile(settings.RegistryConfig),
 		registry.ClientOptBasicAuth(opts.Username, opts.Password),
 	}
@@ -107,6 +129,12 @@ func locateAndLoadChart(client *action.Show, settings *cli.EnvSettings, chartRef
 	if err != nil {
 		return "", nil, fmt.Errorf("locate chart: %w", err)
 	}
+
+	nativeLogger.Debug(
+		"resolved chart reference",
+		slog.String("chartRef", chartRef),
+		slog.String("chartPath", chartPath),
+	)
 
 	ch, err := loader.Load(chartPath)
 	if err != nil {
