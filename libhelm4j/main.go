@@ -21,6 +21,7 @@ import (
 
 	"github.com/thiagogcm/libhelm4j/internal/bridge"
 	"github.com/thiagogcm/libhelm4j/internal/helmlog"
+	"github.com/thiagogcm/libhelm4j/internal/repomgr"
 	"github.com/thiagogcm/libhelm4j/internal/search"
 	"github.com/thiagogcm/libhelm4j/internal/show"
 )
@@ -124,6 +125,88 @@ func HelmSearch(options *C.char) (result *C.char) {
 }
 
 // ---------------------------------------------------------------------------
+// Repo exports
+// ---------------------------------------------------------------------------
+
+//export HelmRepoAdd
+func HelmRepoAdd(options *C.char) (result *C.char) {
+	defer recoverRepoPanic(&result, "add")
+	return dispatchRepo("add", options, func(raw string) (string, error) {
+		opts, err := bridge.ParseOptions[repomgr.AddOptions](raw)
+		if err != nil {
+			return "", err
+		}
+		res, err := repomgr.Add(opts)
+		if err != nil {
+			return "", err
+		}
+		return bridge.MarshalJSON(res)
+	})
+}
+
+//export HelmRepoUpdate
+func HelmRepoUpdate(options *C.char) (result *C.char) {
+	defer recoverRepoPanic(&result, "update")
+	return dispatchRepo("update", options, func(raw string) (string, error) {
+		opts, err := bridge.ParseOptions[repomgr.UpdateOptions](raw)
+		if err != nil {
+			return "", err
+		}
+		res, err := repomgr.Update(opts)
+		if err != nil {
+			return "", err
+		}
+		return bridge.MarshalJSON(res)
+	})
+}
+
+//export HelmRepoList
+func HelmRepoList(options *C.char) (result *C.char) {
+	defer recoverRepoPanic(&result, "list")
+	return dispatchRepo("list", options, func(raw string) (string, error) {
+		opts, err := bridge.ParseOptions[repomgr.ListOptions](raw)
+		if err != nil {
+			return "", err
+		}
+		res, err := repomgr.List(opts)
+		if err != nil {
+			return "", err
+		}
+		return bridge.MarshalJSON(res)
+	})
+}
+
+//export HelmRepoRemove
+func HelmRepoRemove(options *C.char) (result *C.char) {
+	defer recoverRepoPanic(&result, "remove")
+	return dispatchRepo("remove", options, func(raw string) (string, error) {
+		opts, err := bridge.ParseOptions[repomgr.RemoveOptions](raw)
+		if err != nil {
+			return "", err
+		}
+		res, err := repomgr.Remove(opts)
+		if err != nil {
+			return "", err
+		}
+		return bridge.MarshalJSON(res)
+	})
+}
+
+// dispatchRepo is the common dispatch helper for all repo operations.
+// The caller supplies a function that parses options, runs the operation,
+// and marshals the result.
+func dispatchRepo(op string, options *C.char, run func(string) (string, error)) *C.char {
+	goOptions := goString(options)
+
+	result, err := run(goOptions)
+	if err != nil {
+		return toCString(bridge.EncodeError(bridge.StageRun, err, "operation", "repo "+op))
+	}
+
+	return toCString(result)
+}
+
+// ---------------------------------------------------------------------------
 // Panic recovery
 // ---------------------------------------------------------------------------
 
@@ -149,6 +232,18 @@ func recoverSearchPanic(result **C.char) {
 			slog.String("stack", string(debug.Stack())),
 		)
 		*result = toCString(bridge.EncodeError(bridge.StagePanic, fmt.Errorf("panic: %v", recovered)))
+	}
+}
+
+func recoverRepoPanic(result **C.char, op string) {
+	if recovered := recover(); recovered != nil {
+		helmlog.Logger().Error(
+			"panic recovered in helm repo",
+			slog.String("operation", op),
+			slog.Any("panic", recovered),
+			slog.String("stack", string(debug.Stack())),
+		)
+		*result = toCString(bridge.EncodeError(bridge.StagePanic, fmt.Errorf("panic: %v", recovered), "operation", "repo "+op))
 	}
 }
 
