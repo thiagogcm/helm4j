@@ -1,49 +1,30 @@
-package main
+package search
 
 import (
-	"errors"
-	"log/slog"
-	"os"
-	"path/filepath"
-	"strings"
-	"testing"
+"errors"
+"os"
+"path/filepath"
+"strings"
+"testing"
 )
 
-func TestSetNativeLogLevelFromEnv(t *testing.T) {
-	t.Setenv("HELM_DEBUG", "true")
-	if enabled := setNativeLogLevelFromEnv(); !enabled {
-		t.Fatal("expected HELM_DEBUG=true to enable debug logging")
-	}
-	if level := nativeLogLevel.Level(); level != slog.LevelDebug {
-		t.Fatalf("expected slog level debug, got %v", level)
-	}
-
-	t.Setenv("HELM_DEBUG", "false")
-	if enabled := setNativeLogLevelFromEnv(); enabled {
-		t.Fatal("expected HELM_DEBUG=false to disable debug logging")
-	}
-	if level := nativeLogLevel.Level(); level != slog.LevelWarn {
-		t.Fatalf("expected slog level warn, got %v", level)
-	}
-}
-
-func TestRunSearchMissingRepositoryConfigReturnsError(t *testing.T) {
+func TestRunMissingRepositoryConfigReturnsError(t *testing.T) {
 	testHome := t.TempDir()
 	repoConfig := filepath.Join(testHome, "repositories.yaml")
 	repoCache := filepath.Join(testHome, "repository-cache")
 
-	configureSearchTestEnv(t, testHome, repoConfig, repoCache)
+	configureTestEnv(t, testHome, repoConfig, repoCache)
 
-	_, err := runSearch(SearchOptions{Keyword: "demo"})
+	_, err := Run(Options{Keyword: "demo"})
 	if err == nil {
 		t.Fatal("expected missing repository config to return an error")
 	}
-	if !errors.Is(err, errNoRepositoriesConfigured) {
+	if !errors.Is(err, ErrNoRepositoriesConfigured) {
 		t.Fatalf("expected no repositories configured error, got: %v", err)
 	}
 }
 
-func TestRunSearchEmptyRepositoryConfigReturnsError(t *testing.T) {
+func TestRunEmptyRepositoryConfigReturnsError(t *testing.T) {
 	testHome := t.TempDir()
 	repoConfig := filepath.Join(testHome, "repositories.yaml")
 	repoCache := filepath.Join(testHome, "repository-cache")
@@ -52,18 +33,18 @@ func TestRunSearchEmptyRepositoryConfigReturnsError(t *testing.T) {
 		t.Fatalf("write empty repository config: %v", err)
 	}
 
-	configureSearchTestEnv(t, testHome, repoConfig, repoCache)
+	configureTestEnv(t, testHome, repoConfig, repoCache)
 
-	_, err := runSearch(SearchOptions{Keyword: "demo"})
+	_, err := Run(Options{Keyword: "demo"})
 	if err == nil {
 		t.Fatal("expected empty repository config to return an error")
 	}
-	if !errors.Is(err, errNoRepositoriesConfigured) {
+	if !errors.Is(err, ErrNoRepositoriesConfigured) {
 		t.Fatalf("expected no repositories configured error, got: %v", err)
 	}
 }
 
-func TestRunSearchInvalidRepositoryConfigReturnsError(t *testing.T) {
+func TestRunInvalidRepositoryConfigReturnsError(t *testing.T) {
 	testHome := t.TempDir()
 	repoConfig := filepath.Join(testHome, "repositories.yaml")
 	repoCache := filepath.Join(testHome, "repository-cache")
@@ -72,9 +53,9 @@ func TestRunSearchInvalidRepositoryConfigReturnsError(t *testing.T) {
 		t.Fatalf("write invalid repository config: %v", err)
 	}
 
-	configureSearchTestEnv(t, testHome, repoConfig, repoCache)
+	configureTestEnv(t, testHome, repoConfig, repoCache)
 
-	_, err := runSearch(SearchOptions{Keyword: "demo"})
+	_, err := Run(Options{Keyword: "demo"})
 	if err == nil {
 		t.Fatal("expected invalid repository config to return an error")
 	}
@@ -83,7 +64,7 @@ func TestRunSearchInvalidRepositoryConfigReturnsError(t *testing.T) {
 	}
 }
 
-func configureSearchTestEnv(t *testing.T, testHome string, repoConfig string, repoCache string) {
+func configureTestEnv(t *testing.T, testHome, repoConfig, repoCache string) {
 	t.Helper()
 
 	t.Setenv("HELM_CONFIG_HOME", filepath.Join(testHome, "config"))

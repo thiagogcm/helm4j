@@ -1,4 +1,7 @@
-package main
+// Package show implements the `helm show` family of operations
+// (chart, values, readme, crds, all). Each variant shares the same
+// option struct, section builder, and response shape.
+package show
 
 import (
 	"errors"
@@ -12,10 +15,14 @@ import (
 	chart "helm.sh/helm/v4/pkg/chart/v2"
 	chartutil "helm.sh/helm/v4/pkg/chart/v2/util"
 	"k8s.io/cli-runtime/pkg/printers"
+
+	"github.com/thiagogcm/libhelm4j/internal/bridge"
+	"github.com/thiagogcm/libhelm4j/internal/helmenv"
+	"github.com/thiagogcm/libhelm4j/internal/helmlog"
 )
 
-// ShowOptions captures the Helm flags relevant to `helm show` and chart discovery.
-type ShowOptions struct {
+// Options captures the Helm flags relevant to `helm show` and chart discovery.
+type Options struct {
 	Version               string `json:"version,omitempty"`
 	RepoURL               string `json:"repo,omitempty"`
 	Username              string `json:"username,omitempty"`
@@ -32,34 +39,27 @@ type ShowOptions struct {
 	JSONPathTemplate      string `json:"jsonpath,omitempty"`
 }
 
-// ShowSections mirrors the logical sections printed by the Helm CLI.
-type ShowSections struct {
+// Sections mirrors the logical sections printed by the Helm CLI.
+type Sections struct {
 	Chart  string   `json:"chart,omitempty"`
 	Values string   `json:"values,omitempty"`
 	Readme string   `json:"readme,omitempty"`
 	Crds   []string `json:"crds,omitempty"`
 }
 
-// ShowResponse is the structured payload returned on success.
-type ShowResponse struct {
-	Mode      string       `json:"mode"`
-	ChartRef  string       `json:"chartRef"`
-	ChartPath string       `json:"chartPath"`
-	Sections  ShowSections `json:"sections"`
-	CLIOutput string       `json:"cliOutput"`
+// Response is the structured payload returned on success.
+type Response struct {
+	Mode      string   `json:"mode"`
+	ChartRef  string   `json:"chartRef"`
+	ChartPath string   `json:"chartPath"`
+	Sections  Sections `json:"sections"`
+	CLIOutput string   `json:"cliOutput"`
 }
 
-// ShowError is serialized when a runner fails.
-type ShowError struct {
-	Mode      string `json:"mode"`
-	ChartRef  string `json:"chartRef"`
-	ChartPath string `json:"chartPath,omitempty"`
-	Stage     string `json:"stage,omitempty"`
-	Error     string `json:"error"`
-}
-
-func runShow(mode action.ShowOutputFormat, chartRef string, opts ShowOptions) (string, error) {
-	showLog := nativeLogger.With(
+// Run executes a helm show operation for the given mode and chart reference.
+// It returns the JSON-encoded response string or an error.
+func Run(mode action.ShowOutputFormat, chartRef string, opts Options) (string, error) {
+	log := helmlog.Logger().With(
 		slog.String("operation", "show"),
 		slog.String("mode", mode.String()),
 		slog.String("chartRef", chartRef),
@@ -69,15 +69,15 @@ func runShow(mode action.ShowOutputFormat, chartRef string, opts ShowOptions) (s
 		return "", errors.New("chart reference is required")
 	}
 
-	showLog.Debug("running helm show")
+	log.Debug("running helm show")
 
-	env, err := newHelmEnv()
+	env, err := helmenv.New()
 	if err != nil {
-		showLog.Warn("failed to initialize helm environment", slog.Any("error", err))
+		log.Warn("failed to initialize helm environment", slog.Any("error", err))
 		return "", fmt.Errorf("bootstrap helm: %w", err)
 	}
 
-	regClient, err := buildRegistryClient(env.Settings, registryOptions{
+	regClient, err := helmenv.BuildRegistryClient(env.Settings, helmenv.RegistryOptions{
 		CertFile:              opts.CertFile,
 		KeyFile:               opts.KeyFile,
 		CaFile:                opts.CaFile,
@@ -87,40 +87,40 @@ func runShow(mode action.ShowOutputFormat, chartRef string, opts ShowOptions) (s
 		Password:              opts.Password,
 	})
 	if err != nil {
-		showLog.Warn("failed to initialize registry client", slog.Any("error", err))
+		log.Warn("failed to initialize registry client", slog.Any("error", err))
 		return "", fmt.Errorf("registry client: %w", err)
 	}
 	env.Config.RegistryClient = regClient
 
 	client := action.NewShow(mode, env.Config)
-	applyShowOptions(client, opts)
+	applyOptions(client, opts)
 	client.SetRegistryClient(regClient)
 
-	chartPath, ch, err := locateAndLoadChart(client, env.Settings, chartRef)
+	chartPath, ch, err := helmenv.LocateAndLoadChart(chartRef, client.Version, client.Devel, env.Settings, client)
 	if err != nil {
-		showLog.Warn("failed to locate or load chart", slog.Any("error", err))
+		log.Warn("failed to locate or load chart", slog.Any("error", err))
 		return "", err
 	}
 
-	sections, err := buildShowSections(client, ch)
+	sections, err := buildSections(client, ch)
 	if err != nil {
-		showLog.Warn("failed to build show sections", slog.Any("error", err))
+		log.Warn("failed to build show sections", slog.Any("error", err))
 		return "", err
 	}
 
 	cliOut, err := client.Run(chartPath)
 	if err != nil {
-		showLog.Warn("helm show command failed", slog.Any("error", err))
+		log.Warn("helm show command failed", slog.Any("error", err))
 		return "", fmt.Errorf("helm show: %w", err)
 	}
 
-	showLog.Debug(
+	log.Debug(
 		"helm show command completed",
 		slog.String("chartPath", chartPath),
 		slog.Int("cliOutputLength", len(cliOut)),
 	)
 
-	resp := ShowResponse{
+	resp := Response{
 		Mode:      mode.String(),
 		ChartRef:  chartRef,
 		ChartPath: chartPath,
@@ -128,18 +128,17 @@ func runShow(mode action.ShowOutputFormat, chartRef string, opts ShowOptions) (s
 		CLIOutput: cliOut,
 	}
 
-	result, err := marshalJSON(resp)
+	result, err := bridge.MarshalJSON(resp)
 	if err != nil {
-		showLog.Warn("failed to marshal show response", slog.Any("error", err))
+		log.Warn("failed to marshal show response", slog.Any("error", err))
 		return "", err
 	}
 
-	showLog.Debug("helm show completed successfully")
-
+	log.Debug("helm show completed successfully")
 	return result, nil
 }
 
-func applyShowOptions(client *action.Show, opts ShowOptions) {
+func applyOptions(client *action.Show, opts Options) {
 	client.Devel = opts.Devel
 	client.JSONPathTemplate = opts.JSONPathTemplate
 
@@ -157,8 +156,8 @@ func applyShowOptions(client *action.Show, opts ShowOptions) {
 	client.ChartPathOptions.Version = opts.Version
 }
 
-func buildShowSections(client *action.Show, ch *chart.Chart) (ShowSections, error) {
-	sections := ShowSections{}
+func buildSections(client *action.Show, ch *chart.Chart) (Sections, error) {
+	sections := Sections{}
 
 	if client.OutputFormat == action.ShowChart || client.OutputFormat == action.ShowAll {
 		meta, err := yaml.Marshal(ch.Metadata)
@@ -209,12 +208,11 @@ func buildShowSections(client *action.Show, ch *chart.Chart) (ShowSections, erro
 	return sections, nil
 }
 
-func findReadmeFile(files []*common.File) (file *common.File) {
+func findReadmeFile(files []*common.File) *common.File {
 	for _, file := range files {
 		if file == nil {
 			continue
 		}
-
 		if _, ok := readmeFileNames[strings.ToLower(file.Name)]; ok {
 			return file
 		}

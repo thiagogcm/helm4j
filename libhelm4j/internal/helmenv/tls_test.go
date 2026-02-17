@@ -1,4 +1,4 @@
-package main
+package helmenv
 
 import (
 	"crypto/tls"
@@ -9,7 +9,7 @@ import (
 )
 
 func TestBuildTLSConfigSetsModernDefaults(t *testing.T) {
-	tlsConfig, err := buildTLSConfig(registryOptions{InsecureSkipTLSVerify: true})
+	tlsConfig, err := buildTLSConfig(RegistryOptions{InsecureSkipTLSVerify: true})
 	if err != nil {
 		t.Fatalf("build TLS config: %v", err)
 	}
@@ -23,7 +23,7 @@ func TestBuildTLSConfigSetsModernDefaults(t *testing.T) {
 }
 
 func TestBuildTLSConfigRequiresCertificatePair(t *testing.T) {
-	tests := []registryOptions{
+	tests := []RegistryOptions{
 		{CertFile: "/tmp/cert.pem"},
 		{KeyFile: "/tmp/key.pem"},
 	}
