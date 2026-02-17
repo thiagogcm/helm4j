@@ -1,11 +1,11 @@
 package search
 
 import (
-"errors"
-"os"
-"path/filepath"
-"strings"
-"testing"
+	"errors"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
 )
 
 func TestRunMissingRepositoryConfigReturnsError(t *testing.T) {
@@ -15,7 +15,7 @@ func TestRunMissingRepositoryConfigReturnsError(t *testing.T) {
 
 	configureTestEnv(t, testHome, repoConfig, repoCache)
 
-	_, err := Run(Options{Keyword: "demo"})
+	_, err := Run(ModeRepo, Options{Keyword: "demo"})
 	if err == nil {
 		t.Fatal("expected missing repository config to return an error")
 	}
@@ -35,7 +35,7 @@ func TestRunEmptyRepositoryConfigReturnsError(t *testing.T) {
 
 	configureTestEnv(t, testHome, repoConfig, repoCache)
 
-	_, err := Run(Options{Keyword: "demo"})
+	_, err := Run(ModeRepo, Options{Keyword: "demo"})
 	if err == nil {
 		t.Fatal("expected empty repository config to return an error")
 	}
@@ -55,12 +55,19 @@ func TestRunInvalidRepositoryConfigReturnsError(t *testing.T) {
 
 	configureTestEnv(t, testHome, repoConfig, repoCache)
 
-	_, err := Run(Options{Keyword: "demo"})
+	_, err := Run(ModeRepo, Options{Keyword: "demo"})
 	if err == nil {
 		t.Fatal("expected invalid repository config to return an error")
 	}
 	if !strings.Contains(err.Error(), "load repository config") {
 		t.Fatalf("expected wrapped repository config error, got: %v", err)
+	}
+}
+
+func TestParseModeRejectsUnknownValue(t *testing.T) {
+	_, err := ParseMode("something-else")
+	if err == nil {
+		t.Fatal("expected unsupported mode to return an error")
 	}
 }
 

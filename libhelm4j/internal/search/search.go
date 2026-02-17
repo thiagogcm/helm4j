@@ -1,6 +1,4 @@
-// Package search implements `helm search repo`. It builds a search index
-// from the local repository cache and applies keyword, version, and
-// semver-constraint filters.
+// Package search implements `helm search <mode>` operations.
 package search
 
 import (
@@ -24,7 +22,7 @@ const maxScore = 25
 // ErrNoRepositoriesConfigured is returned when no repositories are configured.
 var ErrNoRepositoriesConfigured = errors.New("no repositories configured")
 
-// Options captures the options for helm search repo.
+// Options captures the options for helm search operations.
 type Options struct {
 	Keyword        string `json:"keyword,omitempty"`
 	Regexp         bool   `json:"regexp,omitempty"`
@@ -32,24 +30,30 @@ type Options struct {
 	Devel          bool   `json:"devel,omitempty"`
 	Version        string `json:"version,omitempty"`
 	FailOnNoResult bool   `json:"failOnNoResult,omitempty"`
+	Endpoint       string `json:"endpoint,omitempty"`
+	ListRepoURL    bool   `json:"listRepoUrl,omitempty"`
+	MaxColWidth    int    `json:"maxColWidth,omitempty"`
 }
 
 // Result represents a single search result.
 type Result struct {
-	Name        string `json:"name"`
-	Version     string `json:"version"`
-	AppVersion  string `json:"appVersion"`
-	Description string `json:"description"`
-	Score       int    `json:"score"`
+	Name           string `json:"name"`
+	Version        string `json:"version"`
+	AppVersion     string `json:"appVersion"`
+	Description    string `json:"description"`
+	Score          int    `json:"score"`
+	URL            string `json:"url,omitempty"`
+	RepositoryName string `json:"repositoryName,omitempty"`
+	RepositoryURL  string `json:"repositoryUrl,omitempty"`
 }
 
 // Response is the response for the search operation.
 type Response struct {
+	Mode    string   `json:"mode"`
 	Results []Result `json:"results"`
 }
 
-// Run executes a helm search repo operation and returns the matching results.
-func Run(opts Options) ([]Result, error) {
+func runRepo(opts Options) ([]Result, error) {
 	log := helmlog.Logger()
 
 	log.Debug(

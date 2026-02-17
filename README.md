@@ -1,72 +1,119 @@
 # Helm4j
 
-Helm4j is a Java library that provides bindings to Helm for Kubernetes, backed by Go `c-shared` binaries and Java FFM APIs.
+Helm4j is a Java SDK for Helm v4 focused on idiomatic Java APIs and a stable native bridge.
 
-## Public API (Java 25)
+## Highlights
 
-`HelmClient` exposes a Java-first surface and hides native/jextract payload details.
+- Standard entrypoint: `Helm.client()`
+- Discoverable namespaces: `repo()`, `chart()`, `release()`
+- Immutable API models with Java records
+- Sealed result types for domain outcomes
+- JDK 25+ FFM bridge over JSON C exports from `libhelm4j`
+
+## Quick Start
 
 ```java
-import dev.nthings.helm4j.client.HelmClient;
-import dev.nthings.helm4j.client.HelmClientFactory;
-import dev.nthings.helm4j.options.RepoAddOptions;
-import dev.nthings.helm4j.options.SearchOptions;
-import dev.nthings.helm4j.options.ShowOptions;
+import java.time.Duration;
+import java.util.Map;
 
-var client = HelmClientFactory.create().newClient();
+import dev.nthings.helm4j.Helm;
+import dev.nthings.helm4j.repo.RepoAddSuccess;
+import dev.nthings.helm4j.release.InstallSuccess;
+import dev.nthings.helm4j.types.ChartRef;
 
-var chart = client.showChart("bitnami/nginx");
-System.out.println(chart.metadataYaml());
+try (var helm = Helm.client()) {
+  var add =
+      helm.repo()
+          .add(spec -> spec.name("bitnami").url("https://charts.bitnami.com/bitnami"));
 
-var values =
-    client.showValues(
-        "bitnami/nginx",
-        ShowOptions.builder().version("19.0.0").includePreReleaseVersions(false).build());
-System.out.println(values.valuesYaml());
+  if (add instanceof RepoAddSuccess success) {
+    System.out.println("Added repo: " + success.name());
+  }
 
-var crds = client.showCrds("bitnami/nginx");
-System.out.println(crds.customResourceDefinitions().size());
+  var search = helm.chart().searchRepo("nginx", spec -> spec.includeAllVersions(true));
+  search.first().ifPresent(chart -> System.out.println(chart.name()));
 
-var search =
-    client.search(
-        SearchOptions.builder()
-            .query("nginx")
-            .includeAllVersions(false)
-            .versionConstraint(">=1.0.0")
-            .build());
+  var hub = helm.chart().searchHub("nginx");
+  hub.first().ifPresent(chart -> System.out.println(chart.url()));
 
-search.first().ifPresent(result -> System.out.println(result.name()));
+  var metadata = helm.chart().chart(ChartRef.repo("bitnami/nginx"));
+  System.out.println(metadata.metadataYaml());
 
-client.repo().add(
-    RepoAddOptions.builder()
-        .name("bitnami")
-        .url("https://charts.bitnami.com/bitnami")
-        .forceUpdate(true)
-        .build());
+  var repos = helm.repo().list();
+  System.out.println("Configured repos: " + repos.size());
 
-var repos = client.repo().list();
-System.out.println(repos.size());
+  var install =
+      helm.release()
+          .install(
+              spec ->
+                  spec.releaseName("nginx")
+                      .chart(ChartRef.repo("bitnami/nginx"))
+                      .namespace("apps")
+                      .createNamespace(true)
+                      .timeout(Duration.ofMinutes(5))
+                      .values(Map.of("service", Map.of("type", "ClusterIP"))));
+
+  if (install instanceof InstallSuccess success) {
+    System.out.println(success.release().status());
+  }
+}
 ```
 
-## Build libhelm4j and generate bindings
+## Public API
+
+- `Helm.client()`
+- `Helm.client(spec -> ...)`
+- `HelmClient.repo().add(...)`, `.update(...)`, `.list()`, `.remove(...)`
+- `HelmClient.chart().searchRepo(...)`, `.searchHub(...)`
+- `HelmClient.chart().chart(...)`, `.values(...)`, `.readme(...)`, `.crds(...)`, `.all(...)`
+- `HelmClient.release().install(...)`
+
+## Native Bridge
+
+The Java gateway uses JSON-based native exports from `libhelm4j`:
+
+- `HelmRepo(mode, optionsJson)`
+- `HelmSearch(mode, optionsJson)`
+- `HelmShow(mode, chartRef, optionsJson)`
+- `HelmInstall(releaseName, chartRef, optionsJson)`
+
+Native strings are released with:
+
+- `FreeString`
+
+## Requirements
+
+- Java 25+
+- Go 1.26+
+- Helm v4 SDK (bundled via `libhelm4j/go.mod`)
+
+## Build
+
+### Build Native Library
 
 ```bash
-export LLVM_HOME=/usr/lib/llvm-18
-export LD_LIBRARY_PATH=$LLVM_HOME/lib
-
-(cd libhelm4j && CGO_ENABLED=1 go build -buildmode=c-shared -o libhelm4j.so .)
-
-jextract -Djava.library.path=$LLVM_HOME -Ilibhelm4j -l:libhelm4j/libhelm4j.so \
-  --include-function FreeString \
-  --include-function HelmShowChart \
-  --include-function HelmShowValues \
-  --include-function HelmShowReadme \
-  --include-function HelmShowAll \
-  --include-function HelmShowCRDs \
-  --include-function HelmSearch \
-  --include-function HelmRepoAdd \
-  --include-function HelmRepoUpdate \
-  --include-function HelmRepoList \
-  --include-function HelmRepoRemove \
-  --output src/main/generated --target-package dev.nthings.helm4j.jextract libhelm4j/libhelm4j.h
+cd libhelm4j
+GO111MODULE=on go build -buildmode=c-shared -o libhelm4j.so .
 ```
+
+### Build Java SDK
+
+```bash
+./gradlew build
+```
+
+### Run Checks
+
+```bash
+./gradlew check
+cd libhelm4j && go test ./...
+```
+
+## Documentation
+
+- `docs/spec.md`: architecture and API specification
+- `docs/feature-parity.md`: implemented vs planned Helm v4 action coverage
+
+## License
+
+See `LICENSE`.

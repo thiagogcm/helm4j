@@ -29,8 +29,7 @@ const (
 // and an optional Context map for operation-specific metadata (e.g. mode,
 // chartRef for show errors).
 //
-// The JSON representation keeps backward compatibility with the earlier
-// flat ShowError / SearchError types by promoting Context entries to
+// The JSON representation keeps a flat shape by promoting Context entries to
 // top-level fields via a custom MarshalJSON.
 type OperationError struct {
 	Stage   string            `json:"stage,omitempty"`
@@ -40,7 +39,7 @@ type OperationError struct {
 
 // MarshalJSON produces a flat JSON object where each Context key becomes a
 // top-level field alongside "stage" and "error". This keeps the on-wire
-// format compatible with the Java-side NativePayloadCodec.
+// format expected by the Java gateway error decoder.
 func (e OperationError) MarshalJSON() ([]byte, error) {
 	m := make(map[string]string, len(e.Context)+2)
 	for k, v := range e.Context {

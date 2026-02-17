@@ -52,11 +52,14 @@ type Options struct {
 	DisableHooks             bool   `json:"disableHooks,omitempty"`
 	DisableOpenAPIValidation bool   `json:"disableOpenApiValidation,omitempty"`
 	ForceReplace             bool   `json:"forceReplace,omitempty"`
+	ForceConflicts           bool   `json:"forceConflicts,omitempty"`
+	ServerSideApply          *bool  `json:"serverSideApply,omitempty"`
 	Replace                  bool   `json:"replace,omitempty"`
 	GenerateName             bool   `json:"generateName,omitempty"`
 	NameTemplate             string `json:"nameTemplate,omitempty"`
 	SubNotes                 bool   `json:"subNotes,omitempty"`
 	EnableDNS                bool   `json:"enableDns,omitempty"`
+	TakeOwnership            bool   `json:"takeOwnership,omitempty"`
 
 	// Values — a pre-merged values map from the caller.
 	Values map[string]any    `json:"values,omitempty"`
@@ -205,11 +208,16 @@ func applyOptions(client *action.Install, opts Options) {
 	client.DisableHooks = opts.DisableHooks
 	client.DisableOpenAPIValidation = opts.DisableOpenAPIValidation
 	client.ForceReplace = opts.ForceReplace
+	client.ForceConflicts = opts.ForceConflicts
+	if opts.ServerSideApply != nil {
+		client.ServerSideApply = *opts.ServerSideApply
+	}
 	client.Replace = opts.Replace
 	client.GenerateName = opts.GenerateName
 	client.NameTemplate = opts.NameTemplate
 	client.SubNotes = opts.SubNotes
 	client.EnableDNS = opts.EnableDNS
+	client.TakeOwnership = opts.TakeOwnership
 	client.Labels = opts.Labels
 
 	if opts.DryRun != "" {

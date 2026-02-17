@@ -45,16 +45,10 @@ jextract: go-build
 	fi
 	@LD_LIBRARY_PATH=$$LLVM_HOME/lib jextract -Djava.library.path=$$LLVM_HOME -Ilibhelm4j -l:libhelm4j/libhelm4j.so \
 		--include-function FreeString \
-		--include-function HelmShowChart \
-		--include-function HelmShowValues \
-		--include-function HelmShowReadme \
-		--include-function HelmShowAll \
-		--include-function HelmShowCRDs \
+		--include-function HelmShow \
+		--include-function HelmInstall \
 		--include-function HelmSearch \
-		--include-function HelmRepoAdd \
-		--include-function HelmRepoUpdate \
-		--include-function HelmRepoList \
-		--include-function HelmRepoRemove \
+		--include-function HelmRepo \
 		--output src/main/generated --target-package dev.nthings.helm4j.jextract libhelm4j/libhelm4j.h
 
 # --- Java / Gradle targets ---

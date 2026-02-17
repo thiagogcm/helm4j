@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // ---------------------------------------------------------------------------
@@ -98,6 +99,16 @@ func TestAddDuplicateNameWithoutForceUpdateReturnsError(t *testing.T) {
 	}
 	if !errors.Is(err, ErrRepositoryAlreadyExists) {
 		t.Fatalf("expected ErrRepositoryAlreadyExists, got: %v", err)
+	}
+}
+
+func TestAddDeprecatedRepositoryBlockedByDefault(t *testing.T) {
+	_, err := Add(AddOptions{Name: "stable", URL: "https://kubernetes-charts.storage.googleapis.com"})
+	if err == nil {
+		t.Fatal("expected error for deprecated repository URL")
+	}
+	if !strings.Contains(err.Error(), "no longer available") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
@@ -304,6 +315,21 @@ func TestUpdateUnknownNameReturnsError(t *testing.T) {
 	}
 	if !errors.Is(err, ErrRepositoryNotFound) {
 		t.Fatalf("expected ErrRepositoryNotFound, got: %v", err)
+	}
+}
+
+func TestParseTimeoutFallsBackToDefaultWhenInvalid(t *testing.T) {
+	got := parseTimeout("not-a-duration")
+	want := time.Duration(120) * time.Second
+	if got != want {
+		t.Fatalf("expected default timeout %v, got %v", want, got)
+	}
+}
+
+func TestParseTimeoutParsesValidDurations(t *testing.T) {
+	got := parseTimeout("5s")
+	if got != 5*time.Second {
+		t.Fatalf("expected 5s, got %v", got)
 	}
 }
 

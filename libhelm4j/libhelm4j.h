@@ -88,17 +88,10 @@ extern "C" {
 #endif
 
 extern void FreeString(char* str);
-extern char* HelmShowChart(char* chartRef, char* options);
-extern char* HelmShowValues(char* chartRef, char* options);
-extern char* HelmShowReadme(char* chartRef, char* options);
-extern char* HelmShowAll(char* chartRef, char* options);
-extern char* HelmShowCRDs(char* chartRef, char* options);
+extern char* HelmShow(char* mode, char* chartRef, char* options);
 extern char* HelmInstall(char* releaseName, char* chartRef, char* options);
-extern char* HelmSearch(char* options);
-extern char* HelmRepoAdd(char* options);
-extern char* HelmRepoUpdate(char* options);
-extern char* HelmRepoList(char* options);
-extern char* HelmRepoRemove(char* options);
+extern char* HelmSearch(char* mode, char* options);
+extern char* HelmRepo(char* mode, char* options);
 
 #ifdef __cplusplus
 }

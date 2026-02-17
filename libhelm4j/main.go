@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"log/slog"
 	"runtime/debug"
+	"strings"
 	"unsafe"
 
 	"helm.sh/helm/v4/pkg/action"
@@ -51,34 +52,36 @@ func toCString(value string) *C.char {
 // Show exports
 // ---------------------------------------------------------------------------
 
-//export HelmShowChart
-func HelmShowChart(chartRef *C.char, options *C.char) (result *C.char) {
-	defer recoverShowPanic(&result, action.ShowChart, chartRef)
-	return dispatchShow(action.ShowChart, chartRef, options)
+//export HelmShow
+func HelmShow(mode *C.char, chartRef *C.char, options *C.char) (result *C.char) {
+	goMode := goString(mode)
+	defer recoverShowPanic(&result, goMode, chartRef)
+
+	showMode, err := parseShowMode(goMode)
+	if err != nil {
+		return toCString(bridge.EncodeError(bridge.StageRun, err, "mode", goMode, "chartRef", goString(chartRef)))
+	}
+
+	return dispatchShow(showMode, chartRef, options)
 }
 
-//export HelmShowValues
-func HelmShowValues(chartRef *C.char, options *C.char) (result *C.char) {
-	defer recoverShowPanic(&result, action.ShowValues, chartRef)
-	return dispatchShow(action.ShowValues, chartRef, options)
-}
-
-//export HelmShowReadme
-func HelmShowReadme(chartRef *C.char, options *C.char) (result *C.char) {
-	defer recoverShowPanic(&result, action.ShowReadme, chartRef)
-	return dispatchShow(action.ShowReadme, chartRef, options)
-}
-
-//export HelmShowAll
-func HelmShowAll(chartRef *C.char, options *C.char) (result *C.char) {
-	defer recoverShowPanic(&result, action.ShowAll, chartRef)
-	return dispatchShow(action.ShowAll, chartRef, options)
-}
-
-//export HelmShowCRDs
-func HelmShowCRDs(chartRef *C.char, options *C.char) (result *C.char) {
-	defer recoverShowPanic(&result, action.ShowCRDs, chartRef)
-	return dispatchShow(action.ShowCRDs, chartRef, options)
+func parseShowMode(rawMode string) (action.ShowOutputFormat, error) {
+	switch strings.ToLower(strings.TrimSpace(rawMode)) {
+	case action.ShowChart.String():
+		return action.ShowChart, nil
+	case action.ShowValues.String():
+		return action.ShowValues, nil
+	case action.ShowReadme.String():
+		return action.ShowReadme, nil
+	case action.ShowAll.String():
+		return action.ShowAll, nil
+	case action.ShowCRDs.String():
+		return action.ShowCRDs, nil
+	case "":
+		return action.ShowOutputFormat(""), fmt.Errorf("show mode is required")
+	default:
+		return action.ShowOutputFormat(""), fmt.Errorf("unsupported show mode: %s", rawMode)
+	}
 }
 
 func dispatchShow(mode action.ShowOutputFormat, chartRef *C.char, options *C.char) *C.char {
@@ -128,23 +131,29 @@ func HelmInstall(releaseName *C.char, chartRef *C.char, options *C.char) (result
 // ---------------------------------------------------------------------------
 
 //export HelmSearch
-func HelmSearch(options *C.char) (result *C.char) {
-	defer recoverSearchPanic(&result)
+func HelmSearch(mode *C.char, options *C.char) (result *C.char) {
+	goMode := goString(mode)
+	defer recoverSearchPanic(&result, goMode)
+
+	searchMode, err := search.ParseMode(goMode)
+	if err != nil {
+		return toCString(bridge.EncodeError(bridge.StageRun, err, "mode", goMode))
+	}
 
 	goOptions := goString(options)
 	opts, err := bridge.ParseOptions[search.Options](goOptions)
 	if err != nil {
-		return toCString(bridge.EncodeError(bridge.StageParseOptions, err))
+		return toCString(bridge.EncodeError(bridge.StageParseOptions, err, "mode", searchMode.String()))
 	}
 
-	results, err := search.Run(opts)
+	results, err := search.Run(searchMode, opts)
 	if err != nil {
-		return toCString(bridge.EncodeError(bridge.StageRun, err))
+		return toCString(bridge.EncodeError(bridge.StageRun, err, "mode", searchMode.String()))
 	}
 
-	resp, err := bridge.MarshalJSON(search.Response{Results: results})
+	resp, err := bridge.MarshalJSON(search.Response{Mode: searchMode.String(), Results: results})
 	if err != nil {
-		return toCString(bridge.EncodeError(bridge.StageMarshal, err))
+		return toCString(bridge.EncodeError(bridge.StageMarshal, err, "mode", searchMode.String()))
 	}
 
 	return toCString(resp)
@@ -154,11 +163,33 @@ func HelmSearch(options *C.char) (result *C.char) {
 // Repo exports
 // ---------------------------------------------------------------------------
 
-//export HelmRepoAdd
-func HelmRepoAdd(options *C.char) (result *C.char) {
-	defer recoverRepoPanic(&result, "add")
-	return dispatchRepo("add", options, func(raw string) (string, error) {
-		opts, err := bridge.ParseOptions[repomgr.AddOptions](raw)
+//export HelmRepo
+func HelmRepo(mode *C.char, options *C.char) (result *C.char) {
+	goMode := normalizeRepoMode(goString(mode))
+	defer recoverRepoPanic(&result, goMode)
+	return dispatchRepo(goMode, options)
+}
+
+func normalizeRepoMode(rawMode string) string {
+	return strings.ToLower(strings.TrimSpace(rawMode))
+}
+
+// dispatchRepo routes the repo mode to the matching repomgr operation.
+func dispatchRepo(mode string, options *C.char) *C.char {
+	goOptions := goString(options)
+
+	result, err := runRepoMode(mode, goOptions)
+	if err != nil {
+		return toCString(bridge.EncodeError(bridge.StageRun, err, "operation", repoOperation(mode)))
+	}
+
+	return toCString(result)
+}
+
+func runRepoMode(mode string, rawOptions string) (string, error) {
+	switch mode {
+	case "add":
+		opts, err := bridge.ParseOptions[repomgr.AddOptions](rawOptions)
 		if err != nil {
 			return "", err
 		}
@@ -167,14 +198,8 @@ func HelmRepoAdd(options *C.char) (result *C.char) {
 			return "", err
 		}
 		return bridge.MarshalJSON(res)
-	})
-}
-
-//export HelmRepoUpdate
-func HelmRepoUpdate(options *C.char) (result *C.char) {
-	defer recoverRepoPanic(&result, "update")
-	return dispatchRepo("update", options, func(raw string) (string, error) {
-		opts, err := bridge.ParseOptions[repomgr.UpdateOptions](raw)
+	case "update":
+		opts, err := bridge.ParseOptions[repomgr.UpdateOptions](rawOptions)
 		if err != nil {
 			return "", err
 		}
@@ -183,14 +208,8 @@ func HelmRepoUpdate(options *C.char) (result *C.char) {
 			return "", err
 		}
 		return bridge.MarshalJSON(res)
-	})
-}
-
-//export HelmRepoList
-func HelmRepoList(options *C.char) (result *C.char) {
-	defer recoverRepoPanic(&result, "list")
-	return dispatchRepo("list", options, func(raw string) (string, error) {
-		opts, err := bridge.ParseOptions[repomgr.ListOptions](raw)
+	case "list":
+		opts, err := bridge.ParseOptions[repomgr.ListOptions](rawOptions)
 		if err != nil {
 			return "", err
 		}
@@ -199,14 +218,8 @@ func HelmRepoList(options *C.char) (result *C.char) {
 			return "", err
 		}
 		return bridge.MarshalJSON(res)
-	})
-}
-
-//export HelmRepoRemove
-func HelmRepoRemove(options *C.char) (result *C.char) {
-	defer recoverRepoPanic(&result, "remove")
-	return dispatchRepo("remove", options, func(raw string) (string, error) {
-		opts, err := bridge.ParseOptions[repomgr.RemoveOptions](raw)
+	case "remove":
+		opts, err := bridge.ParseOptions[repomgr.RemoveOptions](rawOptions)
 		if err != nil {
 			return "", err
 		}
@@ -215,38 +228,35 @@ func HelmRepoRemove(options *C.char) (result *C.char) {
 			return "", err
 		}
 		return bridge.MarshalJSON(res)
-	})
+	case "":
+		return "", fmt.Errorf("repo mode is required")
+	default:
+		return "", fmt.Errorf("unsupported repo mode: %s", mode)
+	}
 }
 
-// dispatchRepo is the common dispatch helper for all repo operations.
-// The caller supplies a function that parses options, runs the operation,
-// and marshals the result.
-func dispatchRepo(op string, options *C.char, run func(string) (string, error)) *C.char {
-	goOptions := goString(options)
-
-	result, err := run(goOptions)
-	if err != nil {
-		return toCString(bridge.EncodeError(bridge.StageRun, err, "operation", "repo "+op))
+func repoOperation(mode string) string {
+	if strings.TrimSpace(mode) == "" {
+		return "repo"
 	}
-
-	return toCString(result)
+	return "repo " + mode
 }
 
 // ---------------------------------------------------------------------------
 // Panic recovery
 // ---------------------------------------------------------------------------
 
-func recoverShowPanic(result **C.char, mode action.ShowOutputFormat, chartRef *C.char) {
+func recoverShowPanic(result **C.char, mode string, chartRef *C.char) {
 	if recovered := recover(); recovered != nil {
 		goChartRef := goString(chartRef)
 		helmlog.Logger().Error(
 			"panic recovered in helm show",
-			slog.String("mode", mode.String()),
+			slog.String("mode", mode),
 			slog.String("chartRef", goChartRef),
 			slog.Any("panic", recovered),
 			slog.String("stack", string(debug.Stack())),
 		)
-		*result = toCString(bridge.EncodeError(bridge.StagePanic, fmt.Errorf("panic: %v", recovered), "mode", mode.String(), "chartRef", goChartRef))
+		*result = toCString(bridge.EncodeError(bridge.StagePanic, fmt.Errorf("panic: %v", recovered), "mode", mode, "chartRef", goChartRef))
 	}
 }
 
@@ -265,14 +275,16 @@ func recoverInstallPanic(result **C.char, releaseName *C.char, chartRef *C.char)
 	}
 }
 
-func recoverSearchPanic(result **C.char) {
+func recoverSearchPanic(result **C.char, mode string) {
 	if recovered := recover(); recovered != nil {
 		helmlog.Logger().Error(
 			"panic recovered in helm search",
+			slog.String("mode", mode),
 			slog.Any("panic", recovered),
 			slog.String("stack", string(debug.Stack())),
 		)
-		*result = toCString(bridge.EncodeError(bridge.StagePanic, fmt.Errorf("panic: %v", recovered)))
+		*result = toCString(
+			bridge.EncodeError(bridge.StagePanic, fmt.Errorf("panic: %v", recovered), "mode", mode))
 	}
 }
 
@@ -284,7 +296,7 @@ func recoverRepoPanic(result **C.char, op string) {
 			slog.Any("panic", recovered),
 			slog.String("stack", string(debug.Stack())),
 		)
-		*result = toCString(bridge.EncodeError(bridge.StagePanic, fmt.Errorf("panic: %v", recovered), "operation", "repo "+op))
+		*result = toCString(bridge.EncodeError(bridge.StagePanic, fmt.Errorf("panic: %v", recovered), "operation", repoOperation(op)))
 	}
 }
 

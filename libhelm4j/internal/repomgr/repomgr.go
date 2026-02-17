@@ -10,6 +10,8 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"helm.sh/helm/v4/pkg/getter"
 	"helm.sh/helm/v4/pkg/helmpath"
@@ -25,6 +27,12 @@ var (
 	ErrRepositoryAlreadyExists  = errors.New("repository already exists")
 	ErrRepositoryNotFound       = errors.New("repository not found")
 )
+
+// Repositories that have been permanently deleted and no longer work.
+var deprecatedRepos = map[string]string{
+	"//kubernetes-charts.storage.googleapis.com":           "https://charts.helm.sh/stable",
+	"//kubernetes-charts-incubator.storage.googleapis.com": "https://charts.helm.sh/incubator",
+}
 
 // ---------------------------------------------------------------------------
 // Options
@@ -42,12 +50,15 @@ type AddOptions struct {
 	InsecureSkipTLSVerify bool   `json:"insecureSkipTlsVerify,omitempty"`
 	PassCredentialsAll    bool   `json:"passCredentialsAll,omitempty"`
 	ForceUpdate           bool   `json:"forceUpdate,omitempty"`
+	AllowDeprecatedRepos  bool   `json:"allowDeprecatedRepos,omitempty"`
+	Timeout               string `json:"timeout,omitempty"`
 }
 
 // UpdateOptions captures the parameters for helm repo update.
 // An empty Names slice means "update all repositories".
 type UpdateOptions struct {
-	Names []string `json:"names,omitempty"`
+	Names   []string `json:"names,omitempty"`
+	Timeout string   `json:"timeout,omitempty"`
 }
 
 // ListOptions is intentionally empty; it exists so that every repomgr
@@ -117,6 +128,17 @@ func Add(opts AddOptions) (AddResponse, error) {
 	if opts.URL == "" {
 		return AddResponse{}, errors.New("repository URL is required")
 	}
+	if !opts.AllowDeprecatedRepos {
+		for oldURL, replacementURL := range deprecatedRepos {
+			if strings.Contains(opts.URL, oldURL) {
+				return AddResponse{}, fmt.Errorf(
+					"repo %q is no longer available; try %q instead",
+					opts.URL,
+					replacementURL,
+				)
+			}
+		}
+	}
 
 	env, err := helmenv.New()
 	if err != nil {
@@ -144,7 +166,10 @@ func Add(opts AddOptions) (AddResponse, error) {
 		PassCredentialsAll:    opts.PassCredentialsAll,
 	}
 
-	chartRepo, err := repo.NewChartRepository(entry, getter.All(env.Settings))
+	chartRepo, err := repo.NewChartRepository(
+		entry,
+		getter.All(env.Settings, getter.WithTimeout(parseTimeout(opts.Timeout))),
+	)
 	if err != nil {
 		return AddResponse{}, fmt.Errorf("create chart repository: %w", err)
 	}
@@ -190,7 +215,7 @@ func Update(opts UpdateOptions) (UpdateResponse, error) {
 		return UpdateResponse{}, err
 	}
 
-	getters := getter.All(env.Settings)
+	getters := getter.All(env.Settings, getter.WithTimeout(parseTimeout(opts.Timeout)))
 	results := make([]UpdateEntry, 0, len(entries))
 
 	for _, entry := range entries {
@@ -348,6 +373,18 @@ func selectEntries(rf *repo.File, names []string) ([]*repo.Entry, error) {
 		selected = append(selected, entry)
 	}
 	return selected, nil
+}
+
+func parseTimeout(rawTimeout string) time.Duration {
+	timeout := strings.TrimSpace(rawTimeout)
+	if timeout == "" {
+		return getter.DefaultHTTPTimeout * time.Second
+	}
+	parsed, err := time.ParseDuration(timeout)
+	if err != nil {
+		return getter.DefaultHTTPTimeout * time.Second
+	}
+	return parsed
 }
 
 // removeCachedFiles deletes the index and chart-list files for the named
