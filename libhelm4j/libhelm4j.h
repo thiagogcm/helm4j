@@ -93,7 +93,12 @@ extern char* HelmShowValues(char* chartRef, char* options);
 extern char* HelmShowReadme(char* chartRef, char* options);
 extern char* HelmShowAll(char* chartRef, char* options);
 extern char* HelmShowCRDs(char* chartRef, char* options);
+extern char* HelmInstall(char* releaseName, char* chartRef, char* options);
 extern char* HelmSearch(char* options);
+extern char* HelmRepoAdd(char* options);
+extern char* HelmRepoUpdate(char* options);
+extern char* HelmRepoList(char* options);
+extern char* HelmRepoRemove(char* options);
 
 #ifdef __cplusplus
 }

@@ -21,6 +21,7 @@ import (
 
 	"github.com/thiagogcm/libhelm4j/internal/bridge"
 	"github.com/thiagogcm/libhelm4j/internal/helmlog"
+	"github.com/thiagogcm/libhelm4j/internal/install"
 	"github.com/thiagogcm/libhelm4j/internal/repomgr"
 	"github.com/thiagogcm/libhelm4j/internal/search"
 	"github.com/thiagogcm/libhelm4j/internal/show"
@@ -95,6 +96,31 @@ func dispatchShow(mode action.ShowOutputFormat, chartRef *C.char, options *C.cha
 	}
 
 	return toCString(result)
+}
+
+// ---------------------------------------------------------------------------
+// Install export
+// ---------------------------------------------------------------------------
+
+//export HelmInstall
+func HelmInstall(releaseName *C.char, chartRef *C.char, options *C.char) (result *C.char) {
+	defer recoverInstallPanic(&result, releaseName, chartRef)
+
+	goReleaseName := goString(releaseName)
+	goChartRef := goString(chartRef)
+	goOptions := goString(options)
+
+	opts, err := bridge.ParseOptions[install.Options](goOptions)
+	if err != nil {
+		return toCString(bridge.EncodeError(bridge.StageParseOptions, err, "releaseName", goReleaseName, "chartRef", goChartRef))
+	}
+
+	res, err := install.Run(goReleaseName, goChartRef, opts)
+	if err != nil {
+		return toCString(bridge.EncodeError(bridge.StageRun, err, "releaseName", goReleaseName, "chartRef", goChartRef))
+	}
+
+	return toCString(res)
 }
 
 // ---------------------------------------------------------------------------
@@ -221,6 +247,21 @@ func recoverShowPanic(result **C.char, mode action.ShowOutputFormat, chartRef *C
 			slog.String("stack", string(debug.Stack())),
 		)
 		*result = toCString(bridge.EncodeError(bridge.StagePanic, fmt.Errorf("panic: %v", recovered), "mode", mode.String(), "chartRef", goChartRef))
+	}
+}
+
+func recoverInstallPanic(result **C.char, releaseName *C.char, chartRef *C.char) {
+	if recovered := recover(); recovered != nil {
+		goReleaseName := goString(releaseName)
+		goChartRef := goString(chartRef)
+		helmlog.Logger().Error(
+			"panic recovered in helm install",
+			slog.String("releaseName", goReleaseName),
+			slog.String("chartRef", goChartRef),
+			slog.Any("panic", recovered),
+			slog.String("stack", string(debug.Stack())),
+		)
+		*result = toCString(bridge.EncodeError(bridge.StagePanic, fmt.Errorf("panic: %v", recovered), "releaseName", goReleaseName, "chartRef", goChartRef))
 	}
 }
 
