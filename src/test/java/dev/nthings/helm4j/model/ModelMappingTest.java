@@ -49,4 +49,40 @@ class ModelMappingTest {
     assertEquals(1, response.size());
     assertThrows(UnsupportedOperationException.class, () -> response.charts().clear());
   }
+
+  @Test
+  void repoListResultDefensivelyCopiesRepositories() {
+    var repositories = new ArrayList<RepoSummary>();
+    repositories.add(new RepoSummary("bitnami", "https://charts.bitnami.com/bitnami"));
+
+    var response = new RepoListResult(repositories);
+
+    repositories.clear();
+    assertEquals(1, response.size());
+    assertThrows(UnsupportedOperationException.class, () -> response.repositories().clear());
+  }
+
+  @Test
+  void repoUpdateResultDefensivelyCopiesRepositories() {
+    var repositories = new ArrayList<RepoUpdateEntry>();
+    repositories.add(new RepoUpdateEntry("bitnami", "ok"));
+
+    var response = new RepoUpdateResult(repositories);
+
+    repositories.clear();
+    assertEquals(1, response.size());
+    assertThrows(UnsupportedOperationException.class, () -> response.repositories().clear());
+  }
+
+  @Test
+  void repoRemoveResultDefensivelyCopiesNames() {
+    var removed = new ArrayList<String>();
+    removed.add("bitnami");
+
+    var response = new RepoRemoveResult(removed);
+
+    removed.clear();
+    assertEquals(1, response.size());
+    assertThrows(UnsupportedOperationException.class, () -> response.removed().clear());
+  }
 }

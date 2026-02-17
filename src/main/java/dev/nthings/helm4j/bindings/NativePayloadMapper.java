@@ -1,6 +1,7 @@
 package dev.nthings.helm4j.bindings;
 
 import java.util.List;
+import java.util.Objects;
 
 import dev.nthings.helm4j.model.ChartCrds;
 import dev.nthings.helm4j.model.ChartDetails;
@@ -8,8 +9,18 @@ import dev.nthings.helm4j.model.ChartMetadata;
 import dev.nthings.helm4j.model.ChartReadme;
 import dev.nthings.helm4j.model.ChartSummary;
 import dev.nthings.helm4j.model.ChartValues;
+import dev.nthings.helm4j.model.RepoAddResult;
+import dev.nthings.helm4j.model.RepoListResult;
+import dev.nthings.helm4j.model.RepoRemoveResult;
+import dev.nthings.helm4j.model.RepoSummary;
+import dev.nthings.helm4j.model.RepoUpdateEntry;
+import dev.nthings.helm4j.model.RepoUpdateResult;
 import dev.nthings.helm4j.model.SearchResultSet;
 import dev.nthings.helm4j.model.ShowMode;
+import dev.nthings.helm4j.options.RepoAddOptions;
+import dev.nthings.helm4j.options.RepoListOptions;
+import dev.nthings.helm4j.options.RepoRemoveOptions;
+import dev.nthings.helm4j.options.RepoUpdateOptions;
 import dev.nthings.helm4j.options.SearchOptions;
 import dev.nthings.helm4j.options.ShowOptions;
 
@@ -43,6 +54,33 @@ public final class NativePayloadMapper {
         options.includePreReleaseVersions(),
         options.versionConstraint(),
         options.failIfNoResults());
+  }
+
+  public static NativeRepoAddOptions toNativeRepoAddOptions(RepoAddOptions options) {
+    return new NativeRepoAddOptions(
+        options.name(),
+        options.url(),
+        options.username(),
+        options.password(),
+        options.certificateFile(),
+        options.keyFile(),
+        options.certificateAuthorityFile(),
+        options.insecureSkipTlsVerification(),
+        options.passCredentialsToAllHosts(),
+        options.forceUpdate());
+  }
+
+  public static NativeRepoUpdateOptions toNativeRepoUpdateOptions(RepoUpdateOptions options) {
+    return new NativeRepoUpdateOptions(listOrEmpty(options.names()));
+  }
+
+  public static NativeRepoListOptions toNativeRepoListOptions(RepoListOptions options) {
+    Objects.requireNonNull(options, "options");
+    return new NativeRepoListOptions();
+  }
+
+  public static NativeRepoRemoveOptions toNativeRepoRemoveOptions(RepoRemoveOptions options) {
+    return new NativeRepoRemoveOptions(listOrEmpty(options.names()));
   }
 
   public static ChartMetadata toChartMetadata(NativeShowPayload payload, String chartReference) {
@@ -107,6 +145,34 @@ public final class NativePayloadMapper {
             .toList();
 
     return new SearchResultSet(charts);
+  }
+
+  public static RepoAddResult toRepoAddResult(NativeRepoAddPayload payload) {
+    return new RepoAddResult(textOrEmpty(payload.name()), textOrEmpty(payload.url()));
+  }
+
+  public static RepoUpdateResult toRepoUpdateResult(NativeRepoUpdatePayload payload) {
+    var repositories =
+        listOrEmpty(payload.repositories()).stream()
+            .map(
+                entry ->
+                    new RepoUpdateEntry(textOrEmpty(entry.name()), textOrEmpty(entry.status())))
+            .toList();
+    return new RepoUpdateResult(repositories);
+  }
+
+  public static RepoListResult toRepoListResult(NativeRepoListPayload payload) {
+    var repositories =
+        listOrEmpty(payload.repositories()).stream()
+            .map(entry -> new RepoSummary(textOrEmpty(entry.name()), textOrEmpty(entry.url())))
+            .toList();
+    return new RepoListResult(repositories);
+  }
+
+  public static RepoRemoveResult toRepoRemoveResult(NativeRepoRemovePayload payload) {
+    var removed =
+        listOrEmpty(payload.removed()).stream().map(NativePayloadMapper::textOrEmpty).toList();
+    return new RepoRemoveResult(removed);
   }
 
   public static void ensureMode(ShowMode expectedMode, String rawMode) {

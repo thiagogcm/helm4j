@@ -79,5 +79,25 @@ class HelmClientFactoryTest {
     public String search(String optionsJson) {
       return "{\"results\":[]}";
     }
+
+    @Override
+    public String repoAdd(String optionsJson) {
+      return "{\"name\":\"demo\",\"url\":\"https://example.com/charts\"}";
+    }
+
+    @Override
+    public String repoUpdate(String optionsJson) {
+      return "{\"repositories\":[]}";
+    }
+
+    @Override
+    public String repoList(String optionsJson) {
+      return "{\"repositories\":[]}";
+    }
+
+    @Override
+    public String repoRemove(String optionsJson) {
+      return "{\"removed\":[]}";
+    }
   }
 }

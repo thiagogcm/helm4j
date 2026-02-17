@@ -24,11 +24,37 @@ class FfmNativeHelmBindingsTest {
         new FfmNativeHelmBindings(
             (mode, chartRef, options) -> arena.allocateFrom("{}"),
             options -> arena.allocateFrom("{\"results\":[]}"),
+            options ->
+                arena.allocateFrom("{\"name\":\"demo\",\"url\":\"https://example.com/charts\"}"),
+            options -> arena.allocateFrom("{\"repositories\":[]}"),
+            options -> arena.allocateFrom("{\"repositories\":[]}"),
+            options -> arena.allocateFrom("{\"removed\":[]}"),
             pointer -> freeCalls.incrementAndGet());
 
     var payload = bindings.search("{}");
 
     assertEquals("{\"results\":[]}", payload);
+    assertEquals(1, freeCalls.get());
+  }
+
+  @Test
+  void repoListReleasesNativeStringOnSuccess() {
+    var freeCalls = new AtomicInteger();
+
+    var bindings =
+        new FfmNativeHelmBindings(
+            (mode, chartRef, options) -> arena.allocateFrom("{}"),
+            options -> arena.allocateFrom("{\"results\":[]}"),
+            options ->
+                arena.allocateFrom("{\"name\":\"demo\",\"url\":\"https://example.com/charts\"}"),
+            options -> arena.allocateFrom("{\"repositories\":[]}"),
+            options -> arena.allocateFrom("{\"repositories\":[]}"),
+            options -> arena.allocateFrom("{\"removed\":[]}"),
+            pointer -> freeCalls.incrementAndGet());
+
+    var payload = bindings.repoList("{}");
+
+    assertEquals("{\"repositories\":[]}", payload);
     assertEquals(1, freeCalls.get());
   }
 
@@ -44,6 +70,11 @@ class FfmNativeHelmBindingsTest {
               }
             },
             options -> arena.allocateFrom("{\"results\":[]}"),
+            options ->
+                arena.allocateFrom("{\"name\":\"demo\",\"url\":\"https://example.com/charts\"}"),
+            options -> arena.allocateFrom("{\"repositories\":[]}"),
+            options -> arena.allocateFrom("{\"repositories\":[]}"),
+            options -> arena.allocateFrom("{\"removed\":[]}"),
             pointer -> freeCalled.set(true));
 
     assertThrows(IllegalStateException.class, () -> bindings.show(ShowMode.CHART, "hello", "{}"));

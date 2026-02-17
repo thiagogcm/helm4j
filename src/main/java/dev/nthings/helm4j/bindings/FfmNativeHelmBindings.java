@@ -1,26 +1,19 @@
 package dev.nthings.helm4j.bindings;
 
 import java.lang.foreign.Arena;
-import java.lang.foreign.FunctionDescriptor;
-import java.lang.foreign.Linker;
 import java.lang.foreign.MemorySegment;
-import java.lang.foreign.SymbolLookup;
-import java.lang.foreign.ValueLayout;
-import java.lang.invoke.MethodHandle;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
 
+import dev.nthings.helm4j.jextract.libhelm4j_h;
 import dev.nthings.helm4j.model.ShowMode;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /** FFM-backed implementation of {@link NativeHelmBindings}. */
 public final class FfmNativeHelmBindings implements NativeHelmBindings {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(FfmNativeHelmBindings.class);
+  private static final String LIBRARY_HINT =
+      "Ensure libhelm4j is built and visible to the runtime (for jextract also set LLVM_HOME and"
+          + " LD_LIBRARY_PATH when generating bindings).";
 
-  private static final String LIBRARY_PATH = "libhelm4j/libhelm4j.so";
   private static final String FREE_STRING_SYMBOL = "FreeString";
   private static final String HELM_SEARCH_SYMBOL = "HelmSearch";
   private static final String HELM_SHOW_CHART_SYMBOL = "HelmShowChart";
@@ -28,36 +21,44 @@ public final class FfmNativeHelmBindings implements NativeHelmBindings {
   private static final String HELM_SHOW_README_SYMBOL = "HelmShowReadme";
   private static final String HELM_SHOW_ALL_SYMBOL = "HelmShowAll";
   private static final String HELM_SHOW_CRDS_SYMBOL = "HelmShowCRDs";
-
-  private static final FunctionDescriptor SHOW_FUNCTION_DESCRIPTOR =
-      FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS);
-  private static final FunctionDescriptor SEARCH_FUNCTION_DESCRIPTOR =
-      FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS);
-  private static final FunctionDescriptor FREE_FUNCTION_DESCRIPTOR =
-      FunctionDescriptor.ofVoid(ValueLayout.ADDRESS);
-
-  private static final Arena LIBRARY_ARENA = Arena.ofAuto();
-  private static final SymbolLookup SYMBOL_LOOKUP = createSymbolLookup();
-  private static final ConcurrentHashMap<String, MethodHandle> HANDLE_CACHE =
-      new ConcurrentHashMap<>();
+  private static final String HELM_REPO_ADD_SYMBOL = "HelmRepoAdd";
+  private static final String HELM_REPO_UPDATE_SYMBOL = "HelmRepoUpdate";
+  private static final String HELM_REPO_LIST_SYMBOL = "HelmRepoList";
+  private static final String HELM_REPO_REMOVE_SYMBOL = "HelmRepoRemove";
 
   private final NativeShowInvoker showInvoker;
-  private final NativeSearchInvoker searchInvoker;
+  private final NativeUnaryInvoker searchInvoker;
+  private final NativeUnaryInvoker repoAddInvoker;
+  private final NativeUnaryInvoker repoUpdateInvoker;
+  private final NativeUnaryInvoker repoListInvoker;
+  private final NativeUnaryInvoker repoRemoveInvoker;
   private final NativeStringReleaser stringReleaser;
 
   public FfmNativeHelmBindings() {
     this(
         FfmNativeHelmBindings::invokeShowNative,
         FfmNativeHelmBindings::invokeSearchNative,
+        FfmNativeHelmBindings::invokeRepoAddNative,
+        FfmNativeHelmBindings::invokeRepoUpdateNative,
+        FfmNativeHelmBindings::invokeRepoListNative,
+        FfmNativeHelmBindings::invokeRepoRemoveNative,
         FfmNativeHelmBindings::freeNativeString);
   }
 
   FfmNativeHelmBindings(
       NativeShowInvoker showInvoker,
-      NativeSearchInvoker searchInvoker,
+      NativeUnaryInvoker searchInvoker,
+      NativeUnaryInvoker repoAddInvoker,
+      NativeUnaryInvoker repoUpdateInvoker,
+      NativeUnaryInvoker repoListInvoker,
+      NativeUnaryInvoker repoRemoveInvoker,
       NativeStringReleaser stringReleaser) {
     this.showInvoker = Objects.requireNonNull(showInvoker, "showInvoker");
     this.searchInvoker = Objects.requireNonNull(searchInvoker, "searchInvoker");
+    this.repoAddInvoker = Objects.requireNonNull(repoAddInvoker, "repoAddInvoker");
+    this.repoUpdateInvoker = Objects.requireNonNull(repoUpdateInvoker, "repoUpdateInvoker");
+    this.repoListInvoker = Objects.requireNonNull(repoListInvoker, "repoListInvoker");
+    this.repoRemoveInvoker = Objects.requireNonNull(repoRemoveInvoker, "repoRemoveInvoker");
     this.stringReleaser = Objects.requireNonNull(stringReleaser, "stringReleaser");
   }
 
@@ -77,11 +78,35 @@ public final class FfmNativeHelmBindings implements NativeHelmBindings {
 
   @Override
   public String search(String optionsJson) {
+    return invokeUnary(optionsJson, searchInvoker);
+  }
+
+  @Override
+  public String repoAdd(String optionsJson) {
+    return invokeUnary(optionsJson, repoAddInvoker);
+  }
+
+  @Override
+  public String repoUpdate(String optionsJson) {
+    return invokeUnary(optionsJson, repoUpdateInvoker);
+  }
+
+  @Override
+  public String repoList(String optionsJson) {
+    return invokeUnary(optionsJson, repoListInvoker);
+  }
+
+  @Override
+  public String repoRemove(String optionsJson) {
+    return invokeUnary(optionsJson, repoRemoveInvoker);
+  }
+
+  private String invokeUnary(String optionsJson, NativeUnaryInvoker invoker) {
     Objects.requireNonNull(optionsJson, "optionsJson");
 
     try (var arena = Arena.ofConfined()) {
       var optionsPtr = arena.allocateFrom(optionsJson);
-      var resultPtr = searchInvoker.invoke(optionsPtr);
+      var resultPtr = invoker.invoke(optionsPtr);
       return readAndFree(resultPtr);
     }
   }
@@ -100,80 +125,62 @@ public final class FfmNativeHelmBindings implements NativeHelmBindings {
 
   private static MemorySegment invokeShowNative(
       ShowMode mode, MemorySegment chartRef, MemorySegment options) {
-    var symbol =
-        switch (mode) {
-          case CHART -> HELM_SHOW_CHART_SYMBOL;
-          case VALUES -> HELM_SHOW_VALUES_SYMBOL;
-          case README -> HELM_SHOW_README_SYMBOL;
-          case ALL -> HELM_SHOW_ALL_SYMBOL;
-          case CRDS -> HELM_SHOW_CRDS_SYMBOL;
-        };
-
-    return invokeShowBySymbol(symbol, chartRef, options);
-  }
-
-  private static MemorySegment invokeShowBySymbol(
-      String symbol, MemorySegment chartRef, MemorySegment options) {
-    try {
-      var handle = methodHandle(symbol, SHOW_FUNCTION_DESCRIPTOR);
-      return (MemorySegment) handle.invokeExact(chartRef, options);
-    } catch (Error | RuntimeException ex) {
-      throw ex;
-    } catch (Throwable ex) {
-      throw new IllegalStateException("Failed invoking native function: " + symbol, ex);
-    }
+    return switch (mode) {
+      case CHART ->
+          invokeJextract(
+              HELM_SHOW_CHART_SYMBOL, () -> libhelm4j_h.HelmShowChart(chartRef, options));
+      case VALUES ->
+          invokeJextract(
+              HELM_SHOW_VALUES_SYMBOL, () -> libhelm4j_h.HelmShowValues(chartRef, options));
+      case README ->
+          invokeJextract(
+              HELM_SHOW_README_SYMBOL, () -> libhelm4j_h.HelmShowReadme(chartRef, options));
+      case ALL ->
+          invokeJextract(HELM_SHOW_ALL_SYMBOL, () -> libhelm4j_h.HelmShowAll(chartRef, options));
+      case CRDS ->
+          invokeJextract(HELM_SHOW_CRDS_SYMBOL, () -> libhelm4j_h.HelmShowCRDs(chartRef, options));
+    };
   }
 
   private static MemorySegment invokeSearchNative(MemorySegment options) {
-    try {
-      var handle = methodHandle(HELM_SEARCH_SYMBOL, SEARCH_FUNCTION_DESCRIPTOR);
-      return (MemorySegment) handle.invokeExact(options);
-    } catch (Error | RuntimeException ex) {
-      throw ex;
-    } catch (Throwable ex) {
-      throw new IllegalStateException("Failed invoking native function: " + HELM_SEARCH_SYMBOL, ex);
-    }
+    return invokeJextract(HELM_SEARCH_SYMBOL, () -> libhelm4j_h.HelmSearch(options));
+  }
+
+  private static MemorySegment invokeRepoAddNative(MemorySegment options) {
+    return invokeJextract(HELM_REPO_ADD_SYMBOL, () -> libhelm4j_h.HelmRepoAdd(options));
+  }
+
+  private static MemorySegment invokeRepoUpdateNative(MemorySegment options) {
+    return invokeJextract(HELM_REPO_UPDATE_SYMBOL, () -> libhelm4j_h.HelmRepoUpdate(options));
+  }
+
+  private static MemorySegment invokeRepoListNative(MemorySegment options) {
+    return invokeJextract(HELM_REPO_LIST_SYMBOL, () -> libhelm4j_h.HelmRepoList(options));
+  }
+
+  private static MemorySegment invokeRepoRemoveNative(MemorySegment options) {
+    return invokeJextract(HELM_REPO_REMOVE_SYMBOL, () -> libhelm4j_h.HelmRepoRemove(options));
   }
 
   private static void freeNativeString(MemorySegment pointer) {
+    invokeJextractVoid(FREE_STRING_SYMBOL, () -> libhelm4j_h.FreeString(pointer));
+  }
+
+  private static MemorySegment invokeJextract(String symbol, NativeInvocation invocation) {
     try {
-      var handle = methodHandle(FREE_STRING_SYMBOL, FREE_FUNCTION_DESCRIPTOR);
-      handle.invokeExact(pointer);
-    } catch (Error | RuntimeException ex) {
-      throw ex;
+      return invocation.invoke();
     } catch (Throwable ex) {
-      throw new IllegalStateException("Failed invoking native function: " + FREE_STRING_SYMBOL, ex);
+      throw new IllegalStateException(
+          "Failed invoking native function: " + symbol + ". " + LIBRARY_HINT, ex);
     }
   }
 
-  private static MethodHandle methodHandle(String symbol, FunctionDescriptor descriptor) {
-    return HANDLE_CACHE.computeIfAbsent(
-        symbol,
-        ignored -> {
-          var address =
-              SYMBOL_LOOKUP
-                  .find(symbol)
-                  .orElseThrow(
-                      () ->
-                          new IllegalStateException(
-                              "Native symbol not found: "
-                                  + symbol
-                                  + ". Ensure libhelm4j is built and visible to the runtime."));
-          return Linker.nativeLinker().downcallHandle(address, descriptor);
-        });
-  }
-
-  private static SymbolLookup createSymbolLookup() {
-    var fallback = SymbolLookup.loaderLookup().or(Linker.nativeLinker().defaultLookup());
-
+  private static void invokeJextractVoid(String symbol, NativeVoidInvocation invocation) {
     try {
-      return SymbolLookup.libraryLookup(LIBRARY_PATH, LIBRARY_ARENA).or(fallback);
-    } catch (IllegalArgumentException | UnsatisfiedLinkError ex) {
-      LOGGER.debug(
-          "Unable to eagerly load native library '{}'. Falling back to loader/default lookup.",
-          LIBRARY_PATH,
-          ex);
-      return fallback;
+      invocation.invoke();
+    } catch (Throwable ex) {
+      throw new IllegalStateException(
+          "Failed invoking native function: " + symbol + ". " + LIBRARY_HINT, ex);
     }
   }
 
@@ -183,12 +190,22 @@ public final class FfmNativeHelmBindings implements NativeHelmBindings {
   }
 
   @FunctionalInterface
-  interface NativeSearchInvoker {
+  interface NativeUnaryInvoker {
     MemorySegment invoke(MemorySegment options);
   }
 
   @FunctionalInterface
   interface NativeStringReleaser {
     void free(MemorySegment pointer);
+  }
+
+  @FunctionalInterface
+  private interface NativeInvocation {
+    MemorySegment invoke() throws Throwable;
+  }
+
+  @FunctionalInterface
+  private interface NativeVoidInvocation {
+    void invoke() throws Throwable;
   }
 }

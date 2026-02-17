@@ -31,7 +31,7 @@ class HelmClientSearchIntegrationTest {
       assertNotNull(response.charts());
       assertTrue(response.charts().stream().allMatch(result -> result.name() != null));
     } catch (HelmException ex) {
-      assertEquals("runSearch", ex.stage());
+      assertEquals("runOperation", ex.stage());
       assertTrue(ex.getMessage().contains("no repositories configured"));
     }
   }

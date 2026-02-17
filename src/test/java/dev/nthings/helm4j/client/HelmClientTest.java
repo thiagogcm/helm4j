@@ -216,6 +216,26 @@ class HelmClientTest {
       return searchResponse;
     }
 
+    @Override
+    public String repoAdd(String optionsJson) {
+      return "{\"name\":\"demo\",\"url\":\"https://example.com/charts\"}";
+    }
+
+    @Override
+    public String repoUpdate(String optionsJson) {
+      return "{\"repositories\":[]}";
+    }
+
+    @Override
+    public String repoList(String optionsJson) {
+      return "{\"repositories\":[]}";
+    }
+
+    @Override
+    public String repoRemove(String optionsJson) {
+      return "{\"removed\":[]}";
+    }
+
     void putShowResponse(ShowMode mode, String payload) {
       showResponses.put(mode, payload);
     }

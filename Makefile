@@ -1,4 +1,4 @@
-.PHONY: help build test clean coverage check go-build go-test go-vet go-fix go-all
+.PHONY: help build test clean coverage check go-build go-test go-vet go-fix go-all jextract
 
 # Go module location
 GO_MOD_DIR := libhelm4j
@@ -19,6 +19,7 @@ help:
 	@echo "  make go-vet        - Run go vet on the Go module"
 	@echo "  make go-fix        - Run go fix modernisers (Go 1.26+)"
 	@echo "  make go-all        - go-vet + go-test + go-build"
+	@echo "  make jextract      - Regenerate Java FFM bindings from libhelm4j.h"
 
 # --- Go targets ---
 
@@ -36,6 +37,25 @@ go-fix:
 
 go-all: go-vet go-test go-build
 	@echo "✓ Go pipeline passed"
+
+jextract: go-build
+	@if [ -z "$$LLVM_HOME" ]; then \
+		echo "LLVM_HOME is required (example: export LLVM_HOME=/usr/lib/llvm-18)"; \
+		exit 1; \
+	fi
+	@LD_LIBRARY_PATH=$$LLVM_HOME/lib jextract -Djava.library.path=$$LLVM_HOME -Ilibhelm4j -l:libhelm4j/libhelm4j.so \
+		--include-function FreeString \
+		--include-function HelmShowChart \
+		--include-function HelmShowValues \
+		--include-function HelmShowReadme \
+		--include-function HelmShowAll \
+		--include-function HelmShowCRDs \
+		--include-function HelmSearch \
+		--include-function HelmRepoAdd \
+		--include-function HelmRepoUpdate \
+		--include-function HelmRepoList \
+		--include-function HelmRepoRemove \
+		--output src/main/generated --target-package dev.nthings.helm4j.jextract libhelm4j/libhelm4j.h
 
 # --- Java / Gradle targets ---
 

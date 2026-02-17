@@ -1,5 +1,7 @@
 package dev.nthings.helm4j.bindings;
 
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -20,11 +22,19 @@ public final class NativePayloadCodec {
   private final ObjectWriter writer;
   private final ObjectReader showEnvelopeReader;
   private final ObjectReader searchEnvelopeReader;
+  private final ObjectReader repoAddEnvelopeReader;
+  private final ObjectReader repoUpdateEnvelopeReader;
+  private final ObjectReader repoListEnvelopeReader;
+  private final ObjectReader repoRemoveEnvelopeReader;
 
   public NativePayloadCodec(ObjectMapper mapper) {
     this.writer = mapper.writer();
     this.showEnvelopeReader = mapper.readerFor(NativeShowEnvelope.class);
     this.searchEnvelopeReader = mapper.readerFor(NativeSearchEnvelope.class);
+    this.repoAddEnvelopeReader = mapper.readerFor(NativeRepoAddEnvelope.class);
+    this.repoUpdateEnvelopeReader = mapper.readerFor(NativeRepoUpdateEnvelope.class);
+    this.repoListEnvelopeReader = mapper.readerFor(NativeRepoListEnvelope.class);
+    this.repoRemoveEnvelopeReader = mapper.readerFor(NativeRepoRemoveEnvelope.class);
   }
 
   public String toJson(Object value) {
@@ -74,6 +84,49 @@ public final class NativePayloadCodec {
     return new NativeSearchPayload(envelope.results());
   }
 
+  public NativeRepoAddPayload decodeRepoAddResponse(String json) {
+    var envelope = readEnvelope(json, repoAddEnvelopeReader, NativeRepoAddEnvelope.class);
+    if (envelope.error() != null) {
+      throwRepoFailure(envelope.error(), envelope.stage(), envelope.operation());
+    }
+    return new NativeRepoAddPayload(envelope.name(), envelope.url());
+  }
+
+  public NativeRepoUpdatePayload decodeRepoUpdateResponse(String json) {
+    var envelope = readEnvelope(json, repoUpdateEnvelopeReader, NativeRepoUpdateEnvelope.class);
+    if (envelope.error() != null) {
+      throwRepoFailure(envelope.error(), envelope.stage(), envelope.operation());
+    }
+    return new NativeRepoUpdatePayload(envelope.repositories());
+  }
+
+  public NativeRepoListPayload decodeRepoListResponse(String json) {
+    var envelope = readEnvelope(json, repoListEnvelopeReader, NativeRepoListEnvelope.class);
+    if (envelope.error() != null) {
+      throwRepoFailure(envelope.error(), envelope.stage(), envelope.operation());
+    }
+    return new NativeRepoListPayload(envelope.repositories());
+  }
+
+  public NativeRepoRemovePayload decodeRepoRemoveResponse(String json) {
+    var envelope = readEnvelope(json, repoRemoveEnvelopeReader, NativeRepoRemoveEnvelope.class);
+    if (envelope.error() != null) {
+      throwRepoFailure(envelope.error(), envelope.stage(), envelope.operation());
+    }
+    return new NativeRepoRemovePayload(envelope.removed());
+  }
+
+  private void throwRepoFailure(String message, String rawStage, String rawOperation) {
+    var stage = normalizeText(rawStage);
+    var operation = normalizeText(rawOperation);
+    LOGGER.error(
+        "Native helm repo failure: operation='{}', stage='{}', message='{}'",
+        operation,
+        stage,
+        message);
+    throw new HelmException(message, stage, null, null, null, operation);
+  }
+
   private <T> T readEnvelope(String json, ObjectReader reader, Class<T> type) {
     if (json == null || json.isBlank()) {
       LOGGER.error("Empty payload returned by native layer");
@@ -121,7 +174,36 @@ public final class NativePayloadCodec {
 
   @JsonIgnoreProperties(ignoreUnknown = true)
   private record NativeSearchEnvelope(
-      @JsonProperty("results") java.util.List<NativeSearchResult> results,
+      @JsonProperty("results") List<NativeSearchResult> results,
       @JsonProperty("error") String error,
       @JsonProperty("stage") String stage) {}
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  private record NativeRepoAddEnvelope(
+      @JsonProperty("name") String name,
+      @JsonProperty("url") String url,
+      @JsonProperty("error") String error,
+      @JsonProperty("stage") String stage,
+      @JsonProperty("operation") String operation) {}
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  private record NativeRepoUpdateEnvelope(
+      @JsonProperty("repositories") List<NativeRepoUpdateEntry> repositories,
+      @JsonProperty("error") String error,
+      @JsonProperty("stage") String stage,
+      @JsonProperty("operation") String operation) {}
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  private record NativeRepoListEnvelope(
+      @JsonProperty("repositories") List<NativeRepoListEntry> repositories,
+      @JsonProperty("error") String error,
+      @JsonProperty("stage") String stage,
+      @JsonProperty("operation") String operation) {}
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  private record NativeRepoRemoveEnvelope(
+      @JsonProperty("removed") List<String> removed,
+      @JsonProperty("error") String error,
+      @JsonProperty("stage") String stage,
+      @JsonProperty("operation") String operation) {}
 }

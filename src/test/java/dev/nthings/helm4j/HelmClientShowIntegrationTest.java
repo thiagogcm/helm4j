@@ -88,7 +88,7 @@ class HelmClientShowIntegrationTest {
   void showWithBlankRefFails() {
     var ex = assertThrows(HelmException.class, () -> client.showChart("  "));
 
-    assertEquals("runShow", ex.stage());
+    assertEquals("runOperation", ex.stage());
     assertEquals("chart", ex.mode());
   }
 

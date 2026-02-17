@@ -33,11 +33,18 @@ public final class HelmClient {
   private final ObjectMapper mapper;
   private final NativeHelmBindings bindings;
   private final NativePayloadCodec payloadCodec;
+  private final HelmRepoClient repoClient;
 
   HelmClient(ObjectMapper mapper, NativeHelmBindings bindings) {
     this.mapper = Objects.requireNonNull(mapper, "mapper");
     this.bindings = Objects.requireNonNull(bindings, "bindings");
     this.payloadCodec = new NativePayloadCodec(this.mapper);
+    this.repoClient = new HelmRepoClient(this.bindings, this.payloadCodec);
+  }
+
+  /** Repository operations facade (equivalent to {@code helm repo ...}). */
+  public HelmRepoClient repo() {
+    return repoClient;
   }
 
   /** Show chart metadata (equivalent to {@code helm show chart}). */

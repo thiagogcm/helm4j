@@ -9,6 +9,7 @@ Helm4j is a Java library that provides bindings to Helm for Kubernetes, backed b
 ```java
 import dev.nthings.helm4j.client.HelmClient;
 import dev.nthings.helm4j.client.HelmClientFactory;
+import dev.nthings.helm4j.options.RepoAddOptions;
 import dev.nthings.helm4j.options.SearchOptions;
 import dev.nthings.helm4j.options.ShowOptions;
 
@@ -35,6 +36,16 @@ var search =
             .build());
 
 search.first().ifPresent(result -> System.out.println(result.name()));
+
+client.repo().add(
+    RepoAddOptions.builder()
+        .name("bitnami")
+        .url("https://charts.bitnami.com/bitnami")
+        .forceUpdate(true)
+        .build());
+
+var repos = client.repo().list();
+System.out.println(repos.size());
 ```
 
 ## Build libhelm4j and generate bindings
@@ -43,7 +54,7 @@ search.first().ifPresent(result -> System.out.println(result.name()));
 export LLVM_HOME=/usr/lib/llvm-18
 export LD_LIBRARY_PATH=$LLVM_HOME/lib
 
-go build -buildmode=c-shared -o libhelm4j.so .
+(cd libhelm4j && CGO_ENABLED=1 go build -buildmode=c-shared -o libhelm4j.so .)
 
 jextract -Djava.library.path=$LLVM_HOME -Ilibhelm4j -l:libhelm4j/libhelm4j.so \
   --include-function FreeString \
@@ -53,5 +64,9 @@ jextract -Djava.library.path=$LLVM_HOME -Ilibhelm4j -l:libhelm4j/libhelm4j.so \
   --include-function HelmShowAll \
   --include-function HelmShowCRDs \
   --include-function HelmSearch \
+  --include-function HelmRepoAdd \
+  --include-function HelmRepoUpdate \
+  --include-function HelmRepoList \
+  --include-function HelmRepoRemove \
   --output src/main/generated --target-package dev.nthings.helm4j.jextract libhelm4j/libhelm4j.h
 ```
