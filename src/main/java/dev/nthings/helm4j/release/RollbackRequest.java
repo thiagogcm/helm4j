@@ -42,8 +42,7 @@ public record RollbackRequest(
     private int maxHistory;
     private ApplyStrategy applyStrategy = ApplyStrategy.SERVER_SIDE_APPLY;
 
-    private Builder() {
-    }
+    private Builder() {}
 
     public Builder releaseName(String value) {
       this.releaseName = value;
@@ -123,8 +122,7 @@ public record RollbackRequest(
   }
 
   private static String normalize(String value) {
-    if (value == null)
-      return null;
+    if (value == null) return null;
     var normalized = value.trim();
     return normalized.isEmpty() ? null : normalized;
   }

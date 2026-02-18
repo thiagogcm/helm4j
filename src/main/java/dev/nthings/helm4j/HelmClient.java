@@ -58,8 +58,7 @@ public final class HelmClient implements AutoCloseable {
     private ObjectMapper mapper;
     private HelmBridge bridge;
 
-    private Builder() {
-    }
+    private Builder() {}
 
     public Builder withObjectMapper(ObjectMapper value) {
       this.mapper = Objects.requireNonNull(value, "value");

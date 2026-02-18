@@ -1,10 +1,18 @@
 package dev.nthings.helm4j.internal.sdk;
 
 import dev.nthings.helm4j.VersionInfo;
+import dev.nthings.helm4j.chart.DependencyRequest;
+import dev.nthings.helm4j.chart.DependencyResult;
 import dev.nthings.helm4j.chart.HubSearchRequest;
 import dev.nthings.helm4j.chart.HubSearchResult;
 import dev.nthings.helm4j.chart.LintRequest;
 import dev.nthings.helm4j.chart.LintResult;
+import dev.nthings.helm4j.chart.PackageChartRequest;
+import dev.nthings.helm4j.chart.PackageChartResult;
+import dev.nthings.helm4j.chart.PullRequest;
+import dev.nthings.helm4j.chart.PullResult;
+import dev.nthings.helm4j.chart.PushRequest;
+import dev.nthings.helm4j.chart.PushResult;
 import dev.nthings.helm4j.chart.RepoSearchRequest;
 import dev.nthings.helm4j.chart.RepoSearchResult;
 import dev.nthings.helm4j.chart.ShowAllResult;
@@ -26,14 +34,21 @@ import dev.nthings.helm4j.release.HistoryRequest;
 import dev.nthings.helm4j.release.HistoryResult;
 import dev.nthings.helm4j.release.InstallRequest;
 import dev.nthings.helm4j.release.InstallResult;
+import dev.nthings.helm4j.release.ReleaseListRequest;
+import dev.nthings.helm4j.release.ReleaseListResult;
 import dev.nthings.helm4j.release.RollbackRequest;
 import dev.nthings.helm4j.release.RollbackResult;
 import dev.nthings.helm4j.release.StatusRequest;
 import dev.nthings.helm4j.release.StatusResult;
+import dev.nthings.helm4j.release.TestRequest;
+import dev.nthings.helm4j.release.TestResult;
 import dev.nthings.helm4j.release.UninstallRequest;
 import dev.nthings.helm4j.release.UninstallResult;
 import dev.nthings.helm4j.release.UpgradeRequest;
 import dev.nthings.helm4j.release.UpgradeResult;
+import dev.nthings.helm4j.repo.RegistryLoginRequest;
+import dev.nthings.helm4j.repo.RegistryLogoutRequest;
+import dev.nthings.helm4j.repo.RegistryResult;
 import dev.nthings.helm4j.repo.RepoAddRequest;
 import dev.nthings.helm4j.repo.RepoAddResult;
 import dev.nthings.helm4j.repo.RepoListResult;
@@ -58,6 +73,14 @@ public interface HelmGateway {
 
   HubSearchResult searchHub(HubSearchRequest request);
 
+  PullResult pull(PullRequest request);
+
+  PushResult push(PushRequest request);
+
+  PackageChartResult packageChart(PackageChartRequest request);
+
+  DependencyResult dependency(DependencyRequest request);
+
   ShowChartResult showChart(ChartRef chartReference, ShowRequest request);
 
   ShowValuesResult showValues(ChartRef chartReference, ShowRequest request);
@@ -80,6 +103,10 @@ public interface HelmGateway {
 
   HistoryResult history(HistoryRequest request);
 
+  ReleaseListResult list(ReleaseListRequest request);
+
+  TestResult test(TestRequest request);
+
   GetAllResult getAll(GetRequest request);
 
   GetValuesResult getValues(GetRequest request);
@@ -95,6 +122,10 @@ public interface HelmGateway {
   TemplateResult template(TemplateRequest request);
 
   LintResult lint(LintRequest request);
+
+  RegistryResult registryLogin(RegistryLoginRequest request);
+
+  RegistryResult registryLogout(RegistryLogoutRequest request);
 
   VersionInfo version();
 }

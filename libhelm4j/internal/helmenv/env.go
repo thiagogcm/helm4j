@@ -24,14 +24,33 @@ type Env struct {
 	Config   *action.Configuration
 }
 
+// Options configures environment initialization behavior.
+type Options struct {
+	Namespace string
+}
+
 // New provisions a fresh Helm CLI environment and action configuration.
 // It mirrors the initialisation performed by the helm CLI binary so that
 // every operation starts from a consistent baseline.
 func New() (*Env, error) {
+	return NewWithOptions(Options{})
+}
+
+// NewWithNamespace provisions an environment pinned to the provided namespace.
+func NewWithNamespace(namespace string) (*Env, error) {
+	return NewWithOptions(Options{Namespace: namespace})
+}
+
+// NewWithOptions provisions a fresh Helm CLI environment with explicit
+// initialization options for shared bootstrap settings.
+func NewWithOptions(opts Options) (*Env, error) {
 	debugEnabled := helmlog.SetLevelFromEnv()
 
 	settings := cli.New()
 	settings.Debug = debugEnabled
+	if opts.Namespace != "" {
+		settings.SetNamespace(opts.Namespace)
+	}
 
 	cfg := action.NewConfiguration(action.ConfigurationSetLogger(helmlog.Handler()))
 	if err := cfg.Init(settings.RESTClientGetter(), settings.Namespace(), os.Getenv("HELM_DRIVER")); err != nil {

@@ -9,5 +9,4 @@ public record GetMetadataResult(
     String chart,
     String chartVersion,
     String appVersion,
-    String deployedAt) {
-}
+    String deployedAt) {}

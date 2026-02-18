@@ -1,5 +1,6 @@
 package dev.nthings.helm4j.chart;
 
+import java.nio.file.Path;
 import java.util.Objects;
 import java.util.function.Consumer;
 
@@ -158,5 +159,69 @@ public final class ChartClient {
   public LintResult lint(LintRequest request) {
     Objects.requireNonNull(request, "request");
     return gateway.lint(request);
+  }
+
+  public PullResult pull(String chartReference) {
+    return pull(PullRequest.builder().chartReference(chartReference).build());
+  }
+
+  public PullResult pull(String chartReference, Consumer<PullRequest.Builder> spec) {
+    Objects.requireNonNull(spec, "spec");
+    var builder = PullRequest.builder().chartReference(chartReference);
+    spec.accept(builder);
+    return pull(builder.build());
+  }
+
+  public PullResult pull(PullRequest request) {
+    Objects.requireNonNull(request, "request");
+    return gateway.pull(request);
+  }
+
+  public PushResult push(String chartReference, String remote) {
+    return push(PushRequest.builder().chartReference(chartReference).remote(remote).build());
+  }
+
+  public PushResult push(String chartReference, String remote, Consumer<PushRequest.Builder> spec) {
+    Objects.requireNonNull(spec, "spec");
+    var builder = PushRequest.builder().chartReference(chartReference).remote(remote);
+    spec.accept(builder);
+    return push(builder.build());
+  }
+
+  public PushResult push(PushRequest request) {
+    Objects.requireNonNull(request, "request");
+    return gateway.push(request);
+  }
+
+  public PackageChartResult packageChart(Path chartPath) {
+    return packageChart(PackageChartRequest.builder().chartPath(chartPath).build());
+  }
+
+  public PackageChartResult packageChart(Consumer<PackageChartRequest.Builder> spec) {
+    Objects.requireNonNull(spec, "spec");
+    var builder = PackageChartRequest.builder();
+    spec.accept(builder);
+    return packageChart(builder.build());
+  }
+
+  public PackageChartResult packageChart(PackageChartRequest request) {
+    Objects.requireNonNull(request, "request");
+    return gateway.packageChart(request);
+  }
+
+  public DependencyResult dependency(Path chartPath) {
+    return dependency(DependencyRequest.builder().chartPath(chartPath).build());
+  }
+
+  public DependencyResult dependency(Consumer<DependencyRequest.Builder> spec) {
+    Objects.requireNonNull(spec, "spec");
+    var builder = DependencyRequest.builder();
+    spec.accept(builder);
+    return dependency(builder.build());
+  }
+
+  public DependencyResult dependency(DependencyRequest request) {
+    Objects.requireNonNull(request, "request");
+    return gateway.dependency(request);
   }
 }

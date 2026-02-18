@@ -38,8 +38,7 @@ public record UninstallRequest(
     private WaitMode waitMode;
     private String deletionPropagation;
 
-    private Builder() {
-    }
+    private Builder() {}
 
     public Builder releaseName(String value) {
       this.releaseName = value;
@@ -107,8 +106,7 @@ public record UninstallRequest(
   }
 
   private static String normalize(String value) {
-    if (value == null)
-      return null;
+    if (value == null) return null;
     var normalized = value.trim();
     return normalized.isEmpty() ? null : normalized;
   }

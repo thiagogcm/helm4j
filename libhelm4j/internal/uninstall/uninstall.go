@@ -47,16 +47,18 @@ func Run(releaseName string, opts Options) (string, error) {
 	if strings.TrimSpace(releaseName) == "" {
 		return "", errors.New("release name is required")
 	}
+	if opts.Timeout != "" {
+		_, err := time.ParseDuration(opts.Timeout)
+		if err != nil {
+			return "", fmt.Errorf("invalid timeout %q: %w", opts.Timeout, err)
+		}
+	}
 
 	log.Debug("running helm uninstall")
 
-	env, err := helmenv.New()
+	env, err := helmenv.NewWithNamespace(opts.Namespace)
 	if err != nil {
 		return "", fmt.Errorf("bootstrap helm: %w", err)
-	}
-
-	if opts.Namespace != "" {
-		env.Settings.SetNamespace(opts.Namespace)
 	}
 
 	client := action.NewUninstall(env.Config)
@@ -71,9 +73,8 @@ func Run(releaseName string, opts Options) (string, error) {
 		client.WaitStrategy = kube.WaitStrategy(opts.Wait)
 	}
 	if opts.Timeout != "" {
-		if d, parseErr := time.ParseDuration(opts.Timeout); parseErr == nil {
-			client.Timeout = d
-		}
+		d, _ := time.ParseDuration(opts.Timeout) // already validated above in Run
+		client.Timeout = d
 	}
 
 	res, err := client.Run(releaseName)

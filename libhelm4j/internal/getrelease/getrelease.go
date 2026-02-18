@@ -73,13 +73,9 @@ func Run(mode, releaseName string, opts Options) (string, error) {
 
 	log.Debug("running helm get")
 
-	env, err := helmenv.New()
+	env, err := helmenv.NewWithNamespace(opts.Namespace)
 	if err != nil {
 		return "", fmt.Errorf("bootstrap helm: %w", err)
-	}
-
-	if opts.Namespace != "" {
-		env.Settings.SetNamespace(opts.Namespace)
 	}
 
 	switch strings.ToLower(strings.TrimSpace(mode)) {

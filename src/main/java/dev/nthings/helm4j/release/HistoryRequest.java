@@ -17,8 +17,7 @@ public record HistoryRequest(String releaseName, String namespace, int max) {
     private String namespace;
     private int max;
 
-    private Builder() {
-    }
+    private Builder() {}
 
     public Builder releaseName(String value) {
       this.releaseName = value;
@@ -41,8 +40,7 @@ public record HistoryRequest(String releaseName, String namespace, int max) {
   }
 
   private static String normalize(String value) {
-    if (value == null)
-      return null;
+    if (value == null) return null;
     var normalized = value.trim();
     return normalized.isEmpty() ? null : normalized;
   }

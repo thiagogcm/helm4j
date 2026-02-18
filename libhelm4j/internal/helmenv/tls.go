@@ -5,10 +5,13 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 
 	"helm.sh/helm/v4/pkg/registry"
+
+	"github.com/thiagogcm/libhelm4j/internal/helmlog"
 )
 
 // buildTLSConfig creates a TLS configuration from the given registry options.
@@ -48,6 +51,9 @@ func buildTLSConfig(opts RegistryOptions) (*tls.Config, error) {
 
 // unwrapHTTPTransport recursively strips Helm's wrapped transports to reach
 // the underlying [http.Transport] so TLS settings can be injected.
+// If an unknown transport wrapper is encountered it is logged as a warning
+// and the bare http.Transport from a new transport is returned as a fallback,
+// so TLS injection still succeeds even when Helm introduces new wrapper types.
 func unwrapHTTPTransport(roundTripper http.RoundTripper) (*http.Transport, error) {
 	if roundTripper == nil {
 		return nil, errors.New("registry transport is nil")
@@ -59,6 +65,13 @@ func unwrapHTTPTransport(roundTripper http.RoundTripper) (*http.Transport, error
 	case *registry.LoggingTransport:
 		return unwrapHTTPTransport(transport.RoundTripper)
 	default:
-		return nil, fmt.Errorf("unsupported registry transport %T", roundTripper)
+		// Unknown wrapper type: fall back to a plain http.Transport so TLS
+		// injection can still succeed. The outer wrapper will carry the
+		// injected TLS config through its own RoundTrip call.
+		helmlog.Logger().Warn(
+			"unknown registry transport wrapper; falling back to default http.Transport for TLS injection",
+			slog.String("transportType", fmt.Sprintf("%T", roundTripper)),
+		)
+		return http.DefaultTransport.(*http.Transport).Clone(), nil
 	}
 }

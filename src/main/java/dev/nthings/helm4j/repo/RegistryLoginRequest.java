@@ -1,0 +1,99 @@
+package dev.nthings.helm4j.repo;
+
+/** Request parameters for registry login. */
+public record RegistryLoginRequest(
+    String hostname,
+    String username,
+    String password,
+    String certificateFile,
+    String keyFile,
+    String certificateAuthorityFile,
+    boolean insecure,
+    boolean plainHttp) {
+
+  public RegistryLoginRequest {
+    hostname = normalize(hostname);
+    username = normalize(username);
+    password = normalize(password);
+    certificateFile = normalize(certificateFile);
+    keyFile = normalize(keyFile);
+    certificateAuthorityFile = normalize(certificateAuthorityFile);
+  }
+
+  public static Builder builder() {
+    return new Builder();
+  }
+
+  public static final class Builder {
+    private String hostname;
+    private String username;
+    private String password;
+    private String certificateFile;
+    private String keyFile;
+    private String certificateAuthorityFile;
+    private boolean insecure;
+    private boolean plainHttp;
+
+    private Builder() {}
+
+    public Builder hostname(String value) {
+      this.hostname = value;
+      return this;
+    }
+
+    public Builder username(String value) {
+      this.username = value;
+      return this;
+    }
+
+    public Builder password(String value) {
+      this.password = value;
+      return this;
+    }
+
+    public Builder certificateFile(String value) {
+      this.certificateFile = value;
+      return this;
+    }
+
+    public Builder keyFile(String value) {
+      this.keyFile = value;
+      return this;
+    }
+
+    public Builder certificateAuthorityFile(String value) {
+      this.certificateAuthorityFile = value;
+      return this;
+    }
+
+    public Builder insecure(boolean value) {
+      this.insecure = value;
+      return this;
+    }
+
+    public Builder plainHttp(boolean value) {
+      this.plainHttp = value;
+      return this;
+    }
+
+    public RegistryLoginRequest build() {
+      return new RegistryLoginRequest(
+          hostname,
+          username,
+          password,
+          certificateFile,
+          keyFile,
+          certificateAuthorityFile,
+          insecure,
+          plainHttp);
+    }
+  }
+
+  private static String normalize(String value) {
+    if (value == null) {
+      return null;
+    }
+    var normalized = value.trim();
+    return normalized.isEmpty() ? null : normalized;
+  }
+}

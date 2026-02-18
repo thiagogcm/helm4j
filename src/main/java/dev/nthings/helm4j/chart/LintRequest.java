@@ -29,8 +29,7 @@ public record LintRequest(
     private boolean withSubcharts;
     private Map<String, Object> values;
 
-    private Builder() {
-    }
+    private Builder() {}
 
     public Builder chartPath(Path value) {
       this.chartPath = value;
@@ -63,8 +62,7 @@ public record LintRequest(
   }
 
   private static <T> Map<String, T> copyMap(Map<String, T> value) {
-    if (value == null || value.isEmpty())
-      return Map.of();
+    if (value == null || value.isEmpty()) return Map.of();
     return Map.copyOf(new LinkedHashMap<>(value));
   }
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/thiagogcm/libhelm4j/internal/bridge"
 	"github.com/thiagogcm/libhelm4j/internal/helmenv"
 	"github.com/thiagogcm/libhelm4j/internal/helmlog"
+	"github.com/thiagogcm/libhelm4j/internal/releaseutil"
 )
 
 // Options captures the Helm flags relevant to `helm rollback`.
@@ -35,8 +36,7 @@ type Options struct {
 
 // Response is the top-level JSON payload returned across the FFM boundary.
 type Response struct {
-	ReleaseName string `json:"releaseName"`
-	Revision    int    `json:"revision"`
+	Release releaseutil.ReleaseInfo `json:"release"`
 }
 
 // Run executes a helm rollback operation for the given release name.
@@ -52,13 +52,9 @@ func Run(releaseName string, opts Options) (string, error) {
 
 	log.Debug("running helm rollback")
 
-	env, err := helmenv.New()
+	env, err := helmenv.NewWithNamespace(opts.Namespace)
 	if err != nil {
 		return "", fmt.Errorf("bootstrap helm: %w", err)
-	}
-
-	if opts.Namespace != "" {
-		env.Settings.SetNamespace(opts.Namespace)
 	}
 
 	client := action.NewRollback(env.Config)
@@ -83,10 +79,13 @@ func Run(releaseName string, opts Options) (string, error) {
 	if opts.Wait != "" {
 		client.WaitStrategy = kube.WaitStrategy(opts.Wait)
 	}
+
 	if opts.Timeout != "" {
-		if d, parseErr := time.ParseDuration(opts.Timeout); parseErr == nil {
-			client.Timeout = d
+		d, parseErr := time.ParseDuration(opts.Timeout)
+		if parseErr != nil {
+			return "", fmt.Errorf("invalid timeout %q: %w", opts.Timeout, parseErr)
 		}
+		client.Timeout = d
 	}
 
 	err = client.Run(releaseName)
@@ -94,10 +93,19 @@ func Run(releaseName string, opts Options) (string, error) {
 		return "", fmt.Errorf("helm rollback: %w", err)
 	}
 
-	resp := Response{
-		ReleaseName: releaseName,
-		Revision:    opts.Revision,
+	// Fetch the resulting release state so we can return full ReleaseInfo.
+	statusClient := action.NewStatus(env.Config)
+	rel, err := statusClient.Run(releaseName)
+	if err != nil {
+		return "", fmt.Errorf("helm status after rollback: %w", err)
 	}
+
+	info, err := releaseutil.MapRelease(rel)
+	if err != nil {
+		return "", fmt.Errorf("map release: %w", err)
+	}
+
+	resp := Response{Release: info}
 	result, err := bridge.MarshalJSON(resp)
 	if err != nil {
 		return "", err

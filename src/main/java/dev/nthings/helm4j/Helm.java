@@ -17,8 +17,7 @@ import dev.nthings.helm4j.types.ChartRef;
 /** Standard static SDK entrypoint for Helm operations. */
 public final class Helm {
 
-  private Helm() {
-  }
+  private Helm() {}
 
   public static HelmClient client() {
     return HelmClient.builder().build();

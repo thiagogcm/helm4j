@@ -98,6 +98,38 @@ public final class ReleaseClient {
     return gateway.history(request);
   }
 
+  public ReleaseListResult list() {
+    return list(ReleaseListRequest.builder().build());
+  }
+
+  public ReleaseListResult list(Consumer<ReleaseListRequest.Builder> spec) {
+    Objects.requireNonNull(spec, "spec");
+    var builder = ReleaseListRequest.builder();
+    spec.accept(builder);
+    return list(builder.build());
+  }
+
+  public ReleaseListResult list(ReleaseListRequest request) {
+    Objects.requireNonNull(request, "request");
+    return gateway.list(request);
+  }
+
+  public TestResult test(String releaseName) {
+    return test(TestRequest.builder().releaseName(releaseName).build());
+  }
+
+  public TestResult test(Consumer<TestRequest.Builder> spec) {
+    Objects.requireNonNull(spec, "spec");
+    var builder = TestRequest.builder();
+    spec.accept(builder);
+    return test(builder.build());
+  }
+
+  public TestResult test(TestRequest request) {
+    Objects.requireNonNull(request, "request");
+    return gateway.test(request);
+  }
+
   public GetAllResult getAll(String releaseName) {
     return getAll(GetRequest.builder().releaseName(releaseName).build());
   }

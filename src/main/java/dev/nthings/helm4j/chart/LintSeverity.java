@@ -9,8 +9,7 @@ public enum LintSeverity {
 
   /** Parse severity from the wire string value returned by the native bridge. */
   public static LintSeverity fromWireValue(String value) {
-    if (value == null)
-      return UNKNOWN;
+    if (value == null) return UNKNOWN;
     return switch (value.toUpperCase()) {
       case "INFO" -> INFO;
       case "WARNING" -> WARNING;

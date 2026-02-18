@@ -37,7 +37,8 @@ func runHub(opts Options) ([]Result, error) {
 	}
 	req.Header.Set("User-Agent", "libhelm4j")
 
-	res, err := http.DefaultClient.Do(req)
+	hubClient := &http.Client{Timeout: 30 * time.Second}
+	res, err := hubClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

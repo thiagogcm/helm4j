@@ -3,6 +3,7 @@
 package upgrade
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -83,16 +84,18 @@ func Run(releaseName, chartRef string, opts Options) (string, error) {
 	if strings.TrimSpace(chartRef) == "" {
 		return "", errors.New("chart reference is required")
 	}
+	if opts.Timeout != "" {
+		_, err := time.ParseDuration(opts.Timeout)
+		if err != nil {
+			return "", fmt.Errorf("invalid timeout %q: %w", opts.Timeout, err)
+		}
+	}
 
 	log.Debug("running helm upgrade")
 
-	env, err := helmenv.New()
+	env, err := helmenv.NewWithNamespace(opts.Namespace)
 	if err != nil {
 		return "", fmt.Errorf("bootstrap helm: %w", err)
-	}
-
-	if opts.Namespace != "" {
-		env.Settings.SetNamespace(opts.Namespace)
 	}
 
 	regClient, err := helmenv.BuildRegistryClient(env.Settings, helmenv.RegistryOptions{
@@ -123,7 +126,14 @@ func Run(releaseName, chartRef string, opts Options) (string, error) {
 		vals = make(map[string]any)
 	}
 
-	rel, err := client.Run(releaseName, ch, vals)
+	ctx := context.Background()
+	if client.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, client.Timeout)
+		defer cancel()
+	}
+
+	rel, err := client.RunWithContext(ctx, releaseName, ch, vals)
 	if err != nil {
 		return "", fmt.Errorf("helm upgrade: %w", err)
 	}
@@ -192,8 +202,7 @@ func applyOptions(client *action.Upgrade, opts Options) {
 		client.WaitStrategy = kube.WaitStrategy(opts.Wait)
 	}
 	if opts.Timeout != "" {
-		if d, err := time.ParseDuration(opts.Timeout); err == nil {
-			client.Timeout = d
-		}
+		d, _ := time.ParseDuration(opts.Timeout) // already validated above in Run
+		client.Timeout = d
 	}
 }

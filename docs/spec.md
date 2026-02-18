@@ -46,6 +46,12 @@ public final class HelmClient implements AutoCloseable {
   - `RepoRemoveResult remove(String... names)`
   - `RepoRemoveResult remove(Consumer<RepoRemoveRequest.Builder> spec)`
   - `RepoRemoveResult remove(RepoRemoveRequest request)`
+  - `RegistryResult registryLogin(String hostname, String username, String password)`
+  - `RegistryResult registryLogin(Consumer<RegistryLoginRequest.Builder> spec)`
+  - `RegistryResult registryLogin(RegistryLoginRequest request)`
+  - `RegistryResult registryLogout(String hostname)`
+  - `RegistryResult registryLogout(Consumer<RegistryLogoutRequest.Builder> spec)`
+  - `RegistryResult registryLogout(RegistryLogoutRequest request)`
 - `ChartClient`
   - `RepoSearchResult searchRepo(String keyword)`
   - `RepoSearchResult searchRepo(String keyword, Consumer<RepoSearchRequest.Builder> spec)`
@@ -73,6 +79,18 @@ public final class HelmClient implements AutoCloseable {
   - `LintResult lint(Path chartPath)`
   - `LintResult lint(Consumer<LintRequest.Builder> spec)`
   - `LintResult lint(LintRequest request)`
+  - `PullResult pull(String chartReference)`
+  - `PullResult pull(String chartReference, Consumer<PullRequest.Builder> spec)`
+  - `PullResult pull(PullRequest request)`
+  - `PushResult push(String chartReference, String remote)`
+  - `PushResult push(String chartReference, String remote, Consumer<PushRequest.Builder> spec)`
+  - `PushResult push(PushRequest request)`
+  - `PackageChartResult packageChart(Path chartPath)`
+  - `PackageChartResult packageChart(Consumer<PackageChartRequest.Builder> spec)`
+  - `PackageChartResult packageChart(PackageChartRequest request)`
+  - `DependencyResult dependency(Path chartPath)`
+  - `DependencyResult dependency(Consumer<DependencyRequest.Builder> spec)`
+  - `DependencyResult dependency(DependencyRequest request)`
 - `ReleaseClient`
   - `InstallResult install(Consumer<InstallRequest.Builder> spec)`
   - `InstallResult install(InstallRequest request)`
@@ -89,6 +107,12 @@ public final class HelmClient implements AutoCloseable {
   - `HistoryResult history(String releaseName)`
   - `HistoryResult history(Consumer<HistoryRequest.Builder> spec)`
   - `HistoryResult history(HistoryRequest request)`
+  - `ReleaseListResult list()`
+  - `ReleaseListResult list(Consumer<ReleaseListRequest.Builder> spec)`
+  - `ReleaseListResult list(ReleaseListRequest request)`
+  - `TestResult test(String releaseName)`
+  - `TestResult test(Consumer<TestRequest.Builder> spec)`
+  - `TestResult test(TestRequest request)`
   - `GetAllResult getAll(String releaseName)`
   - `GetValuesResult getValues(String releaseName)`
   - `GetManifestResult getManifest(String releaseName)`
@@ -165,6 +189,13 @@ The Java SDK invokes JSON-native operations exported by `libhelm4j`:
 - `HelmGet(char* mode, char* releaseName, char* optionsJson) -> char*`
 - `HelmTemplate(char* releaseName, char* chartRef, char* optionsJson) -> char*`
 - `HelmLint(char* chartPath, char* optionsJson) -> char*`
+- `HelmList(char* optionsJson) -> char*`
+- `HelmPull(char* chartRef, char* optionsJson) -> char*`
+- `HelmPush(char* chartRef, char* remote, char* optionsJson) -> char*`
+- `HelmPackage(char* chartPath, char* optionsJson) -> char*`
+- `HelmDependency(char* chartPath, char* optionsJson) -> char*`
+- `HelmRegistry(char* mode, char* hostname, char* optionsJson) -> char*`
+- `HelmTest(char* releaseName, char* optionsJson) -> char*`
 - `HelmVersion() -> char*`
 
 Each response is a UTF-8 JSON string released with:
@@ -201,15 +232,3 @@ This keeps user code ergonomic while preserving strict transport diagnostics.
 - JDK 25
 - Native access enabled (`--enable-native-access=ALL-UNNAMED` in tests/build)
 - Go 1.26 for `libhelm4j` builds
-
-## 8. Current Scope
-
-Implemented in this standard SDK:
-
-- Repo add/update/list/remove
-- Search repo/hub
-- Show chart/values/readme/crds/all
-- Release install/upgrade/uninstall/status/rollback/history
-- Release get (all/values/manifest/hooks/notes/metadata)
-- Chart template/lint
-- Version info

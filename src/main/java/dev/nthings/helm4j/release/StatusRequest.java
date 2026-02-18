@@ -17,8 +17,7 @@ public record StatusRequest(String releaseName, String namespace, int revision) 
     private String namespace;
     private int revision;
 
-    private Builder() {
-    }
+    private Builder() {}
 
     public Builder releaseName(String value) {
       this.releaseName = value;
@@ -41,8 +40,7 @@ public record StatusRequest(String releaseName, String namespace, int revision) 
   }
 
   private static String normalize(String value) {
-    if (value == null)
-      return null;
+    if (value == null) return null;
     var normalized = value.trim();
     return normalized.isEmpty() ? null : normalized;
   }

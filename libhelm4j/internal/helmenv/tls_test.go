@@ -57,12 +57,17 @@ func TestUnwrapHTTPTransportReturnsUnderlyingTransport(t *testing.T) {
 	}
 }
 
-func TestUnwrapHTTPTransportRejectsUnsupportedTransport(t *testing.T) {
-	_, err := unwrapHTTPTransport(roundTripperFunc(func(*http.Request) (*http.Response, error) {
+func TestUnwrapHTTPTransportFallsBackForUnsupportedTransport(t *testing.T) {
+	// Unknown transport types produce a warning log and fall back to a clone of
+	// http.DefaultTransport, allowing TLS injection to proceed rather than hard-failing.
+	resolved, err := unwrapHTTPTransport(roundTripperFunc(func(*http.Request) (*http.Response, error) {
 		return nil, nil
 	}))
-	if err == nil {
-		t.Fatal("expected unsupported transport to fail")
+	if err != nil {
+		t.Fatalf("unexpected error on unsupported transport: %v", err)
+	}
+	if resolved == nil {
+		t.Fatal("expected a non-nil fallback transport")
 	}
 }
 

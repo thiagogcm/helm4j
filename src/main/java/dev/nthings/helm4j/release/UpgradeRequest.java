@@ -82,8 +82,7 @@ public record UpgradeRequest(
     private Map<String, Object> values;
     private Map<String, String> labels;
 
-    private Builder() {
-    }
+    private Builder() {}
 
     public Builder releaseName(String value) {
       this.releaseName = value;
@@ -221,7 +220,8 @@ public record UpgradeRequest(
     }
 
     public UpgradeRequest build() {
-      var resolvedSource = source != null ? source.merge(sourceBuilder.build()) : sourceBuilder.build();
+      var resolvedSource =
+          source != null ? source.merge(sourceBuilder.build()) : sourceBuilder.build();
       return new UpgradeRequest(
           releaseName,
           chart,
@@ -253,15 +253,13 @@ public record UpgradeRequest(
   }
 
   private static String normalize(String value) {
-    if (value == null)
-      return null;
+    if (value == null) return null;
     var normalized = value.trim();
     return normalized.isEmpty() ? null : normalized;
   }
 
   private static <T> Map<String, T> copyMap(Map<String, T> value) {
-    if (value == null || value.isEmpty())
-      return Map.of();
+    if (value == null || value.isEmpty()) return Map.of();
     return Map.copyOf(new LinkedHashMap<>(value));
   }
 }

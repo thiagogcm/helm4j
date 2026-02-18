@@ -68,4 +68,41 @@ public final class RepoClient {
     var normalized = new RepoRemoveRequest(List.copyOf(request.names()));
     return gateway.repoRemove(normalized);
   }
+
+  public RegistryResult registryLogin(String hostname, String username, String password) {
+    return registryLogin(
+        RegistryLoginRequest.builder()
+            .hostname(hostname)
+            .username(username)
+            .password(password)
+            .build());
+  }
+
+  public RegistryResult registryLogin(Consumer<RegistryLoginRequest.Builder> spec) {
+    Objects.requireNonNull(spec, "spec");
+    var builder = RegistryLoginRequest.builder();
+    spec.accept(builder);
+    return registryLogin(builder.build());
+  }
+
+  public RegistryResult registryLogin(RegistryLoginRequest request) {
+    Objects.requireNonNull(request, "request");
+    return gateway.registryLogin(request);
+  }
+
+  public RegistryResult registryLogout(String hostname) {
+    return registryLogout(RegistryLogoutRequest.builder().hostname(hostname).build());
+  }
+
+  public RegistryResult registryLogout(Consumer<RegistryLogoutRequest.Builder> spec) {
+    Objects.requireNonNull(spec, "spec");
+    var builder = RegistryLogoutRequest.builder();
+    spec.accept(builder);
+    return registryLogout(builder.build());
+  }
+
+  public RegistryResult registryLogout(RegistryLogoutRequest request) {
+    Objects.requireNonNull(request, "request");
+    return gateway.registryLogout(request);
+  }
 }

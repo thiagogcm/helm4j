@@ -7,9 +7,11 @@ import (
 	"io/fs"
 	"log/slog"
 	"path/filepath"
+	"regexp"
+	"sort"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
-	helmSearch "helm.sh/helm/v4/pkg/cmd/search"
 	"helm.sh/helm/v4/pkg/helmpath"
 	"helm.sh/helm/v4/pkg/repo/v1"
 
@@ -53,6 +55,18 @@ type Response struct {
 	Results []Result `json:"results"`
 }
 
+type indexedChart struct {
+	Name    string
+	Repo    string
+	RepoURL string
+	Chart   *repo.ChartVersion
+}
+
+type scoredChart struct {
+	Entry indexedChart
+	Score int
+}
+
 func runRepo(opts Options) ([]Result, error) {
 	log := helmlog.Logger()
 
@@ -69,7 +83,7 @@ func runRepo(opts Options) ([]Result, error) {
 		return nil, fmt.Errorf("bootstrap helm: %w", err)
 	}
 
-	i, err := buildIndex(
+	entries, err := buildIndex(
 		env.Settings.RepositoryConfig,
 		env.Settings.RepositoryCache,
 		opts.Versions || opts.Version != "",
@@ -78,17 +92,22 @@ func runRepo(opts Options) ([]Result, error) {
 		return nil, err
 	}
 
-	var res []*helmSearch.Result
-	if opts.Keyword == "" {
-		res = i.All()
-	} else {
-		res, err = i.Search(opts.Keyword, maxScore, opts.Regexp)
-		if err != nil {
-			return nil, fmt.Errorf("search index: %w", err)
-		}
+	matched, err := filterAndScore(entries, opts.Keyword, opts.Regexp)
+	if err != nil {
+		return nil, err
 	}
 
-	helmSearch.SortScore(res)
+	sort.SliceStable(matched, func(i, j int) bool {
+		if matched[i].Score != matched[j].Score {
+			return matched[i].Score > matched[j].Score
+		}
+		left := normalizeVersion(matched[i].Entry.Chart.Version)
+		right := normalizeVersion(matched[j].Entry.Chart.Version)
+		if left != nil && right != nil && !left.Equal(right) {
+			return left.GreaterThan(right)
+		}
+		return matched[i].Entry.Name < matched[j].Entry.Name
+	})
 
 	// Apply version constraints.
 	if opts.Version == "" {
@@ -104,16 +123,17 @@ func runRepo(opts Options) ([]Result, error) {
 		return nil, fmt.Errorf("an invalid version/constraint format: %w", err)
 	}
 
-	var filtered []*helmSearch.Result
+	var filtered []scoredChart
 	foundNames := map[string]struct{}{}
-	for _, r := range res {
+	for _, candidate := range matched {
+		r := candidate.Entry
 		if !opts.Versions {
 			if _, seen := foundNames[r.Name]; seen {
 				continue
 			}
 		}
 
-		if r.Chart == nil {
+		if r.Chart == nil || r.Chart.Metadata == nil {
 			continue
 		}
 
@@ -128,7 +148,7 @@ func runRepo(opts Options) ([]Result, error) {
 			continue
 		}
 		if constraint.Check(v) {
-			filtered = append(filtered, r)
+			filtered = append(filtered, candidate)
 			foundNames[r.Name] = struct{}{}
 		}
 	}
@@ -138,13 +158,21 @@ func runRepo(opts Options) ([]Result, error) {
 	}
 
 	results := make([]Result, len(filtered))
-	for idx, r := range filtered {
+	for idx, candidate := range filtered {
+		r := candidate.Entry
+		// r.Name has the form "repoName/chartName" — extract the repo name.
+		repoName := ""
+		if parts := strings.SplitN(r.Name, "/", 2); len(parts) == 2 {
+			repoName = parts[0]
+		}
 		results[idx] = Result{
-			Name:        r.Name,
-			Version:     r.Chart.Version,
-			AppVersion:  r.Chart.AppVersion,
-			Description: r.Chart.Description,
-			Score:       r.Score,
+			Name:           r.Name,
+			Version:        r.Chart.Version,
+			AppVersion:     r.Chart.AppVersion,
+			Description:    r.Chart.Description,
+			Score:          candidate.Score,
+			RepositoryName: repoName,
+			RepositoryURL:  r.RepoURL,
 		}
 	}
 
@@ -153,7 +181,7 @@ func runRepo(opts Options) ([]Result, error) {
 	return results, nil
 }
 
-func buildIndex(repoFile, repoCacheDir string, includeAllVersions bool) (*helmSearch.Index, error) {
+func buildIndex(repoFile, repoCacheDir string, includeAllVersions bool) ([]indexedChart, error) {
 	log := helmlog.Logger()
 
 	rf, err := repo.LoadFile(repoFile)
@@ -170,7 +198,7 @@ func buildIndex(repoFile, repoCacheDir string, includeAllVersions bool) (*helmSe
 		return nil, ErrNoRepositoriesConfigured
 	}
 
-	i := helmSearch.NewIndex()
+	charts := make([]indexedChart, 0)
 	for _, repository := range rf.Repositories {
 		repoName := repository.Name
 		indexFile := filepath.Join(repoCacheDir, helmpath.CacheIndexFile(repoName))
@@ -193,8 +221,99 @@ func buildIndex(repoFile, repoCacheDir string, includeAllVersions bool) (*helmSe
 			continue
 		}
 
-		i.AddRepo(repoName, ind, includeAllVersions)
+		ind.SortEntries()
+		for chartName, versions := range ind.Entries {
+			if len(versions) == 0 {
+				continue
+			}
+
+			selected := versions
+			if !includeAllVersions {
+				selected = versions[:1]
+			}
+
+			for _, cv := range selected {
+				if cv == nil || cv.Metadata == nil {
+					continue
+				}
+				charts = append(charts, indexedChart{
+					Name:    repoName + "/" + chartName,
+					Repo:    repoName,
+					RepoURL: repository.URL,
+					Chart:   cv,
+				})
+			}
+		}
 	}
 
-	return i, nil
+	return charts, nil
+}
+
+func filterAndScore(entries []indexedChart, keyword string, useRegexp bool) ([]scoredChart, error) {
+	if keyword == "" {
+		results := make([]scoredChart, 0, len(entries))
+		for _, entry := range entries {
+			results = append(results, scoredChart{Entry: entry, Score: maxScore})
+		}
+		return results, nil
+	}
+
+	var matcher *regexp.Regexp
+	if useRegexp {
+		compiled, err := regexp.Compile(keyword)
+		if err != nil {
+			return nil, fmt.Errorf("search index: %w", err)
+		}
+		matcher = compiled
+	}
+
+	normalizedKeyword := strings.ToLower(keyword)
+	results := make([]scoredChart, 0)
+	for _, entry := range entries {
+		description := ""
+		if entry.Chart != nil {
+			description = entry.Chart.Description
+		}
+
+		score := scoreMatch(entry.Name, description, normalizedKeyword, matcher)
+		if score > 0 {
+			results = append(results, scoredChart{Entry: entry, Score: score})
+		}
+	}
+
+	return results, nil
+}
+
+func scoreMatch(name, description, keyword string, matcher *regexp.Regexp) int {
+	if matcher != nil {
+		if matcher.MatchString(name) {
+			return maxScore
+		}
+		if matcher.MatchString(description) {
+			return 18
+		}
+		return 0
+	}
+
+	normalizedName := strings.ToLower(name)
+	normalizedDescription := strings.ToLower(description)
+
+	switch {
+	case normalizedName == keyword:
+		return maxScore
+	case strings.Contains(normalizedName, keyword):
+		return 20
+	case strings.Contains(normalizedDescription, keyword):
+		return 12
+	default:
+		return 0
+	}
+}
+
+func normalizeVersion(raw string) *semver.Version {
+	v, err := semver.NewVersion(raw)
+	if err != nil {
+		return nil
+	}
+	return v
 }

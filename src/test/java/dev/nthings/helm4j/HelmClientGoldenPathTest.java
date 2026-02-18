@@ -1,6 +1,7 @@
 package dev.nthings.helm4j;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -59,35 +60,41 @@ class HelmClientGoldenPathTest {
     bridge.setInstallSuccess("nginx", "apps", 3, "deployed");
 
     try (var helm = Helm.client(spec -> spec.withBridge(bridge))) {
-      var add = helm.repo()
-          .add(
-              spec -> spec.name("bitnami")
-                  .url("https://charts.bitnami.com/bitnami")
-                  .timeout(Duration.ofSeconds(5))
-                  .forceUpdate(true));
+      var add =
+          helm.repo()
+              .add(
+                  spec ->
+                      spec.name("bitnami")
+                          .url("https://charts.bitnami.com/bitnami")
+                          .timeout(Duration.ofSeconds(5))
+                          .forceUpdate(true));
 
       var addSuccess = assertInstanceOf(RepoAddSuccess.class, add);
       assertEquals("bitnami", addSuccess.name());
       assertEquals("https://charts.bitnami.com/bitnami", addSuccess.url());
 
-      var search = helm.chart()
-          .searchRepo(
-              "nginx",
-              spec -> spec.includeAllVersions(true)
-                  .includePreReleaseVersions(true)
-                  .maxColumnWidth(120));
+      var search =
+          helm.chart()
+              .searchRepo(
+                  "nginx",
+                  spec ->
+                      spec.includeAllVersions(true)
+                          .includePreReleaseVersions(true)
+                          .maxColumnWidth(120));
       assertEquals(1, search.size());
       assertEquals("bitnami/nginx", search.first().orElseThrow().name());
 
-      var install = helm.release()
-          .install(
-              spec -> spec.releaseName("nginx")
-                  .chart(ChartRef.repo("bitnami/nginx"))
-                  .source(s -> s.repositoryUrl("https://charts.bitnami.com/bitnami"))
-                  .namespace("apps")
-                  .createNamespace(true)
-                  .timeout(Duration.ofMinutes(3))
-                  .values(Map.of("service", Map.of("type", "ClusterIP"))));
+      var install =
+          helm.release()
+              .install(
+                  spec ->
+                      spec.releaseName("nginx")
+                          .chart(ChartRef.repo("bitnami/nginx"))
+                          .source(s -> s.repositoryUrl("https://charts.bitnami.com/bitnami"))
+                          .namespace("apps")
+                          .createNamespace(true)
+                          .timeout(Duration.ofMinutes(3))
+                          .values(Map.of("service", Map.of("type", "ClusterIP"))));
 
       var success = assertInstanceOf(InstallSuccess.class, install);
       assertEquals("nginx", success.release().name());
@@ -165,7 +172,8 @@ class HelmClientGoldenPathTest {
         "show all output");
 
     try (var helm = Helm.client(spec -> spec.withBridge(bridge))) {
-      var update = helm.repo().update(spec -> spec.names("bitnami").timeout(Duration.ofSeconds(20)));
+      var update =
+          helm.repo().update(spec -> spec.names("bitnami").timeout(Duration.ofSeconds(20)));
       assertEquals(1, update.size());
       assertEquals("bitnami", update.first().orElseThrow().name());
 
@@ -210,8 +218,9 @@ class HelmClientGoldenPathTest {
     pendingBridge.setInstallSuccess("nginx", "apps", 1, "pending-install");
 
     try (var helm = Helm.client(spec -> spec.withBridge(pendingBridge))) {
-      var pending = helm.release()
-          .install(spec -> spec.releaseName("nginx").chart(ChartRef.repo("bitnami/nginx")));
+      var pending =
+          helm.release()
+              .install(spec -> spec.releaseName("nginx").chart(ChartRef.repo("bitnami/nginx")));
       assertInstanceOf(InstallPending.class, pending);
     }
 
@@ -219,8 +228,9 @@ class HelmClientGoldenPathTest {
     failedBridge.setInstallFailure("chart not found", "runOperation", "install");
 
     try (var helm = Helm.client(spec -> spec.withBridge(failedBridge))) {
-      var failure = helm.release()
-          .install(spec -> spec.releaseName("nginx").chart(ChartRef.repo("bitnami/nginx")));
+      var failure =
+          helm.release()
+              .install(spec -> spec.releaseName("nginx").chart(ChartRef.repo("bitnami/nginx")));
       var typedFailure = assertInstanceOf(InstallFailure.class, failure);
       assertEquals("chart not found", typedFailure.message());
       assertEquals("runOperation", typedFailure.stage());
@@ -233,7 +243,8 @@ class HelmClientGoldenPathTest {
     domainFailureBridge.setRepoAddFailure("repository already exists", "runOperation", "repo add");
 
     try (var helm = Helm.client(spec -> spec.withBridge(domainFailureBridge))) {
-      var result = helm.repo().add(spec -> spec.name("bitnami").url("https://charts.bitnami.com/bitnami"));
+      var result =
+          helm.repo().add(spec -> spec.name("bitnami").url("https://charts.bitnami.com/bitnami"));
       var failure = assertInstanceOf(RepoAddFailure.class, result);
       assertEquals("repository already exists", failure.message());
     }
@@ -243,9 +254,10 @@ class HelmClientGoldenPathTest {
         "no repositories configured", "runOperation", "search repo");
 
     try (var helm = Helm.client(spec -> spec.withBridge(transportFailureBridge))) {
-      var error = assertThrows(
-          HelmException.class,
-          () -> helm.chart().searchRepo("nginx", spec -> spec.failIfNoResults(true)));
+      var error =
+          assertThrows(
+              HelmException.class,
+              () -> helm.chart().searchRepo("nginx", spec -> spec.failIfNoResults(true)));
       assertEquals("runOperation", error.stage());
       assertEquals("search repo", error.operation());
     }
@@ -257,18 +269,19 @@ class HelmClientGoldenPathTest {
     bridge.setInstallSuccess("nginx", "apps", 1, "deployed");
 
     try (var helm = Helm.client(spec -> spec.withBridge(bridge))) {
-      var result = Helm.install("bitnami/nginx")
-          .releaseName("nginx")
-          .version("19.0.0")
-          .namespace("apps")
-          .createNamespace(true)
-          .dryRun(DryRunMode.NONE)
-          .waitMode(WaitMode.WATCHER)
-          .timeout(Duration.ofMinutes(3))
-          .applyStrategy(ApplyStrategy.SERVER_SIDE_APPLY_FORCE_CONFLICTS)
-          .values(Map.of("service", Map.of("type", "ClusterIP")))
-          .labels(Map.of("team", "platform"))
-          .run(helm);
+      var result =
+          Helm.install("bitnami/nginx")
+              .releaseName("nginx")
+              .version("19.0.0")
+              .namespace("apps")
+              .createNamespace(true)
+              .dryRun(DryRunMode.NONE)
+              .waitMode(WaitMode.WATCHER)
+              .timeout(Duration.ofMinutes(3))
+              .applyStrategy(ApplyStrategy.SERVER_SIDE_APPLY_FORCE_CONFLICTS)
+              .values(Map.of("service", Map.of("type", "ClusterIP")))
+              .labels(Map.of("team", "platform"))
+              .run(helm);
 
       var success = assertInstanceOf(InstallSuccess.class, result);
       assertEquals("nginx", success.release().name());
@@ -284,9 +297,10 @@ class HelmClientGoldenPathTest {
     bridge.setInstallSuccess("web", "default", 1, "deployed");
 
     try (var helm = Helm.client(spec -> spec.withBridge(bridge))) {
-      var result = Helm.install(ChartRef.oci("oci://registry-1.docker.io/bitnamicharts/nginx"))
-          .releaseName("web")
-          .run(helm);
+      var result =
+          Helm.install(ChartRef.oci("oci://registry-1.docker.io/bitnamicharts/nginx"))
+              .releaseName("web")
+              .run(helm);
 
       assertInstanceOf(InstallSuccess.class, result);
     }
@@ -300,14 +314,16 @@ class HelmClientGoldenPathTest {
     bridge.setUpgradeSuccess("nginx", "apps", 2, "deployed");
 
     try (var helm = Helm.client(spec -> spec.withBridge(bridge))) {
-      var result = helm.release()
-          .upgrade(
-              spec -> spec.releaseName("nginx")
-                  .chart(ChartRef.repo("bitnami/nginx"))
-                  .namespace("apps")
-                  .install(true)
-                  .reuseValues(true)
-                  .values(Map.of("replicaCount", 3)));
+      var result =
+          helm.release()
+              .upgrade(
+                  spec ->
+                      spec.releaseName("nginx")
+                          .chart(ChartRef.repo("bitnami/nginx"))
+                          .namespace("apps")
+                          .install(true)
+                          .reuseValues(true)
+                          .values(Map.of("replicaCount", 3)));
 
       var success = assertInstanceOf(UpgradeSuccess.class, result);
       assertEquals("nginx", success.release().name());
@@ -324,8 +340,9 @@ class HelmClientGoldenPathTest {
     bridge.setUpgradeSuccess("nginx", "apps", 2, "pending-upgrade");
 
     try (var helm = Helm.client(spec -> spec.withBridge(bridge))) {
-      var result = helm.release()
-          .upgrade(spec -> spec.releaseName("nginx").chart(ChartRef.repo("bitnami/nginx")));
+      var result =
+          helm.release()
+              .upgrade(spec -> spec.releaseName("nginx").chart(ChartRef.repo("bitnami/nginx")));
       assertInstanceOf(UpgradePending.class, result);
     }
   }
@@ -336,12 +353,13 @@ class HelmClientGoldenPathTest {
     bridge.setUpgradeSuccess("nginx", "apps", 3, "deployed");
 
     try (var helm = Helm.client(spec -> spec.withBridge(bridge))) {
-      var result = Helm.upgrade("bitnami/nginx")
-          .releaseName("nginx")
-          .namespace("apps")
-          .install(true)
-          .values(Map.of("replicaCount", 3))
-          .run(helm);
+      var result =
+          Helm.upgrade("bitnami/nginx")
+              .releaseName("nginx")
+              .namespace("apps")
+              .install(true)
+              .values(Map.of("replicaCount", 3))
+              .run(helm);
 
       var success = assertInstanceOf(UpgradeSuccess.class, result);
       assertEquals("nginx", success.release().name());
@@ -446,8 +464,9 @@ class HelmClientGoldenPathTest {
     bridge.setTemplateSuccess("nginx", "default", 1, "---\napiVersion: v1\nkind: Service");
 
     try (var helm = Helm.client(spec -> spec.withBridge(bridge))) {
-      var result = helm.chart()
-          .template(spec -> spec.releaseName("nginx").chart(ChartRef.repo("bitnami/nginx")));
+      var result =
+          helm.chart()
+              .template(spec -> spec.releaseName("nginx").chart(ChartRef.repo("bitnami/nginx")));
       assertEquals("nginx", result.release().name());
       assertTrue(result.manifest().contains("apiVersion: v1"));
     }
@@ -483,6 +502,49 @@ class HelmClientGoldenPathTest {
     }
   }
 
+  @Test
+  void extendedOperationsAreExposedThroughSdkNamespaces() {
+    var bridge = new StubHelmBridge();
+    bridge.setListSuccess(List.of(StubHelmBridge.releaseMap("nginx", "apps", 2, "deployed")));
+    bridge.setPullSuccess("Pulled: bitnami/nginx");
+    bridge.setPushSuccess("Pushed: oci://registry.example/charts/nginx");
+    bridge.setPackageSuccess("/tmp/nginx-19.0.0.tgz");
+    bridge.setDependencySuccess("NAME\tVERSION\ncommon\t2.2.0");
+    bridge.setRegistrySuccess("registry.example", "ok");
+    bridge.setTestSuccess(
+        StubHelmBridge.releaseMap("nginx", "apps", 2, "deployed"),
+        List.of(Map.of("name", "nginx-test", "status", "succeeded")));
+
+    try (var helm = Helm.client(spec -> spec.withBridge(bridge))) {
+      var listed = helm.release().list();
+      assertEquals(1, listed.size());
+      assertEquals("nginx", listed.first().orElseThrow().name());
+
+      var pull = helm.chart().pull("bitnami/nginx");
+      assertTrue(pull.output().contains("Pulled"));
+
+      var push = helm.chart().push("/tmp/nginx-19.0.0.tgz", "oci://registry.example/charts");
+      assertTrue(push.output().contains("Pushed"));
+
+      var pkg = helm.chart().packageChart(Path.of("/tmp/chart"));
+      assertEquals("/tmp/nginx-19.0.0.tgz", pkg.path());
+
+      var deps = helm.chart().dependency(Path.of("/tmp/chart"));
+      assertTrue(deps.output().contains("common"));
+
+      var login = helm.repo().registryLogin("registry.example", "user", "secret");
+      assertEquals("registry.example", login.hostname());
+
+      var logout = helm.repo().registryLogout("registry.example");
+      assertEquals("ok", logout.status());
+
+      var test = helm.release().test("nginx");
+      assertEquals("nginx", test.release().name());
+      assertEquals(1, test.results().size());
+      assertEquals("nginx-test", test.results().getFirst().name());
+    }
+  }
+
   static final class StubHelmBridge implements HelmBridge {
 
     private static final ObjectMapper MAPPER = JsonMapper.builder().build();
@@ -501,6 +563,13 @@ class HelmClientGoldenPathTest {
     private byte[] rollbackResponse = utf8("{}");
     private byte[] historyResponse = utf8("{}");
     private byte[] getResponse = utf8("{}");
+    private byte[] listResponse = utf8("{}");
+    private byte[] pullResponse = utf8("{}");
+    private byte[] pushResponse = utf8("{}");
+    private byte[] packageResponse = utf8("{}");
+    private byte[] dependencyResponse = utf8("{}");
+    private byte[] registryResponse = utf8("{}");
+    private byte[] testResponse = utf8("{}");
     private byte[] templateResponse = utf8("{}");
     private byte[] lintResponse = utf8("{}");
     private byte[] versionResponse = utf8("{}");
@@ -579,7 +648,8 @@ class HelmClientGoldenPathTest {
     }
 
     void setInstallSuccess(String name, String namespace, int revision, String status) {
-      this.installResponse = asJsonBytes(Map.of("release", releaseMap(name, namespace, revision, status)));
+      this.installResponse =
+          asJsonBytes(Map.of("release", releaseMap(name, namespace, revision, status)));
     }
 
     void setInstallFailure(String message, String stage, String operation) {
@@ -587,7 +657,8 @@ class HelmClientGoldenPathTest {
     }
 
     void setUpgradeSuccess(String name, String namespace, int revision, String status) {
-      this.upgradeResponse = asJsonBytes(Map.of("release", releaseMap(name, namespace, revision, status)));
+      this.upgradeResponse =
+          asJsonBytes(Map.of("release", releaseMap(name, namespace, revision, status)));
     }
 
     void setUninstallSuccess(String info) {
@@ -596,7 +667,8 @@ class HelmClientGoldenPathTest {
     }
 
     void setStatusSuccess(String name, String namespace, int revision, String status) {
-      this.statusResponse = asJsonBytes(Map.of("release", releaseMap(name, namespace, revision, status)));
+      this.statusResponse =
+          asJsonBytes(Map.of("release", releaseMap(name, namespace, revision, status)));
     }
 
     void setRollbackSuccess(String releaseName, int revision) {
@@ -612,26 +684,57 @@ class HelmClientGoldenPathTest {
     }
 
     void setTemplateSuccess(String name, String namespace, int revision, String manifest) {
-      this.templateResponse = asJsonBytes(
-          Map.of(
-              "release",
-              releaseMap(name, namespace, revision, "deployed"),
-              "manifest",
-              manifest));
+      this.templateResponse =
+          asJsonBytes(
+              Map.of(
+                  "release",
+                  releaseMap(name, namespace, revision, "deployed"),
+                  "manifest",
+                  manifest));
     }
 
     void setLintSuccess(int totalCharts, int chartsTested, int chartsFailed) {
-      this.lintResponse = asJsonBytes(
-          Map.of(
-              "messages", List.of(),
-              "totalCharts", totalCharts,
-              "chartsTested", chartsTested,
-              "chartsFailed", chartsFailed));
+      this.lintResponse =
+          asJsonBytes(
+              Map.of(
+                  "messages", List.of(),
+                  "totalCharts", totalCharts,
+                  "chartsTested", chartsTested,
+                  "chartsFailed", chartsFailed));
     }
 
     void setVersionSuccess(String version, String goVersion, String helmVersion) {
-      this.versionResponse = asJsonBytes(
-          Map.of("version", version, "goVersion", goVersion, "helmVersion", helmVersion));
+      this.versionResponse =
+          asJsonBytes(
+              Map.of("version", version, "goVersion", goVersion, "helmVersion", helmVersion));
+    }
+
+    void setListSuccess(List<Map<String, Object>> releases) {
+      this.listResponse = asJsonBytes(Map.of("releases", releases));
+    }
+
+    void setPullSuccess(String output) {
+      this.pullResponse = asJsonBytes(Map.of("output", output));
+    }
+
+    void setPushSuccess(String output) {
+      this.pushResponse = asJsonBytes(Map.of("output", output));
+    }
+
+    void setPackageSuccess(String path) {
+      this.packageResponse = asJsonBytes(Map.of("path", path));
+    }
+
+    void setDependencySuccess(String output) {
+      this.dependencyResponse = asJsonBytes(Map.of("output", output));
+    }
+
+    void setRegistrySuccess(String hostname, String status) {
+      this.registryResponse = asJsonBytes(Map.of("hostname", hostname, "status", status));
+    }
+
+    void setTestSuccess(Map<String, Object> release, List<Map<String, String>> results) {
+      this.testResponse = asJsonBytes(Map.of("release", release, "results", results));
     }
 
     private static Map<String, Object> releaseMap(
@@ -734,6 +837,41 @@ class HelmClientGoldenPathTest {
       this.lastGetMode = fromUtf8(mode);
       this.lastGetReleaseName = fromUtf8(releaseName);
       return getResponse;
+    }
+
+    @Override
+    public byte[] list(byte[] optionsJson) {
+      return listResponse;
+    }
+
+    @Override
+    public byte[] pull(byte[] chartRef, byte[] optionsJson) {
+      return pullResponse;
+    }
+
+    @Override
+    public byte[] push(byte[] chartRef, byte[] remote, byte[] optionsJson) {
+      return pushResponse;
+    }
+
+    @Override
+    public byte[] packageChart(byte[] chartPath, byte[] optionsJson) {
+      return packageResponse;
+    }
+
+    @Override
+    public byte[] dependency(byte[] chartPath, byte[] optionsJson) {
+      return dependencyResponse;
+    }
+
+    @Override
+    public byte[] registry(byte[] mode, byte[] hostname, byte[] optionsJson) {
+      return registryResponse;
+    }
+
+    @Override
+    public byte[] test(byte[] releaseName, byte[] optionsJson) {
+      return testResponse;
     }
 
     @Override

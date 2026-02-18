@@ -53,7 +53,7 @@ type Options struct {
 // Response is the top-level JSON payload returned across the FFM boundary.
 type Response struct {
 	Release  releaseutil.ReleaseInfo `json:"release"`
-	Manifest string                 `json:"manifest"`
+	Manifest string                  `json:"manifest"`
 }
 
 // Run executes a helm template operation for the given release name and chart
@@ -74,13 +74,9 @@ func Run(releaseName, chartRef string, opts Options) (string, error) {
 
 	log.Debug("running helm template")
 
-	env, err := helmenv.New()
+	env, err := helmenv.NewWithNamespace(opts.Namespace)
 	if err != nil {
 		return "", fmt.Errorf("bootstrap helm: %w", err)
-	}
-
-	if opts.Namespace != "" {
-		env.Settings.SetNamespace(opts.Namespace)
 	}
 
 	regClient, err := helmenv.BuildRegistryClient(env.Settings, helmenv.RegistryOptions{

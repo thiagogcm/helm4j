@@ -9,5 +9,4 @@ public record GetAllResult(
     Map<String, Object> values,
     String manifest,
     List<HookInfo> hooks,
-    String notes) {
-}
+    String notes) {}

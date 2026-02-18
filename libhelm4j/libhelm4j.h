@@ -101,6 +101,13 @@ extern char* HelmStatus(char* releaseName, char* options);
 extern char* HelmRollback(char* releaseName, char* options);
 extern char* HelmHistory(char* releaseName, char* options);
 extern char* HelmGet(char* mode, char* releaseName, char* options);
+extern char* HelmList(char* options);
+extern char* HelmPull(char* chartRef, char* options);
+extern char* HelmPush(char* chartRef, char* remote, char* options);
+extern char* HelmPackage(char* chartPath, char* options);
+extern char* HelmDependency(char* chartPath, char* options);
+extern char* HelmRegistry(char* mode, char* hostname, char* options);
+extern char* HelmTest(char* releaseName, char* options);
 
 #ifdef __cplusplus
 }
