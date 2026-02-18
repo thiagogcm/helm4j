@@ -13,6 +13,9 @@ This document tracks Helm v4 action coverage in the new standard SDK surface.
 - `Helm.client().repo()`
 - `Helm.client().chart()`
 - `Helm.client().release()`
+- `Helm.client().version()`
+- `Helm.install(...)` / `Helm.upgrade(...)` (fluent one-shot builders)
+- `Helm.version()`
 
 ## Action Matrix
 
@@ -30,25 +33,34 @@ This document tracks Helm v4 action coverage in the new standard SDK surface.
 | `show crds` | `helm show crds CHART` | `chart().crds(...)` | ✅ |
 | `show all` | `helm show all CHART` | `chart().all(...)` | ✅ |
 | `install` | `helm install RELEASE CHART` | `release().install(...)` | ✅ |
-| `upgrade` | `helm upgrade RELEASE CHART` | - | ❌ |
-| `rollback` | `helm rollback RELEASE [REVISION]` | - | ❌ |
-| `uninstall` | `helm uninstall RELEASE` | - | ❌ |
-| `status` | `helm status RELEASE` | - | ❌ |
-| `history` | `helm history RELEASE` | - | ❌ |
-| `get` | `helm get ...` | - | ❌ |
-| `template` | `helm template ...` | - | ❌ |
-| `lint` | `helm lint ...` | - | ❌ |
+| `upgrade` | `helm upgrade RELEASE CHART` | `release().upgrade(...)` | ✅ |
+| `rollback` | `helm rollback RELEASE [REVISION]` | `release().rollback(...)` | ✅ |
+| `uninstall` | `helm uninstall RELEASE` | `release().uninstall(...)` | ✅ |
+| `status` | `helm status RELEASE` | `release().status(...)` | ✅ |
+| `history` | `helm history RELEASE` | `release().history(...)` | ✅ |
+| `get all` | `helm get all RELEASE` | `release().getAll(...)` | ✅ |
+| `get values` | `helm get values RELEASE` | `release().getValues(...)` | ✅ |
+| `get manifest` | `helm get manifest RELEASE` | `release().getManifest(...)` | ✅ |
+| `get hooks` | `helm get hooks RELEASE` | `release().getHooks(...)` | ✅ |
+| `get notes` | `helm get notes RELEASE` | `release().getNotes(...)` | ✅ |
+| `get metadata` | `helm get metadata RELEASE` | `release().getMetadata(...)` | ✅ |
+| `template` | `helm template RELEASE CHART` | `chart().template(...)` | ✅ |
+| `lint` | `helm lint PATH` | `chart().lint(...)` | ✅ |
+| `version` | `helm version` | `version()` | ✅ |
 
 ## Native Bridge Coverage
 
-All implemented operations above execute through the JSON-native bridge
-(`HelmRepo`, `HelmSearch`, `HelmShow`, `HelmInstall`).
+All implemented operations execute through the JSON-native bridge
+(`HelmRepo`, `HelmSearch`, `HelmShow`, `HelmInstall`, `HelmUpgrade`,
+`HelmUninstall`, `HelmStatus`, `HelmRollback`, `HelmHistory`, `HelmGet`,
+`HelmTemplate`, `HelmLint`, `HelmVersion`).
 
 ## Helm v4-Specific Notes
 
-- Server-side apply is exposed through `ApplyStrategy` and defaults to `SERVER_SIDE_APPLY` in `InstallRequest`.
+- Server-side apply is exposed through `ApplyStrategy` and defaults to `SERVER_SIDE_APPLY` in `InstallRequest` and `UpgradeRequest`.
 - OCI references are first-class through `ChartRef.oci(...)`.
 - Release install domain outcomes are modeled with sealed results:
-  - `InstallSuccess`
-  - `InstallPending`
-  - `InstallFailure`
+  - `InstallSuccess` / `InstallPending` / `InstallFailure`
+  - `UpgradeSuccess` / `UpgradePending` / `UpgradeFailure`
+  - `UninstallSuccess` / `UninstallFailure`
+  - `RollbackSuccess` / `RollbackFailure`

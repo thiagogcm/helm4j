@@ -20,12 +20,16 @@ Design goals:
 public final class Helm {
   public static HelmClient client();
   public static HelmClient client(Consumer<HelmClient.Builder> spec);
+  public static InstallBuilder install(ChartRef chart);
+  public static UpgradeBuilder upgrade(ChartRef chart);
+  public static VersionInfo version();
 }
 
 public final class HelmClient implements AutoCloseable {
   public RepoClient repo();
   public ChartClient chart();
   public ReleaseClient release();
+  public VersionInfo version();
 }
 ```
 
@@ -64,15 +68,43 @@ public final class HelmClient implements AutoCloseable {
   - `ShowAllResult all(ChartRef chartReference)`
   - `ShowAllResult all(ChartRef chartReference, Consumer<ShowRequest.Builder> spec)`
   - `ShowAllResult all(ChartRef chartReference, ShowRequest request)`
+  - `TemplateResult template(Consumer<TemplateRequest.Builder> spec)`
+  - `TemplateResult template(TemplateRequest request)`
+  - `LintResult lint(Path chartPath)`
+  - `LintResult lint(Consumer<LintRequest.Builder> spec)`
+  - `LintResult lint(LintRequest request)`
 - `ReleaseClient`
   - `InstallResult install(Consumer<InstallRequest.Builder> spec)`
   - `InstallResult install(InstallRequest request)`
+  - `UpgradeResult upgrade(Consumer<UpgradeRequest.Builder> spec)`
+  - `UpgradeResult upgrade(UpgradeRequest request)`
+  - `UninstallResult uninstall(String releaseName)`
+  - `UninstallResult uninstall(Consumer<UninstallRequest.Builder> spec)`
+  - `UninstallResult uninstall(UninstallRequest request)`
+  - `StatusResult status(String releaseName)`
+  - `StatusResult status(Consumer<StatusRequest.Builder> spec)`
+  - `StatusResult status(StatusRequest request)`
+  - `RollbackResult rollback(Consumer<RollbackRequest.Builder> spec)`
+  - `RollbackResult rollback(RollbackRequest request)`
+  - `HistoryResult history(String releaseName)`
+  - `HistoryResult history(Consumer<HistoryRequest.Builder> spec)`
+  - `HistoryResult history(HistoryRequest request)`
+  - `GetAllResult getAll(String releaseName)`
+  - `GetValuesResult getValues(String releaseName)`
+  - `GetManifestResult getManifest(String releaseName)`
+  - `GetHooksResult getHooks(String releaseName)`
+  - `GetNotesResult getNotes(String releaseName)`
+  - `GetMetadataResult getMetadata(String releaseName)`
+  - _(all get* methods also accept Consumer<GetRequest.Builder> and GetRequest overloads)_
 
 ### 2.3 Model Strategy
 
 - Request/response carriers are records
 - Install and repo add return sealed domain outcomes:
   - `InstallResult = InstallSuccess | InstallPending | InstallFailure`
+  - `UpgradeResult = UpgradeSuccess | UpgradePending | UpgradeFailure`
+  - `UninstallResult = UninstallSuccess | UninstallFailure`
+  - `RollbackResult = RollbackSuccess | RollbackFailure`
   - `RepoAddResult = RepoAddSuccess | RepoAddFailure`
 - Typed chart references via sealed `ChartRef`:
   - `RepoChartRef`
@@ -125,6 +157,15 @@ The Java SDK invokes JSON-native operations exported by `libhelm4j`:
 - `HelmSearch(char* mode, char* optionsJson) -> char*`
 - `HelmShow(char* mode, char* chartRef, char* optionsJson) -> char*`
 - `HelmInstall(char* releaseName, char* chartRef, char* optionsJson) -> char*`
+- `HelmUpgrade(char* releaseName, char* chartRef, char* optionsJson) -> char*`
+- `HelmUninstall(char* releaseName, char* optionsJson) -> char*`
+- `HelmStatus(char* releaseName, char* optionsJson) -> char*`
+- `HelmRollback(char* releaseName, char* optionsJson) -> char*`
+- `HelmHistory(char* releaseName, char* optionsJson) -> char*`
+- `HelmGet(char* mode, char* releaseName, char* optionsJson) -> char*`
+- `HelmTemplate(char* releaseName, char* chartRef, char* optionsJson) -> char*`
+- `HelmLint(char* chartPath, char* optionsJson) -> char*`
+- `HelmVersion() -> char*`
 
 Each response is a UTF-8 JSON string released with:
 
@@ -148,6 +189,9 @@ Principles:
 - Transport/runtime/contract issues throw `dev.nthings.helm4j.errors.HelmException`
 - Domain operation outcomes are typed sealed results:
   - install pending/failed/success
+  - upgrade pending/failed/success
+  - uninstall success/failure
+  - rollback success/failure
   - repo add success/failure
 
 This keeps user code ergonomic while preserving strict transport diagnostics.
@@ -160,13 +204,12 @@ This keeps user code ergonomic while preserving strict transport diagnostics.
 
 ## 8. Current Scope
 
-Implemented in this standard SDK iteration:
+Implemented in this standard SDK:
 
 - Repo add/update/list/remove
 - Search repo/hub
 - Show chart/values/readme/crds/all
-- Release install
-
-Remaining Helm actions (upgrade/rollback/uninstall/status/history/get/template/lint)
-are intentionally out of scope and will be added on the same gateway
-architecture.
+- Release install/upgrade/uninstall/status/rollback/history
+- Release get (all/values/manifest/hooks/notes/metadata)
+- Chart template/lint
+- Version info

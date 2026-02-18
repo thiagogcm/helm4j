@@ -8,9 +8,14 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
+import dev.nthings.helm4j.VersionInfo;
 import dev.nthings.helm4j.chart.HubChartSummary;
 import dev.nthings.helm4j.chart.HubSearchRequest;
 import dev.nthings.helm4j.chart.HubSearchResult;
+import dev.nthings.helm4j.chart.LintMessage;
+import dev.nthings.helm4j.chart.LintRequest;
+import dev.nthings.helm4j.chart.LintResult;
+import dev.nthings.helm4j.chart.LintSeverity;
 import dev.nthings.helm4j.chart.RepoChartSummary;
 import dev.nthings.helm4j.chart.RepoSearchRequest;
 import dev.nthings.helm4j.chart.RepoSearchResult;
@@ -21,13 +26,42 @@ import dev.nthings.helm4j.chart.ShowMode;
 import dev.nthings.helm4j.chart.ShowReadmeResult;
 import dev.nthings.helm4j.chart.ShowRequest;
 import dev.nthings.helm4j.chart.ShowValuesResult;
+import dev.nthings.helm4j.chart.TemplateRequest;
+import dev.nthings.helm4j.chart.TemplateResult;
 import dev.nthings.helm4j.errors.HelmException;
+import dev.nthings.helm4j.release.GetAllResult;
+import dev.nthings.helm4j.release.GetHooksResult;
+import dev.nthings.helm4j.release.GetManifestResult;
+import dev.nthings.helm4j.release.GetMetadataResult;
+import dev.nthings.helm4j.release.GetMode;
+import dev.nthings.helm4j.release.GetNotesResult;
+import dev.nthings.helm4j.release.GetRequest;
+import dev.nthings.helm4j.release.GetValuesResult;
+import dev.nthings.helm4j.release.HistoryEntry;
+import dev.nthings.helm4j.release.HistoryRequest;
+import dev.nthings.helm4j.release.HistoryResult;
+import dev.nthings.helm4j.release.HookInfo;
 import dev.nthings.helm4j.release.InstallFailure;
 import dev.nthings.helm4j.release.InstallPending;
 import dev.nthings.helm4j.release.InstallRequest;
 import dev.nthings.helm4j.release.InstallResult;
 import dev.nthings.helm4j.release.InstallSuccess;
 import dev.nthings.helm4j.release.ReleaseInfo;
+import dev.nthings.helm4j.release.RollbackFailure;
+import dev.nthings.helm4j.release.RollbackRequest;
+import dev.nthings.helm4j.release.RollbackResult;
+import dev.nthings.helm4j.release.RollbackSuccess;
+import dev.nthings.helm4j.release.StatusRequest;
+import dev.nthings.helm4j.release.StatusResult;
+import dev.nthings.helm4j.release.UninstallFailure;
+import dev.nthings.helm4j.release.UninstallRequest;
+import dev.nthings.helm4j.release.UninstallResult;
+import dev.nthings.helm4j.release.UninstallSuccess;
+import dev.nthings.helm4j.release.UpgradeFailure;
+import dev.nthings.helm4j.release.UpgradePending;
+import dev.nthings.helm4j.release.UpgradeRequest;
+import dev.nthings.helm4j.release.UpgradeResult;
+import dev.nthings.helm4j.release.UpgradeSuccess;
 import dev.nthings.helm4j.repo.RepoAddFailure;
 import dev.nthings.helm4j.repo.RepoAddRequest;
 import dev.nthings.helm4j.repo.RepoAddResult;
@@ -301,24 +335,314 @@ public final class NativeStructGateway implements HelmGateway {
           "Native install response missing release", "decodeResponse", "install");
     }
 
-    var nativeRelease = response.release();
-    var release = new ReleaseInfo(
-        nativeRelease.name(),
-        nativeRelease.namespace(),
-        nativeRelease.revision(),
-        nativeRelease.status(),
-        nativeRelease.description(),
-        nativeRelease.firstDeployed(),
-        nativeRelease.lastDeployed(),
-        nativeRelease.chartName(),
-        nativeRelease.chartVersion(),
-        nativeRelease.appVersion(),
-        nativeRelease.notes());
+    var release = mapReleasePayload(response.release());
 
     if (isPendingStatus(release.status())) {
       return new InstallPending(release);
     }
     return new InstallSuccess(release);
+  }
+
+  @Override
+  public UpgradeResult upgrade(UpgradeRequest request) {
+    Objects.requireNonNull(request, "request");
+    if (request.chart() == null) {
+      throw new IllegalArgumentException("Upgrade requires chart reference");
+    }
+
+    log.debug(
+        "Upgrading release: name={}, chart={}",
+        request.releaseName(),
+        request.chart().asReference());
+    var payload = invoke(
+        () -> bridge.upgrade(
+            utf8(request.releaseName()),
+            utf8(request.chart().asReference()),
+            toJsonBytes(upgradeOptions(request), "upgrade")),
+        "upgrade",
+        "invokeNative");
+    var root = parse(payload, "upgrade");
+
+    var failure = operationError(root, "upgrade");
+    if (failure != null) {
+      return new UpgradeFailure(
+          messageOrUnknown(failure.message()), failure.stage(), failure.operation());
+    }
+
+    var response = convert(root, ReleasePayload.class, "upgrade");
+    if (response == null || response.release() == null) {
+      throw new HelmException(
+          "Native upgrade response missing release", "decodeResponse", "upgrade");
+    }
+
+    var release = mapReleasePayload(response.release());
+    if (isPendingStatus(release.status())) {
+      return new UpgradePending(release);
+    }
+    return new UpgradeSuccess(release);
+  }
+
+  @Override
+  public UninstallResult uninstall(UninstallRequest request) {
+    Objects.requireNonNull(request, "request");
+
+    log.debug("Uninstalling release: name={}", request.releaseName());
+    var payload = invoke(
+        () -> bridge.uninstall(
+            utf8(request.releaseName()),
+            toJsonBytes(uninstallOptions(request), "uninstall")),
+        "uninstall",
+        "invokeNative");
+    var root = parse(payload, "uninstall");
+
+    var failure = operationError(root, "uninstall");
+    if (failure != null) {
+      return new UninstallFailure(
+          messageOrUnknown(failure.message()), failure.stage(), failure.operation());
+    }
+
+    var response = convert(root, UninstallPayload.class, "uninstall");
+    if (response == null) {
+      throw new HelmException(
+          "Native uninstall response missing data", "decodeResponse", "uninstall");
+    }
+
+    var release = response.release() != null ? mapReleasePayload(response.release()) : null;
+    return new UninstallSuccess(release, response.info());
+  }
+
+  @Override
+  public StatusResult status(StatusRequest request) {
+    Objects.requireNonNull(request, "request");
+
+    log.debug("Getting status: name={}", request.releaseName());
+    var payload = invoke(
+        () -> bridge.status(
+            utf8(request.releaseName()), toJsonBytes(statusOptions(request), "status")),
+        "status",
+        "invokeNative");
+    var root = parse(payload, "status");
+
+    var failure = operationError(root, "status");
+    if (failure != null) {
+      throw asException(failure);
+    }
+
+    var response = convert(root, ReleasePayload.class, "status");
+    if (response == null || response.release() == null) {
+      throw new HelmException("Native status response missing release", "decodeResponse", "status");
+    }
+
+    return new StatusResult(mapReleasePayload(response.release()));
+  }
+
+  @Override
+  public RollbackResult rollback(RollbackRequest request) {
+    Objects.requireNonNull(request, "request");
+
+    log.debug("Rolling back release: name={}", request.releaseName());
+    var payload = invoke(
+        () -> bridge.rollback(
+            utf8(request.releaseName()), toJsonBytes(rollbackOptions(request), "rollback")),
+        "rollback",
+        "invokeNative");
+    var root = parse(payload, "rollback");
+
+    var failure = operationError(root, "rollback");
+    if (failure != null) {
+      return new RollbackFailure(
+          messageOrUnknown(failure.message()), failure.stage(), failure.operation());
+    }
+
+    var response = convert(root, RollbackPayload.class, "rollback");
+    if (response == null) {
+      throw new HelmException(
+          "Native rollback response missing data", "decodeResponse", "rollback");
+    }
+
+    return new RollbackSuccess(response.releaseName(), response.revision());
+  }
+
+  @Override
+  public HistoryResult history(HistoryRequest request) {
+    Objects.requireNonNull(request, "request");
+
+    log.debug("Getting history: name={}", request.releaseName());
+    var payload = invoke(
+        () -> bridge.history(
+            utf8(request.releaseName()), toJsonBytes(historyOptions(request), "history")),
+        "history",
+        "invokeNative");
+    var root = parse(payload, "history");
+
+    var failure = operationError(root, "history");
+    if (failure != null) {
+      throw asException(failure);
+    }
+
+    var response = convert(root, HistoryPayload.class, "history");
+    var entries = listOrEmpty(response == null ? null : response.entries()).stream()
+        .map(
+            e -> new HistoryEntry(
+                e.revision(),
+                e.updated(),
+                e.status(),
+                e.chart(),
+                e.chartVersion(),
+                e.appVersion(),
+                e.description()))
+        .toList();
+    return new HistoryResult(entries);
+  }
+
+  @Override
+  public GetAllResult getAll(GetRequest request) {
+    Objects.requireNonNull(request, "request");
+    var payload = runGet(GetMode.ALL, request);
+    var response = convert(parse(payload, "get all"), GetAllPayload.class, "get all");
+    if (response == null || response.release() == null) {
+      throw new HelmException(
+          "Native get all response missing release", "decodeResponse", "get all");
+    }
+    return new GetAllResult(
+        mapReleasePayload(response.release()),
+        mapOrEmpty(response.values()),
+        response.manifest(),
+        mapHooks(response.hooks()),
+        response.notes());
+  }
+
+  @Override
+  public GetValuesResult getValues(GetRequest request) {
+    Objects.requireNonNull(request, "request");
+    var payload = runGet(GetMode.VALUES, request);
+    var response = convert(parse(payload, "get values"), GetValuesPayload.class, "get values");
+    return new GetValuesResult(mapOrEmpty(response == null ? null : response.values()));
+  }
+
+  @Override
+  public GetManifestResult getManifest(GetRequest request) {
+    Objects.requireNonNull(request, "request");
+    var payload = runGet(GetMode.MANIFEST, request);
+    var response = convert(parse(payload, "get manifest"), GetManifestPayload.class, "get manifest");
+    return new GetManifestResult(response == null ? "" : response.manifest());
+  }
+
+  @Override
+  public GetHooksResult getHooks(GetRequest request) {
+    Objects.requireNonNull(request, "request");
+    var payload = runGet(GetMode.HOOKS, request);
+    var response = convert(parse(payload, "get hooks"), GetHooksPayload.class, "get hooks");
+    return new GetHooksResult(mapHooks(response == null ? null : response.hooks()));
+  }
+
+  @Override
+  public GetNotesResult getNotes(GetRequest request) {
+    Objects.requireNonNull(request, "request");
+    var payload = runGet(GetMode.NOTES, request);
+    var response = convert(parse(payload, "get notes"), GetNotesPayload.class, "get notes");
+    return new GetNotesResult(response == null ? "" : response.notes());
+  }
+
+  @Override
+  public GetMetadataResult getMetadata(GetRequest request) {
+    Objects.requireNonNull(request, "request");
+    var payload = runGet(GetMode.METADATA, request);
+    var response = convert(parse(payload, "get metadata"), GetMetadataPayload.class, "get metadata");
+    if (response == null) {
+      throw new HelmException(
+          "Native get metadata response missing data", "decodeResponse", "get metadata");
+    }
+    return new GetMetadataResult(
+        response.name(),
+        response.namespace(),
+        response.revision(),
+        response.status(),
+        response.chart(),
+        response.chartVersion(),
+        response.appVersion(),
+        response.deployedAt());
+  }
+
+  @Override
+  public TemplateResult template(TemplateRequest request) {
+    Objects.requireNonNull(request, "request");
+    if (request.chart() == null) {
+      throw new IllegalArgumentException("Template requires chart reference");
+    }
+
+    log.debug(
+        "Templating chart: name={}, chart={}",
+        request.releaseName(),
+        request.chart().asReference());
+    var payload = invoke(
+        () -> bridge.template(
+            utf8(request.releaseName()),
+            utf8(request.chart().asReference()),
+            toJsonBytes(templateOptions(request), "template")),
+        "template",
+        "invokeNative");
+    var root = parse(payload, "template");
+
+    var failure = operationError(root, "template");
+    if (failure != null) {
+      throw asException(failure);
+    }
+
+    var response = convert(root, TemplatePayload.class, "template");
+    if (response == null || response.release() == null) {
+      throw new HelmException(
+          "Native template response missing release", "decodeResponse", "template");
+    }
+
+    return new TemplateResult(mapReleasePayload(response.release()), response.manifest());
+  }
+
+  @Override
+  public LintResult lint(LintRequest request) {
+    Objects.requireNonNull(request, "request");
+
+    log.debug("Linting chart: path={}", request.chartPath());
+    var payload = invoke(
+        () -> bridge.lint(
+            utf8(request.chartPath().toString()),
+            toJsonBytes(lintOptions(request), "lint")),
+        "lint",
+        "invokeNative");
+    var root = parse(payload, "lint");
+
+    var failure = operationError(root, "lint");
+    if (failure != null) {
+      throw asException(failure);
+    }
+
+    var response = convert(root, LintPayload.class, "lint");
+    var messages = listOrEmpty(response == null ? null : response.messages()).stream()
+        .map(m -> new LintMessage(LintSeverity.fromWireValue(m.severity()), m.message()))
+        .toList();
+    return new LintResult(
+        messages,
+        response == null ? 0 : response.totalCharts(),
+        response == null ? 0 : response.chartsTested(),
+        response == null ? 0 : response.chartsFailed());
+  }
+
+  @Override
+  public VersionInfo version() {
+    log.debug("Getting version info");
+    var payload = invoke(bridge::version, "version", "invokeNative");
+    var root = parse(payload, "version");
+
+    var failure = operationError(root, "version");
+    if (failure != null) {
+      throw asException(failure);
+    }
+
+    var response = convert(root, VersionPayload.class, "version");
+    if (response == null) {
+      throw new HelmException("Native version response missing data", "decodeResponse", "version");
+    }
+    return new VersionInfo(response.version(), response.goVersion(), response.helmVersion());
   }
 
   private ShowPayload runShow(ShowMode mode, ChartRef chartReference, ShowRequest request) {
@@ -552,6 +876,205 @@ public final class NativeStructGateway implements HelmGateway {
     return options;
   }
 
+  private static Map<String, Object> upgradeOptions(UpgradeRequest request) {
+    var source = request.source();
+    var options = new LinkedHashMap<String, Object>();
+
+    putIfNonNull(options, "version", source.version());
+    putIfNonNull(options, "repo", source.repositoryUrl());
+    putIfNonNull(options, "username", source.username());
+    putIfNonNull(options, "password", source.password());
+    options.put("plainHttp", source.plainHttp());
+    options.put("insecureSkipTlsVerify", source.insecureSkipTlsVerification());
+    putIfNonNull(options, "keyring", source.keyringPath());
+    putIfNonNull(options, "certFile", source.certificateFile());
+    putIfNonNull(options, "keyFile", source.keyFile());
+    putIfNonNull(options, "caFile", source.certificateAuthorityFile());
+    options.put("passCredentialsAll", source.passCredentialsToAllHosts());
+    options.put("verify", source.verifySignatures());
+    options.put("devel", source.includePreReleaseVersions());
+
+    putIfNonNull(options, "namespace", request.namespace());
+    options.put("install", request.install());
+    putIfNonNull(
+        options, "dryRun", request.dryRunMode() == null ? null : request.dryRunMode().wireValue());
+    putIfNonNull(
+        options, "wait", request.waitMode() == null ? null : request.waitMode().wireValue());
+    options.put("waitForJobs", request.waitForJobs());
+    putIfNonNull(options, "timeout", durationString(request.timeout()));
+    putIfNonNull(options, "description", request.description());
+    options.put("rollbackOnFailure", request.rollbackOnFailure());
+    options.put("skipCrds", request.skipCrds());
+    options.put("disableHooks", request.disableHooks());
+    options.put("disableOpenApiValidation", request.disableOpenApiValidation());
+    options.put("forceReplace", request.forceReplace());
+    options.put("forceConflicts", request.applyStrategy().forceConflicts());
+    options.put("serverSideApply", request.applyStrategy().serverSideApply());
+    options.put("subNotes", request.subNotes());
+    options.put("enableDns", request.enableDns());
+    options.put("takeOwnership", request.takeOwnership());
+    options.put("cleanupOnFail", request.cleanupOnFail());
+    options.put("maxHistory", request.maxHistory());
+    options.put("reuseValues", request.reuseValues());
+    options.put("resetValues", request.resetValues());
+    options.put("resetThenReuseValues", request.resetThenReuseValues());
+
+    if (!request.values().isEmpty()) {
+      options.put("values", request.values());
+    }
+    if (!request.labels().isEmpty()) {
+      options.put("labels", request.labels());
+    }
+
+    return options;
+  }
+
+  private static Map<String, Object> uninstallOptions(UninstallRequest request) {
+    var options = new LinkedHashMap<String, Object>();
+    putIfNonNull(options, "namespace", request.namespace());
+    options.put("dryRun", request.dryRun());
+    options.put("disableHooks", request.disableHooks());
+    options.put("keepHistory", request.keepHistory());
+    options.put("ignoreNotFound", request.ignoreNotFound());
+    putIfNonNull(options, "timeout", durationString(request.timeout()));
+    putIfNonNull(options, "description", request.description());
+    putIfNonNull(
+        options, "wait", request.waitMode() == null ? null : request.waitMode().wireValue());
+    putIfNonNull(options, "deletionPropagation", request.deletionPropagation());
+    return options;
+  }
+
+  private static Map<String, Object> statusOptions(StatusRequest request) {
+    var options = new LinkedHashMap<String, Object>();
+    putIfNonNull(options, "namespace", request.namespace());
+    options.put("revision", request.revision());
+    return options;
+  }
+
+  private static Map<String, Object> rollbackOptions(RollbackRequest request) {
+    var options = new LinkedHashMap<String, Object>();
+    putIfNonNull(options, "namespace", request.namespace());
+    options.put("revision", request.revision());
+    putIfNonNull(
+        options, "dryRun", request.dryRunMode() == null ? null : request.dryRunMode().wireValue());
+    options.put("disableHooks", request.disableHooks());
+    options.put("forceReplace", request.forceReplace());
+    putIfNonNull(options, "timeout", durationString(request.timeout()));
+    putIfNonNull(
+        options, "wait", request.waitMode() == null ? null : request.waitMode().wireValue());
+    options.put("waitForJobs", request.waitForJobs());
+    options.put("cleanupOnFail", request.cleanupOnFail());
+    options.put("maxHistory", request.maxHistory());
+    options.put("forceConflicts", request.applyStrategy().forceConflicts());
+    options.put("serverSideApply", request.applyStrategy().serverSideApply());
+    return options;
+  }
+
+  private static Map<String, Object> historyOptions(HistoryRequest request) {
+    var options = new LinkedHashMap<String, Object>();
+    putIfNonNull(options, "namespace", request.namespace());
+    options.put("max", request.max());
+    return options;
+  }
+
+  private static Map<String, Object> getOptions(GetRequest request) {
+    var options = new LinkedHashMap<String, Object>();
+    putIfNonNull(options, "namespace", request.namespace());
+    options.put("revision", request.revision());
+    options.put("allValues", request.allValues());
+    return options;
+  }
+
+  private static Map<String, Object> templateOptions(TemplateRequest request) {
+    var source = request.source();
+    var options = new LinkedHashMap<String, Object>();
+
+    putIfNonNull(options, "version", source.version());
+    putIfNonNull(options, "repo", source.repositoryUrl());
+    putIfNonNull(options, "username", source.username());
+    putIfNonNull(options, "password", source.password());
+    options.put("plainHttp", source.plainHttp());
+    options.put("insecureSkipTlsVerify", source.insecureSkipTlsVerification());
+    putIfNonNull(options, "keyring", source.keyringPath());
+    putIfNonNull(options, "certFile", source.certificateFile());
+    putIfNonNull(options, "keyFile", source.keyFile());
+    putIfNonNull(options, "caFile", source.certificateAuthorityFile());
+    options.put("passCredentialsAll", source.passCredentialsToAllHosts());
+    options.put("verify", source.verifySignatures());
+    options.put("devel", source.includePreReleaseVersions());
+
+    putIfNonNull(options, "namespace", request.namespace());
+    putIfNonNull(options, "description", request.description());
+    options.put("skipCrds", request.skipCrds());
+    options.put("disableHooks", request.disableHooks());
+    options.put("disableOpenApiValidation", request.disableOpenApiValidation());
+    options.put("generateName", request.generateName());
+    putIfNonNull(options, "nameTemplate", request.nameTemplate());
+    options.put("subNotes", request.subNotes());
+    options.put("enableDns", request.enableDns());
+    options.put("includeCrds", request.includeCrds());
+
+    if (request.apiVersions() != null && !request.apiVersions().isEmpty()) {
+      options.put("apiVersions", request.apiVersions());
+    }
+    if (!request.values().isEmpty()) {
+      options.put("values", request.values());
+    }
+    if (!request.labels().isEmpty()) {
+      options.put("labels", request.labels());
+    }
+
+    return options;
+  }
+
+  private static Map<String, Object> lintOptions(LintRequest request) {
+    var options = new LinkedHashMap<String, Object>();
+    options.put("strict", request.strict());
+    options.put("quiet", request.quiet());
+    options.put("withSubcharts", request.withSubcharts());
+    if (!request.values().isEmpty()) {
+      options.put("values", request.values());
+    }
+    return options;
+  }
+
+  private byte[] runGet(GetMode mode, GetRequest request) {
+    var operation = "get " + mode.wireValue();
+    log.debug("Get operation: mode={}, release={}", mode.wireValue(), request.releaseName());
+    return invoke(
+        () -> bridge.get(
+            utf8(mode.wireValue()),
+            utf8(request.releaseName()),
+            toJsonBytes(getOptions(request), operation)),
+        operation,
+        "invokeNative");
+  }
+
+  private static ReleaseInfo mapReleasePayload(NativeReleasePayload r) {
+    return new ReleaseInfo(
+        r.name(),
+        r.namespace(),
+        r.revision(),
+        r.status(),
+        r.description(),
+        r.firstDeployed(),
+        r.lastDeployed(),
+        r.chartName(),
+        r.chartVersion(),
+        r.appVersion(),
+        r.notes());
+  }
+
+  private static List<HookInfo> mapHooks(List<HookPayload> hooks) {
+    return listOrEmpty(hooks).stream()
+        .map(h -> new HookInfo(h.name(), h.kind(), h.path(), listOrEmpty(h.events()), h.weight()))
+        .toList();
+  }
+
+  private static Map<String, Object> mapOrEmpty(Map<String, Object> value) {
+    return value == null ? Map.of() : value;
+  }
+
   private static void putIfNonNull(Map<String, Object> target, String key, Object value) {
     if (value != null) {
       target.put(key, value);
@@ -640,10 +1163,80 @@ public final class NativeStructGateway implements HelmGateway {
       String chart, String values, String readme, List<String> crds) {
   }
 
-  private record InstallPayload(InstallReleasePayload release) {
+  private record InstallPayload(NativeReleasePayload release) {
   }
 
-  private record InstallReleasePayload(
+  private record ReleasePayload(NativeReleasePayload release) {
+  }
+
+  private record UninstallPayload(NativeReleasePayload release, String info) {
+  }
+
+  private record RollbackPayload(String releaseName, int revision) {
+  }
+
+  private record HistoryPayload(List<HistoryEntryPayload> entries) {
+  }
+
+  private record HistoryEntryPayload(
+      int revision,
+      String updated,
+      String status,
+      String chart,
+      String chartVersion,
+      String appVersion,
+      String description) {
+  }
+
+  private record GetAllPayload(
+      NativeReleasePayload release,
+      Map<String, Object> values,
+      String manifest,
+      List<HookPayload> hooks,
+      String notes) {
+  }
+
+  private record GetValuesPayload(Map<String, Object> values) {
+  }
+
+  private record GetManifestPayload(String manifest) {
+  }
+
+  private record GetHooksPayload(List<HookPayload> hooks) {
+  }
+
+  private record GetNotesPayload(String notes) {
+  }
+
+  private record GetMetadataPayload(
+      String name,
+      String namespace,
+      int revision,
+      String status,
+      String chart,
+      String chartVersion,
+      String appVersion,
+      String deployedAt) {
+  }
+
+  private record HookPayload(
+      String name, String kind, String path, List<String> events, int weight) {
+  }
+
+  private record TemplatePayload(NativeReleasePayload release, String manifest) {
+  }
+
+  private record LintPayload(
+      List<LintMessagePayload> messages, int totalCharts, int chartsTested, int chartsFailed) {
+  }
+
+  private record LintMessagePayload(String severity, String message) {
+  }
+
+  private record VersionPayload(String version, String goVersion, String helmVersion) {
+  }
+
+  private record NativeReleasePayload(
       String name,
       String namespace,
       int revision,

@@ -10,14 +10,12 @@ import (
 	"time"
 
 	"helm.sh/helm/v4/pkg/action"
-	chart "helm.sh/helm/v4/pkg/chart/v2"
 	"helm.sh/helm/v4/pkg/kube"
-	"helm.sh/helm/v4/pkg/release"
-	v1release "helm.sh/helm/v4/pkg/release/v1"
 
 	"github.com/thiagogcm/libhelm4j/internal/bridge"
 	"github.com/thiagogcm/libhelm4j/internal/helmenv"
 	"github.com/thiagogcm/libhelm4j/internal/helmlog"
+	"github.com/thiagogcm/libhelm4j/internal/releaseutil"
 )
 
 // Options captures the Helm flags relevant to `helm install` and chart
@@ -66,24 +64,12 @@ type Options struct {
 	Labels map[string]string `json:"labels,omitempty"`
 }
 
-// ReleaseInfo is the structured release payload returned on success.
-type ReleaseInfo struct {
-	Name          string `json:"name"`
-	Namespace     string `json:"namespace"`
-	Revision      int    `json:"revision"`
-	Status        string `json:"status"`
-	Description   string `json:"description"`
-	FirstDeployed string `json:"firstDeployed"`
-	LastDeployed  string `json:"lastDeployed"`
-	ChartName     string `json:"chartName"`
-	ChartVersion  string `json:"chartVersion"`
-	AppVersion    string `json:"appVersion"`
-	Notes         string `json:"notes"`
-}
+// ReleaseInfo is an alias for the shared release info type.
+type ReleaseInfo = releaseutil.ReleaseInfo
 
 // Response is the top-level JSON payload returned across the FFM boundary.
 type Response struct {
-	Release ReleaseInfo `json:"release"`
+	Release releaseutil.ReleaseInfo `json:"release"`
 }
 
 // Run executes a helm install operation for the given release name and chart
@@ -156,7 +142,7 @@ func Run(releaseName, chartRef string, opts Options) (string, error) {
 	}
 
 	// --- build response ---
-	info, err := mapRelease(rel)
+	info, err := releaseutil.MapRelease(rel)
 	if err != nil {
 		log.Warn("failed to map release to response", slog.Any("error", err))
 		return "", fmt.Errorf("map release: %w", err)
@@ -233,46 +219,4 @@ func applyOptions(client *action.Install, opts Options) {
 			client.Timeout = d
 		}
 	}
-}
-
-// mapRelease converts a Helm SDK [release.Releaser] into the serialisable
-// [ReleaseInfo] returned across the FFM boundary. It uses the [release.Accessor]
-// interface for forward-compatible field access, falling back to a type
-// assertion for fields only available on the concrete v1 release type.
-func mapRelease(rel release.Releaser) (ReleaseInfo, error) {
-	acc, err := release.NewAccessor(rel)
-	if err != nil {
-		return ReleaseInfo{}, fmt.Errorf("create release accessor: %w", err)
-	}
-
-	info := ReleaseInfo{
-		Name:      acc.Name(),
-		Namespace: acc.Namespace(),
-		Revision:  acc.Version(),
-		Status:    acc.Status(),
-		Notes:     acc.Notes(),
-	}
-
-	// Chart metadata via type assertion to the concrete v2 chart type.
-	if ch := acc.Chart(); ch != nil {
-		if v2ch, ok := ch.(*chart.Chart); ok && v2ch.Metadata != nil {
-			info.ChartName = v2ch.Metadata.Name
-			info.ChartVersion = v2ch.Metadata.Version
-			info.AppVersion = v2ch.Metadata.AppVersion
-		}
-	}
-
-	// Description, FirstDeployed, LastDeployed are only available on the
-	// concrete v1 release type.
-	if v1, ok := rel.(*v1release.Release); ok && v1.Info != nil {
-		info.Description = v1.Info.Description
-		if !v1.Info.FirstDeployed.IsZero() {
-			info.FirstDeployed = v1.Info.FirstDeployed.UTC().Format(time.RFC3339)
-		}
-		if !v1.Info.LastDeployed.IsZero() {
-			info.LastDeployed = v1.Info.LastDeployed.UTC().Format(time.RFC3339)
-		}
-	}
-
-	return info, nil
 }

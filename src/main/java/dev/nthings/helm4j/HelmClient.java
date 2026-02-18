@@ -17,11 +17,13 @@ import tools.jackson.databind.json.JsonMapper;
 /** Root client for Helm SDK namespaces. */
 public final class HelmClient implements AutoCloseable {
 
+  private final HelmGateway gateway;
   private final RepoClient repo;
   private final ChartClient chart;
   private final ReleaseClient release;
 
   private HelmClient(HelmGateway gateway) {
+    this.gateway = gateway;
     this.repo = new RepoClient(gateway);
     this.chart = new ChartClient(gateway);
     this.release = new ReleaseClient(gateway);
@@ -41,6 +43,10 @@ public final class HelmClient implements AutoCloseable {
 
   public ReleaseClient release() {
     return release;
+  }
+
+  public VersionInfo version() {
+    return gateway.version();
   }
 
   @Override

@@ -131,4 +131,32 @@ public final class ChartClient {
     Objects.requireNonNull(request, "request");
     return gateway.showAll(chartReference, request);
   }
+
+  public TemplateResult template(Consumer<TemplateRequest.Builder> spec) {
+    Objects.requireNonNull(spec, "spec");
+    var builder = TemplateRequest.builder();
+    spec.accept(builder);
+    return template(builder.build());
+  }
+
+  public TemplateResult template(TemplateRequest request) {
+    Objects.requireNonNull(request, "request");
+    return gateway.template(request);
+  }
+
+  public LintResult lint(java.nio.file.Path chartPath) {
+    return lint(LintRequest.builder().chartPath(chartPath).build());
+  }
+
+  public LintResult lint(Consumer<LintRequest.Builder> spec) {
+    Objects.requireNonNull(spec, "spec");
+    var builder = LintRequest.builder();
+    spec.accept(builder);
+    return lint(builder.build());
+  }
+
+  public LintResult lint(LintRequest request) {
+    Objects.requireNonNull(request, "request");
+    return gateway.lint(request);
+  }
 }

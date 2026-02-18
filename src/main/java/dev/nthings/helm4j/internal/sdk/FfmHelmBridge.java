@@ -53,6 +53,81 @@ public final class FfmHelmBridge implements HelmBridge {
             cstringFromBytes(arena, optionsJson)));
   }
 
+  @Override
+  public byte[] upgrade(byte[] releaseName, byte[] chartRef, byte[] optionsJson) {
+    return invoke(
+        "upgrade",
+        arena -> libhelm4j_h.HelmUpgrade(
+            cstringFromBytes(arena, releaseName),
+            cstringFromBytes(arena, chartRef),
+            cstringFromBytes(arena, optionsJson)));
+  }
+
+  @Override
+  public byte[] uninstall(byte[] releaseName, byte[] optionsJson) {
+    return invoke(
+        "uninstall",
+        arena -> libhelm4j_h.HelmUninstall(
+            cstringFromBytes(arena, releaseName), cstringFromBytes(arena, optionsJson)));
+  }
+
+  @Override
+  public byte[] status(byte[] releaseName, byte[] optionsJson) {
+    return invoke(
+        "status",
+        arena -> libhelm4j_h.HelmStatus(
+            cstringFromBytes(arena, releaseName), cstringFromBytes(arena, optionsJson)));
+  }
+
+  @Override
+  public byte[] rollback(byte[] releaseName, byte[] optionsJson) {
+    return invoke(
+        "rollback",
+        arena -> libhelm4j_h.HelmRollback(
+            cstringFromBytes(arena, releaseName), cstringFromBytes(arena, optionsJson)));
+  }
+
+  @Override
+  public byte[] history(byte[] releaseName, byte[] optionsJson) {
+    return invoke(
+        "history",
+        arena -> libhelm4j_h.HelmHistory(
+            cstringFromBytes(arena, releaseName), cstringFromBytes(arena, optionsJson)));
+  }
+
+  @Override
+  public byte[] get(byte[] mode, byte[] releaseName, byte[] optionsJson) {
+    return invoke(
+        "get",
+        arena -> libhelm4j_h.HelmGet(
+            cstringFromBytes(arena, mode),
+            cstringFromBytes(arena, releaseName),
+            cstringFromBytes(arena, optionsJson)));
+  }
+
+  @Override
+  public byte[] template(byte[] releaseName, byte[] chartRef, byte[] optionsJson) {
+    return invoke(
+        "template",
+        arena -> libhelm4j_h.HelmTemplate(
+            cstringFromBytes(arena, releaseName),
+            cstringFromBytes(arena, chartRef),
+            cstringFromBytes(arena, optionsJson)));
+  }
+
+  @Override
+  public byte[] lint(byte[] chartPath, byte[] optionsJson) {
+    return invoke(
+        "lint",
+        arena -> libhelm4j_h.HelmLint(
+            cstringFromBytes(arena, chartPath), cstringFromBytes(arena, optionsJson)));
+  }
+
+  @Override
+  public byte[] version() {
+    return invoke("version", arena -> libhelm4j_h.HelmVersion());
+  }
+
   private static byte[] invoke(String operation, NativeCall call) {
     log.debug("Invoking native operation: {}", operation);
     try (var arena = Arena.ofConfined()) {

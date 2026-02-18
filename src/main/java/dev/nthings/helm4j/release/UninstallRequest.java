@@ -1,0 +1,115 @@
+package dev.nthings.helm4j.release;
+
+import java.time.Duration;
+
+/** Request parameters for uninstalling a release. */
+public record UninstallRequest(
+    String releaseName,
+    String namespace,
+    boolean dryRun,
+    boolean disableHooks,
+    boolean keepHistory,
+    boolean ignoreNotFound,
+    Duration timeout,
+    String description,
+    WaitMode waitMode,
+    String deletionPropagation) {
+
+  public UninstallRequest {
+    releaseName = normalize(releaseName);
+    namespace = normalize(namespace);
+    description = normalize(description);
+    deletionPropagation = normalize(deletionPropagation);
+  }
+
+  public static Builder builder() {
+    return new Builder();
+  }
+
+  public static final class Builder {
+    private String releaseName;
+    private String namespace;
+    private boolean dryRun;
+    private boolean disableHooks;
+    private boolean keepHistory;
+    private boolean ignoreNotFound;
+    private Duration timeout;
+    private String description;
+    private WaitMode waitMode;
+    private String deletionPropagation;
+
+    private Builder() {
+    }
+
+    public Builder releaseName(String value) {
+      this.releaseName = value;
+      return this;
+    }
+
+    public Builder namespace(String value) {
+      this.namespace = value;
+      return this;
+    }
+
+    public Builder dryRun(boolean value) {
+      this.dryRun = value;
+      return this;
+    }
+
+    public Builder disableHooks(boolean value) {
+      this.disableHooks = value;
+      return this;
+    }
+
+    public Builder keepHistory(boolean value) {
+      this.keepHistory = value;
+      return this;
+    }
+
+    public Builder ignoreNotFound(boolean value) {
+      this.ignoreNotFound = value;
+      return this;
+    }
+
+    public Builder timeout(Duration value) {
+      this.timeout = value;
+      return this;
+    }
+
+    public Builder description(String value) {
+      this.description = value;
+      return this;
+    }
+
+    public Builder waitMode(WaitMode value) {
+      this.waitMode = value;
+      return this;
+    }
+
+    public Builder deletionPropagation(String value) {
+      this.deletionPropagation = value;
+      return this;
+    }
+
+    public UninstallRequest build() {
+      return new UninstallRequest(
+          releaseName,
+          namespace,
+          dryRun,
+          disableHooks,
+          keepHistory,
+          ignoreNotFound,
+          timeout,
+          description,
+          waitMode,
+          deletionPropagation);
+    }
+  }
+
+  private static String normalize(String value) {
+    if (value == null)
+      return null;
+    var normalized = value.trim();
+    return normalized.isEmpty() ? null : normalized;
+  }
+}

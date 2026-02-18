@@ -92,6 +92,15 @@ extern char* HelmShow(char* mode, char* chartRef, char* options);
 extern char* HelmInstall(char* releaseName, char* chartRef, char* options);
 extern char* HelmSearch(char* mode, char* options);
 extern char* HelmRepo(char* mode, char* options);
+extern char* HelmTemplate(char* releaseName, char* chartRef, char* options);
+extern char* HelmLint(char* chartPath, char* options);
+extern char* HelmVersion(void);
+extern char* HelmUpgrade(char* releaseName, char* chartRef, char* options);
+extern char* HelmUninstall(char* releaseName, char* options);
+extern char* HelmStatus(char* releaseName, char* options);
+extern char* HelmRollback(char* releaseName, char* options);
+extern char* HelmHistory(char* releaseName, char* options);
+extern char* HelmGet(char* mode, char* releaseName, char* options);
 
 #ifdef __cplusplus
 }

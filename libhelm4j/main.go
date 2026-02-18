@@ -21,11 +21,20 @@ import (
 	"helm.sh/helm/v4/pkg/action"
 
 	"github.com/thiagogcm/libhelm4j/internal/bridge"
+	"github.com/thiagogcm/libhelm4j/internal/getrelease"
 	"github.com/thiagogcm/libhelm4j/internal/helmlog"
+	"github.com/thiagogcm/libhelm4j/internal/history"
 	"github.com/thiagogcm/libhelm4j/internal/install"
+	"github.com/thiagogcm/libhelm4j/internal/lint"
 	"github.com/thiagogcm/libhelm4j/internal/repomgr"
+	"github.com/thiagogcm/libhelm4j/internal/rollback"
 	"github.com/thiagogcm/libhelm4j/internal/search"
 	"github.com/thiagogcm/libhelm4j/internal/show"
+	"github.com/thiagogcm/libhelm4j/internal/status"
+	"github.com/thiagogcm/libhelm4j/internal/template"
+	"github.com/thiagogcm/libhelm4j/internal/uninstall"
+	"github.com/thiagogcm/libhelm4j/internal/upgrade"
+	"github.com/thiagogcm/libhelm4j/internal/version"
 )
 
 // ---------------------------------------------------------------------------
@@ -246,6 +255,17 @@ func repoOperation(mode string) string {
 // Panic recovery
 // ---------------------------------------------------------------------------
 
+func recoverPanic(result **C.char, operation string, kvPairs ...string) {
+	if recovered := recover(); recovered != nil {
+		helmlog.Logger().Error(
+			"panic recovered in "+operation,
+			slog.Any("panic", recovered),
+			slog.String("stack", string(debug.Stack())),
+		)
+		*result = toCString(bridge.EncodeError(bridge.StagePanic, fmt.Errorf("panic: %v", recovered), kvPairs...))
+	}
+}
+
 func recoverShowPanic(result **C.char, mode string, chartRef *C.char) {
 	if recovered := recover(); recovered != nil {
 		goChartRef := goString(chartRef)
@@ -298,6 +318,217 @@ func recoverRepoPanic(result **C.char, op string) {
 		)
 		*result = toCString(bridge.EncodeError(bridge.StagePanic, fmt.Errorf("panic: %v", recovered), "operation", repoOperation(op)))
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Template export
+// ---------------------------------------------------------------------------
+
+//export HelmTemplate
+func HelmTemplate(releaseName *C.char, chartRef *C.char, options *C.char) (result *C.char) {
+	defer recoverPanic(&result, "helm template", "releaseName", goString(releaseName), "chartRef", goString(chartRef))
+
+	goReleaseName := goString(releaseName)
+	goChartRef := goString(chartRef)
+	goOptions := goString(options)
+
+	opts, err := bridge.ParseOptions[template.Options](goOptions)
+	if err != nil {
+		return toCString(bridge.EncodeError(bridge.StageParseOptions, err, "releaseName", goReleaseName, "chartRef", goChartRef))
+	}
+
+	res, err := template.Run(goReleaseName, goChartRef, opts)
+	if err != nil {
+		return toCString(bridge.EncodeError(bridge.StageRun, err, "releaseName", goReleaseName, "chartRef", goChartRef))
+	}
+
+	return toCString(res)
+}
+
+// ---------------------------------------------------------------------------
+// Lint export
+// ---------------------------------------------------------------------------
+
+//export HelmLint
+func HelmLint(chartPath *C.char, options *C.char) (result *C.char) {
+	goChartPath := goString(chartPath)
+	defer recoverPanic(&result, "helm lint", "chartPath", goChartPath)
+
+	goOptions := goString(options)
+
+	opts, err := bridge.ParseOptions[lint.Options](goOptions)
+	if err != nil {
+		return toCString(bridge.EncodeError(bridge.StageParseOptions, err, "chartPath", goChartPath))
+	}
+
+	res, err := lint.Run(goChartPath, opts)
+	if err != nil {
+		return toCString(bridge.EncodeError(bridge.StageRun, err, "chartPath", goChartPath))
+	}
+
+	return toCString(res)
+}
+
+// ---------------------------------------------------------------------------
+// Version export
+// ---------------------------------------------------------------------------
+
+//export HelmVersion
+func HelmVersion() (result *C.char) {
+	defer recoverPanic(&result, "helm version")
+
+	res, err := version.Run()
+	if err != nil {
+		return toCString(bridge.EncodeError(bridge.StageRun, err))
+	}
+
+	return toCString(res)
+}
+
+// ---------------------------------------------------------------------------
+// Upgrade export
+// ---------------------------------------------------------------------------
+
+//export HelmUpgrade
+func HelmUpgrade(releaseName *C.char, chartRef *C.char, options *C.char) (result *C.char) {
+	defer recoverPanic(&result, "helm upgrade", "releaseName", goString(releaseName), "chartRef", goString(chartRef))
+
+	goReleaseName := goString(releaseName)
+	goChartRef := goString(chartRef)
+	goOptions := goString(options)
+
+	opts, err := bridge.ParseOptions[upgrade.Options](goOptions)
+	if err != nil {
+		return toCString(bridge.EncodeError(bridge.StageParseOptions, err, "releaseName", goReleaseName, "chartRef", goChartRef))
+	}
+
+	res, err := upgrade.Run(goReleaseName, goChartRef, opts)
+	if err != nil {
+		return toCString(bridge.EncodeError(bridge.StageRun, err, "releaseName", goReleaseName, "chartRef", goChartRef))
+	}
+
+	return toCString(res)
+}
+
+// ---------------------------------------------------------------------------
+// Uninstall export
+// ---------------------------------------------------------------------------
+
+//export HelmUninstall
+func HelmUninstall(releaseName *C.char, options *C.char) (result *C.char) {
+	goReleaseName := goString(releaseName)
+	defer recoverPanic(&result, "helm uninstall", "releaseName", goReleaseName)
+
+	goOptions := goString(options)
+
+	opts, err := bridge.ParseOptions[uninstall.Options](goOptions)
+	if err != nil {
+		return toCString(bridge.EncodeError(bridge.StageParseOptions, err, "releaseName", goReleaseName))
+	}
+
+	res, err := uninstall.Run(goReleaseName, opts)
+	if err != nil {
+		return toCString(bridge.EncodeError(bridge.StageRun, err, "releaseName", goReleaseName))
+	}
+
+	return toCString(res)
+}
+
+// ---------------------------------------------------------------------------
+// Status export
+// ---------------------------------------------------------------------------
+
+//export HelmStatus
+func HelmStatus(releaseName *C.char, options *C.char) (result *C.char) {
+	goReleaseName := goString(releaseName)
+	defer recoverPanic(&result, "helm status", "releaseName", goReleaseName)
+
+	goOptions := goString(options)
+
+	opts, err := bridge.ParseOptions[status.Options](goOptions)
+	if err != nil {
+		return toCString(bridge.EncodeError(bridge.StageParseOptions, err, "releaseName", goReleaseName))
+	}
+
+	res, err := status.Run(goReleaseName, opts)
+	if err != nil {
+		return toCString(bridge.EncodeError(bridge.StageRun, err, "releaseName", goReleaseName))
+	}
+
+	return toCString(res)
+}
+
+// ---------------------------------------------------------------------------
+// Rollback export
+// ---------------------------------------------------------------------------
+
+//export HelmRollback
+func HelmRollback(releaseName *C.char, options *C.char) (result *C.char) {
+	goReleaseName := goString(releaseName)
+	defer recoverPanic(&result, "helm rollback", "releaseName", goReleaseName)
+
+	goOptions := goString(options)
+
+	opts, err := bridge.ParseOptions[rollback.Options](goOptions)
+	if err != nil {
+		return toCString(bridge.EncodeError(bridge.StageParseOptions, err, "releaseName", goReleaseName))
+	}
+
+	res, err := rollback.Run(goReleaseName, opts)
+	if err != nil {
+		return toCString(bridge.EncodeError(bridge.StageRun, err, "releaseName", goReleaseName))
+	}
+
+	return toCString(res)
+}
+
+// ---------------------------------------------------------------------------
+// History export
+// ---------------------------------------------------------------------------
+
+//export HelmHistory
+func HelmHistory(releaseName *C.char, options *C.char) (result *C.char) {
+	goReleaseName := goString(releaseName)
+	defer recoverPanic(&result, "helm history", "releaseName", goReleaseName)
+
+	goOptions := goString(options)
+
+	opts, err := bridge.ParseOptions[history.Options](goOptions)
+	if err != nil {
+		return toCString(bridge.EncodeError(bridge.StageParseOptions, err, "releaseName", goReleaseName))
+	}
+
+	res, err := history.Run(goReleaseName, opts)
+	if err != nil {
+		return toCString(bridge.EncodeError(bridge.StageRun, err, "releaseName", goReleaseName))
+	}
+
+	return toCString(res)
+}
+
+// ---------------------------------------------------------------------------
+// Get export
+// ---------------------------------------------------------------------------
+
+//export HelmGet
+func HelmGet(mode *C.char, releaseName *C.char, options *C.char) (result *C.char) {
+	goMode := goString(mode)
+	goReleaseName := goString(releaseName)
+	defer recoverPanic(&result, "helm get", "mode", goMode, "releaseName", goReleaseName)
+
+	goOptions := goString(options)
+
+	opts, err := bridge.ParseOptions[getrelease.Options](goOptions)
+	if err != nil {
+		return toCString(bridge.EncodeError(bridge.StageParseOptions, err, "mode", goMode, "releaseName", goReleaseName))
+	}
+
+	res, err := getrelease.Run(goMode, goReleaseName, opts)
+	if err != nil {
+		return toCString(bridge.EncodeError(bridge.StageRun, err, "mode", goMode, "releaseName", goReleaseName))
+	}
+
+	return toCString(res)
 }
 
 func main() {}

@@ -2,12 +2,14 @@
 
 package dev.nthings.helm4j.jextract;
 
-import java.lang.foreign.Arena;
-import java.lang.foreign.FunctionDescriptor;
-import java.lang.foreign.Linker;
-import java.lang.foreign.MemorySegment;
-import java.lang.foreign.SymbolLookup;
-import java.lang.invoke.MethodHandle;
+import java.lang.foreign.*;
+import java.lang.invoke.*;
+import java.util.*;
+import java.util.function.*;
+import java.util.stream.*;
+
+import static java.lang.foreign.MemoryLayout.PathElement.*;
+import static java.lang.foreign.ValueLayout.*;
 
 public class libhelm4j_h extends libhelm4j_h$shared {
 
@@ -339,6 +341,587 @@ public class libhelm4j_h extends libhelm4j_h$shared {
         traceDowncall("HelmRepo", mode, options);
       }
       return (MemorySegment) mh$.invokeExact(mode, options);
+    } catch (Error | RuntimeException ex) {
+      throw ex;
+    } catch (Throwable ex$) {
+      throw new AssertionError("should not reach here", ex$);
+    }
+  }
+
+  private static class HelmTemplate {
+    public static final FunctionDescriptor DESC =
+        FunctionDescriptor.of(
+            libhelm4j_h.C_POINTER,
+            libhelm4j_h.C_POINTER,
+            libhelm4j_h.C_POINTER,
+            libhelm4j_h.C_POINTER);
+
+    public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("HelmTemplate");
+
+    public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
+  }
+
+  /**
+   * Function descriptor for:
+   *
+   * {@snippet lang=c :
+   * extern char *HelmTemplate(char *releaseName, char *chartRef, char *options)
+   * }
+   */
+  public static FunctionDescriptor HelmTemplate$descriptor() {
+    return HelmTemplate.DESC;
+  }
+
+  /**
+   * Downcall method handle for:
+   *
+   * {@snippet lang=c :
+   * extern char *HelmTemplate(char *releaseName, char *chartRef, char *options)
+   * }
+   */
+  public static MethodHandle HelmTemplate$handle() {
+    return HelmTemplate.HANDLE;
+  }
+
+  /**
+   * Address for:
+   *
+   * {@snippet lang=c :
+   * extern char *HelmTemplate(char *releaseName, char *chartRef, char *options)
+   * }
+   */
+  public static MemorySegment HelmTemplate$address() {
+    return HelmTemplate.ADDR;
+  }
+
+  /**
+   *
+   *
+   * {@snippet lang=c :
+   * extern char *HelmTemplate(char *releaseName, char *chartRef, char *options)
+   * }
+   */
+  public static MemorySegment HelmTemplate(
+      MemorySegment releaseName, MemorySegment chartRef, MemorySegment options) {
+    var mh$ = HelmTemplate.HANDLE;
+    try {
+      if (TRACE_DOWNCALLS) {
+        traceDowncall("HelmTemplate", releaseName, chartRef, options);
+      }
+      return (MemorySegment) mh$.invokeExact(releaseName, chartRef, options);
+    } catch (Error | RuntimeException ex) {
+      throw ex;
+    } catch (Throwable ex$) {
+      throw new AssertionError("should not reach here", ex$);
+    }
+  }
+
+  private static class HelmLint {
+    public static final FunctionDescriptor DESC =
+        FunctionDescriptor.of(libhelm4j_h.C_POINTER, libhelm4j_h.C_POINTER, libhelm4j_h.C_POINTER);
+
+    public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("HelmLint");
+
+    public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
+  }
+
+  /**
+   * Function descriptor for:
+   *
+   * {@snippet lang=c :
+   * extern char *HelmLint(char *chartPath, char *options)
+   * }
+   */
+  public static FunctionDescriptor HelmLint$descriptor() {
+    return HelmLint.DESC;
+  }
+
+  /**
+   * Downcall method handle for:
+   *
+   * {@snippet lang=c :
+   * extern char *HelmLint(char *chartPath, char *options)
+   * }
+   */
+  public static MethodHandle HelmLint$handle() {
+    return HelmLint.HANDLE;
+  }
+
+  /**
+   * Address for:
+   *
+   * {@snippet lang=c :
+   * extern char *HelmLint(char *chartPath, char *options)
+   * }
+   */
+  public static MemorySegment HelmLint$address() {
+    return HelmLint.ADDR;
+  }
+
+  /**
+   *
+   *
+   * {@snippet lang=c :
+   * extern char *HelmLint(char *chartPath, char *options)
+   * }
+   */
+  public static MemorySegment HelmLint(MemorySegment chartPath, MemorySegment options) {
+    var mh$ = HelmLint.HANDLE;
+    try {
+      if (TRACE_DOWNCALLS) {
+        traceDowncall("HelmLint", chartPath, options);
+      }
+      return (MemorySegment) mh$.invokeExact(chartPath, options);
+    } catch (Error | RuntimeException ex) {
+      throw ex;
+    } catch (Throwable ex$) {
+      throw new AssertionError("should not reach here", ex$);
+    }
+  }
+
+  private static class HelmVersion {
+    public static final FunctionDescriptor DESC = FunctionDescriptor.of(libhelm4j_h.C_POINTER);
+
+    public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("HelmVersion");
+
+    public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
+  }
+
+  /**
+   * Function descriptor for:
+   *
+   * {@snippet lang=c :
+   * extern char *HelmVersion(void)
+   * }
+   */
+  public static FunctionDescriptor HelmVersion$descriptor() {
+    return HelmVersion.DESC;
+  }
+
+  /**
+   * Downcall method handle for:
+   *
+   * {@snippet lang=c :
+   * extern char *HelmVersion(void)
+   * }
+   */
+  public static MethodHandle HelmVersion$handle() {
+    return HelmVersion.HANDLE;
+  }
+
+  /**
+   * Address for:
+   *
+   * {@snippet lang=c :
+   * extern char *HelmVersion(void)
+   * }
+   */
+  public static MemorySegment HelmVersion$address() {
+    return HelmVersion.ADDR;
+  }
+
+  /**
+   *
+   *
+   * {@snippet lang=c :
+   * extern char *HelmVersion(void)
+   * }
+   */
+  public static MemorySegment HelmVersion() {
+    var mh$ = HelmVersion.HANDLE;
+    try {
+      if (TRACE_DOWNCALLS) {
+        traceDowncall("HelmVersion");
+      }
+      return (MemorySegment) mh$.invokeExact();
+    } catch (Error | RuntimeException ex) {
+      throw ex;
+    } catch (Throwable ex$) {
+      throw new AssertionError("should not reach here", ex$);
+    }
+  }
+
+  private static class HelmUpgrade {
+    public static final FunctionDescriptor DESC =
+        FunctionDescriptor.of(
+            libhelm4j_h.C_POINTER,
+            libhelm4j_h.C_POINTER,
+            libhelm4j_h.C_POINTER,
+            libhelm4j_h.C_POINTER);
+
+    public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("HelmUpgrade");
+
+    public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
+  }
+
+  /**
+   * Function descriptor for:
+   *
+   * {@snippet lang=c :
+   * extern char *HelmUpgrade(char *releaseName, char *chartRef, char *options)
+   * }
+   */
+  public static FunctionDescriptor HelmUpgrade$descriptor() {
+    return HelmUpgrade.DESC;
+  }
+
+  /**
+   * Downcall method handle for:
+   *
+   * {@snippet lang=c :
+   * extern char *HelmUpgrade(char *releaseName, char *chartRef, char *options)
+   * }
+   */
+  public static MethodHandle HelmUpgrade$handle() {
+    return HelmUpgrade.HANDLE;
+  }
+
+  /**
+   * Address for:
+   *
+   * {@snippet lang=c :
+   * extern char *HelmUpgrade(char *releaseName, char *chartRef, char *options)
+   * }
+   */
+  public static MemorySegment HelmUpgrade$address() {
+    return HelmUpgrade.ADDR;
+  }
+
+  /**
+   *
+   *
+   * {@snippet lang=c :
+   * extern char *HelmUpgrade(char *releaseName, char *chartRef, char *options)
+   * }
+   */
+  public static MemorySegment HelmUpgrade(
+      MemorySegment releaseName, MemorySegment chartRef, MemorySegment options) {
+    var mh$ = HelmUpgrade.HANDLE;
+    try {
+      if (TRACE_DOWNCALLS) {
+        traceDowncall("HelmUpgrade", releaseName, chartRef, options);
+      }
+      return (MemorySegment) mh$.invokeExact(releaseName, chartRef, options);
+    } catch (Error | RuntimeException ex) {
+      throw ex;
+    } catch (Throwable ex$) {
+      throw new AssertionError("should not reach here", ex$);
+    }
+  }
+
+  private static class HelmUninstall {
+    public static final FunctionDescriptor DESC =
+        FunctionDescriptor.of(libhelm4j_h.C_POINTER, libhelm4j_h.C_POINTER, libhelm4j_h.C_POINTER);
+
+    public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("HelmUninstall");
+
+    public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
+  }
+
+  /**
+   * Function descriptor for:
+   *
+   * {@snippet lang=c :
+   * extern char *HelmUninstall(char *releaseName, char *options)
+   * }
+   */
+  public static FunctionDescriptor HelmUninstall$descriptor() {
+    return HelmUninstall.DESC;
+  }
+
+  /**
+   * Downcall method handle for:
+   *
+   * {@snippet lang=c :
+   * extern char *HelmUninstall(char *releaseName, char *options)
+   * }
+   */
+  public static MethodHandle HelmUninstall$handle() {
+    return HelmUninstall.HANDLE;
+  }
+
+  /**
+   * Address for:
+   *
+   * {@snippet lang=c :
+   * extern char *HelmUninstall(char *releaseName, char *options)
+   * }
+   */
+  public static MemorySegment HelmUninstall$address() {
+    return HelmUninstall.ADDR;
+  }
+
+  /**
+   *
+   *
+   * {@snippet lang=c :
+   * extern char *HelmUninstall(char *releaseName, char *options)
+   * }
+   */
+  public static MemorySegment HelmUninstall(MemorySegment releaseName, MemorySegment options) {
+    var mh$ = HelmUninstall.HANDLE;
+    try {
+      if (TRACE_DOWNCALLS) {
+        traceDowncall("HelmUninstall", releaseName, options);
+      }
+      return (MemorySegment) mh$.invokeExact(releaseName, options);
+    } catch (Error | RuntimeException ex) {
+      throw ex;
+    } catch (Throwable ex$) {
+      throw new AssertionError("should not reach here", ex$);
+    }
+  }
+
+  private static class HelmStatus {
+    public static final FunctionDescriptor DESC =
+        FunctionDescriptor.of(libhelm4j_h.C_POINTER, libhelm4j_h.C_POINTER, libhelm4j_h.C_POINTER);
+
+    public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("HelmStatus");
+
+    public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
+  }
+
+  /**
+   * Function descriptor for:
+   *
+   * {@snippet lang=c :
+   * extern char *HelmStatus(char *releaseName, char *options)
+   * }
+   */
+  public static FunctionDescriptor HelmStatus$descriptor() {
+    return HelmStatus.DESC;
+  }
+
+  /**
+   * Downcall method handle for:
+   *
+   * {@snippet lang=c :
+   * extern char *HelmStatus(char *releaseName, char *options)
+   * }
+   */
+  public static MethodHandle HelmStatus$handle() {
+    return HelmStatus.HANDLE;
+  }
+
+  /**
+   * Address for:
+   *
+   * {@snippet lang=c :
+   * extern char *HelmStatus(char *releaseName, char *options)
+   * }
+   */
+  public static MemorySegment HelmStatus$address() {
+    return HelmStatus.ADDR;
+  }
+
+  /**
+   *
+   *
+   * {@snippet lang=c :
+   * extern char *HelmStatus(char *releaseName, char *options)
+   * }
+   */
+  public static MemorySegment HelmStatus(MemorySegment releaseName, MemorySegment options) {
+    var mh$ = HelmStatus.HANDLE;
+    try {
+      if (TRACE_DOWNCALLS) {
+        traceDowncall("HelmStatus", releaseName, options);
+      }
+      return (MemorySegment) mh$.invokeExact(releaseName, options);
+    } catch (Error | RuntimeException ex) {
+      throw ex;
+    } catch (Throwable ex$) {
+      throw new AssertionError("should not reach here", ex$);
+    }
+  }
+
+  private static class HelmRollback {
+    public static final FunctionDescriptor DESC =
+        FunctionDescriptor.of(libhelm4j_h.C_POINTER, libhelm4j_h.C_POINTER, libhelm4j_h.C_POINTER);
+
+    public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("HelmRollback");
+
+    public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
+  }
+
+  /**
+   * Function descriptor for:
+   *
+   * {@snippet lang=c :
+   * extern char *HelmRollback(char *releaseName, char *options)
+   * }
+   */
+  public static FunctionDescriptor HelmRollback$descriptor() {
+    return HelmRollback.DESC;
+  }
+
+  /**
+   * Downcall method handle for:
+   *
+   * {@snippet lang=c :
+   * extern char *HelmRollback(char *releaseName, char *options)
+   * }
+   */
+  public static MethodHandle HelmRollback$handle() {
+    return HelmRollback.HANDLE;
+  }
+
+  /**
+   * Address for:
+   *
+   * {@snippet lang=c :
+   * extern char *HelmRollback(char *releaseName, char *options)
+   * }
+   */
+  public static MemorySegment HelmRollback$address() {
+    return HelmRollback.ADDR;
+  }
+
+  /**
+   *
+   *
+   * {@snippet lang=c :
+   * extern char *HelmRollback(char *releaseName, char *options)
+   * }
+   */
+  public static MemorySegment HelmRollback(MemorySegment releaseName, MemorySegment options) {
+    var mh$ = HelmRollback.HANDLE;
+    try {
+      if (TRACE_DOWNCALLS) {
+        traceDowncall("HelmRollback", releaseName, options);
+      }
+      return (MemorySegment) mh$.invokeExact(releaseName, options);
+    } catch (Error | RuntimeException ex) {
+      throw ex;
+    } catch (Throwable ex$) {
+      throw new AssertionError("should not reach here", ex$);
+    }
+  }
+
+  private static class HelmHistory {
+    public static final FunctionDescriptor DESC =
+        FunctionDescriptor.of(libhelm4j_h.C_POINTER, libhelm4j_h.C_POINTER, libhelm4j_h.C_POINTER);
+
+    public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("HelmHistory");
+
+    public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
+  }
+
+  /**
+   * Function descriptor for:
+   *
+   * {@snippet lang=c :
+   * extern char *HelmHistory(char *releaseName, char *options)
+   * }
+   */
+  public static FunctionDescriptor HelmHistory$descriptor() {
+    return HelmHistory.DESC;
+  }
+
+  /**
+   * Downcall method handle for:
+   *
+   * {@snippet lang=c :
+   * extern char *HelmHistory(char *releaseName, char *options)
+   * }
+   */
+  public static MethodHandle HelmHistory$handle() {
+    return HelmHistory.HANDLE;
+  }
+
+  /**
+   * Address for:
+   *
+   * {@snippet lang=c :
+   * extern char *HelmHistory(char *releaseName, char *options)
+   * }
+   */
+  public static MemorySegment HelmHistory$address() {
+    return HelmHistory.ADDR;
+  }
+
+  /**
+   *
+   *
+   * {@snippet lang=c :
+   * extern char *HelmHistory(char *releaseName, char *options)
+   * }
+   */
+  public static MemorySegment HelmHistory(MemorySegment releaseName, MemorySegment options) {
+    var mh$ = HelmHistory.HANDLE;
+    try {
+      if (TRACE_DOWNCALLS) {
+        traceDowncall("HelmHistory", releaseName, options);
+      }
+      return (MemorySegment) mh$.invokeExact(releaseName, options);
+    } catch (Error | RuntimeException ex) {
+      throw ex;
+    } catch (Throwable ex$) {
+      throw new AssertionError("should not reach here", ex$);
+    }
+  }
+
+  private static class HelmGet {
+    public static final FunctionDescriptor DESC =
+        FunctionDescriptor.of(
+            libhelm4j_h.C_POINTER,
+            libhelm4j_h.C_POINTER,
+            libhelm4j_h.C_POINTER,
+            libhelm4j_h.C_POINTER);
+
+    public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("HelmGet");
+
+    public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
+  }
+
+  /**
+   * Function descriptor for:
+   *
+   * {@snippet lang=c :
+   * extern char *HelmGet(char *mode, char *releaseName, char *options)
+   * }
+   */
+  public static FunctionDescriptor HelmGet$descriptor() {
+    return HelmGet.DESC;
+  }
+
+  /**
+   * Downcall method handle for:
+   *
+   * {@snippet lang=c :
+   * extern char *HelmGet(char *mode, char *releaseName, char *options)
+   * }
+   */
+  public static MethodHandle HelmGet$handle() {
+    return HelmGet.HANDLE;
+  }
+
+  /**
+   * Address for:
+   *
+   * {@snippet lang=c :
+   * extern char *HelmGet(char *mode, char *releaseName, char *options)
+   * }
+   */
+  public static MemorySegment HelmGet$address() {
+    return HelmGet.ADDR;
+  }
+
+  /**
+   *
+   *
+   * {@snippet lang=c :
+   * extern char *HelmGet(char *mode, char *releaseName, char *options)
+   * }
+   */
+  public static MemorySegment HelmGet(
+      MemorySegment mode, MemorySegment releaseName, MemorySegment options) {
+    var mh$ = HelmGet.HANDLE;
+    try {
+      if (TRACE_DOWNCALLS) {
+        traceDowncall("HelmGet", mode, releaseName, options);
+      }
+      return (MemorySegment) mh$.invokeExact(mode, releaseName, options);
     } catch (Error | RuntimeException ex) {
       throw ex;
     } catch (Throwable ex$) {

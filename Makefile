@@ -49,6 +49,15 @@ jextract: go-build
 		--include-function HelmInstall \
 		--include-function HelmSearch \
 		--include-function HelmRepo \
+		--include-function HelmUpgrade \
+		--include-function HelmUninstall \
+		--include-function HelmStatus \
+		--include-function HelmRollback \
+		--include-function HelmHistory \
+		--include-function HelmGet \
+		--include-function HelmTemplate \
+		--include-function HelmLint \
+		--include-function HelmVersion \
 		--output src/main/generated --target-package dev.nthings.helm4j.jextract libhelm4j/libhelm4j.h
 
 # --- Java / Gradle targets ---
