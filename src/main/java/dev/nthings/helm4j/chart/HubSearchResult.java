@@ -1,14 +1,15 @@
 package dev.nthings.helm4j.chart;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
+
+import dev.nthings.helm4j.internal.model.ModelSupport;
 
 /** Structured response for hub search operations. */
 public record HubSearchResult(List<HubChartSummary> charts) {
 
   public HubSearchResult {
-    charts = List.copyOf(Objects.requireNonNullElse(charts, List.of()));
+    charts = ModelSupport.immutableListOrEmpty(charts);
   }
 
   public int size() {
@@ -16,6 +17,6 @@ public record HubSearchResult(List<HubChartSummary> charts) {
   }
 
   public Optional<HubChartSummary> first() {
-    return charts.stream().findFirst();
+    return charts.isEmpty() ? Optional.empty() : Optional.of(charts.getFirst());
   }
 }

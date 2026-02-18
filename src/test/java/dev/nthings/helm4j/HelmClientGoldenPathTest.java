@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import dev.nthings.helm4j.chart.HubChartSummary;
+import dev.nthings.helm4j.chart.LintSeverity;
 import dev.nthings.helm4j.chart.RepoChartSummary;
 import dev.nthings.helm4j.chart.ShowMode;
 import dev.nthings.helm4j.errors.HelmException;
@@ -18,8 +19,11 @@ import dev.nthings.helm4j.release.DryRunMode;
 import dev.nthings.helm4j.release.InstallFailure;
 import dev.nthings.helm4j.release.InstallPending;
 import dev.nthings.helm4j.release.InstallSuccess;
+import dev.nthings.helm4j.release.RollbackFailure;
 import dev.nthings.helm4j.release.RollbackSuccess;
+import dev.nthings.helm4j.release.UninstallFailure;
 import dev.nthings.helm4j.release.UninstallSuccess;
+import dev.nthings.helm4j.release.UpgradeFailure;
 import dev.nthings.helm4j.release.UpgradePending;
 import dev.nthings.helm4j.release.UpgradeSuccess;
 import dev.nthings.helm4j.release.WaitMode;
@@ -37,6 +41,7 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -76,9 +81,9 @@ class HelmClientGoldenPathTest {
       var search =
           helm.chart()
               .searchRepo(
-                  "nginx",
                   spec ->
-                      spec.includeAllVersions(true)
+                      spec.keyword("nginx")
+                          .includeAllVersions(true)
                           .includePreReleaseVersions(true)
                           .maxColumnWidth(120));
       assertEquals(1, search.size());
@@ -181,28 +186,28 @@ class HelmClientGoldenPathTest {
       assertEquals(1, list.size());
       assertEquals("bitnami", list.first().orElseThrow().name());
 
-      var remove = helm.repo().remove("bitnami");
+      var remove = helm.repo().remove(spec -> spec.names("bitnami"));
       assertEquals(1, remove.size());
       assertEquals("bitnami", remove.first().orElseThrow());
 
-      var hub = helm.chart().searchHub("nginx", spec -> spec.listRepositoryUrl(true));
+      var hub = helm.chart().searchHub(spec -> spec.keyword("nginx").listRepositoryUrl(true));
       assertEquals(1, hub.size());
       assertEquals("nginx", hub.first().orElseThrow().name());
 
       var chartRef = ChartRef.repo("bitnami/nginx");
-      var chart = helm.chart().chart(chartRef);
+      var chart = helm.chart().chart(chartRef, spec -> {});
       assertEquals("apiVersion: v2", chart.metadataYaml());
 
-      var values = helm.chart().values(chartRef);
+      var values = helm.chart().values(chartRef, spec -> {});
       assertEquals("service:\n  type: ClusterIP", values.valuesYaml());
 
-      var readme = helm.chart().readme(chartRef);
+      var readme = helm.chart().readme(chartRef, spec -> {});
       assertEquals("# Nginx", readme.readmeText());
 
-      var crds = helm.chart().crds(chartRef);
+      var crds = helm.chart().crds(chartRef, spec -> {});
       assertEquals(1, crds.customResourceDefinitions().size());
 
-      var all = helm.chart().all(chartRef);
+      var all = helm.chart().all(chartRef, spec -> {});
       assertEquals("apiVersion: v2", all.metadataYaml());
       assertEquals("# Nginx", all.readmeText());
       assertEquals(1, all.customResourceDefinitions().size());
@@ -257,7 +262,7 @@ class HelmClientGoldenPathTest {
       var error =
           assertThrows(
               HelmException.class,
-              () -> helm.chart().searchRepo("nginx", spec -> spec.failIfNoResults(true)));
+              () -> helm.chart().searchRepo(spec -> spec.keyword("nginx").failIfNoResults(true)));
       assertEquals("runOperation", error.stage());
       assertEquals("search repo", error.operation());
     }
@@ -270,7 +275,7 @@ class HelmClientGoldenPathTest {
 
     try (var helm = Helm.client(spec -> spec.withBridge(bridge))) {
       var result =
-          Helm.install("bitnami/nginx")
+          Helm.install(ChartRef.repo("bitnami/nginx"))
               .releaseName("nginx")
               .version("19.0.0")
               .namespace("apps")
@@ -354,7 +359,7 @@ class HelmClientGoldenPathTest {
 
     try (var helm = Helm.client(spec -> spec.withBridge(bridge))) {
       var result =
-          Helm.upgrade("bitnami/nginx")
+          Helm.upgrade(ChartRef.repo("bitnami/nginx"))
               .releaseName("nginx")
               .namespace("apps")
               .install(true)
@@ -374,7 +379,7 @@ class HelmClientGoldenPathTest {
     bridge.setUninstallSuccess("release \"my-release\" uninstalled");
 
     try (var helm = Helm.client(spec -> spec.withBridge(bridge))) {
-      var result = helm.release().uninstall("my-release");
+      var result = helm.release().uninstall(spec -> spec.releaseName("my-release"));
 
       var success = assertInstanceOf(UninstallSuccess.class, result);
       assertEquals("release \"my-release\" uninstalled", success.info());
@@ -389,7 +394,7 @@ class HelmClientGoldenPathTest {
     bridge.setStatusSuccess("nginx", "apps", 2, "deployed");
 
     try (var helm = Helm.client(spec -> spec.withBridge(bridge))) {
-      var result = helm.release().status("nginx");
+      var result = helm.release().status(spec -> spec.releaseName("nginx"));
       assertEquals("nginx", result.release().name());
       assertEquals("deployed", result.release().status());
     }
@@ -435,7 +440,7 @@ class HelmClientGoldenPathTest {
                 "install")));
 
     try (var helm = Helm.client(spec -> spec.withBridge(bridge))) {
-      var result = helm.release().history("nginx");
+      var result = helm.release().history(spec -> spec.releaseName("nginx"));
       assertEquals(1, result.size());
       assertEquals(1, result.first().orElseThrow().revision());
       assertEquals("deployed", result.first().orElseThrow().status());
@@ -450,12 +455,94 @@ class HelmClientGoldenPathTest {
     bridge.setGetValuesSuccess(Map.of("replicaCount", 3, "image", Map.of("tag", "latest")));
 
     try (var helm = Helm.client(spec -> spec.withBridge(bridge))) {
-      var result = helm.release().getValues("nginx");
+      var result = helm.release().getValues(spec -> spec.releaseName("nginx"));
       assertEquals(3, result.values().get("replicaCount"));
     }
 
     assertEquals("values", bridge.lastGetMode);
     assertEquals("nginx", bridge.lastGetReleaseName);
+  }
+
+  @Test
+  void getOperationsReturnTypedResults() {
+    var bridge = new StubHelmBridge();
+    var hookPayload =
+        Map.of(
+            "name",
+            "pre-install",
+            "kind",
+            "Job",
+            "path",
+            "templates/hook.yaml",
+            "events",
+            List.of("pre-install"),
+            "weight",
+            1);
+    bridge.setGetAllSuccess(
+        StubHelmBridge.releaseMap("nginx", "apps", 2, "deployed"),
+        Map.of("replicaCount", 3),
+        "---\nkind: ConfigMap",
+        List.of(hookPayload),
+        "release notes");
+    bridge.setGetValuesSuccess(Map.of("replicaCount", 3));
+    bridge.setGetManifestSuccess("---\nkind: Secret");
+    bridge.setGetHooksSuccess(List.of(hookPayload));
+    bridge.setGetNotesSuccess("note text");
+    bridge.setGetMetadataSuccess(
+        "nginx", "apps", 2, "deployed", "nginx", "19.0.0", "1.27.0", "2026-01-01T00:00:00Z");
+
+    try (var helm = Helm.client(spec -> spec.withBridge(bridge))) {
+      var all = helm.release().getAll(spec -> spec.releaseName("nginx"));
+      assertEquals("nginx", all.release().name());
+      assertEquals(1, all.hooks().size());
+      assertEquals("all", bridge.lastGetMode);
+
+      var values = helm.release().getValues(spec -> spec.releaseName("nginx"));
+      assertEquals(3, values.values().get("replicaCount"));
+      assertEquals("values", bridge.lastGetMode);
+
+      var manifest = helm.release().getManifest(spec -> spec.releaseName("nginx"));
+      assertTrue(manifest.manifest().contains("kind: Secret"));
+      assertEquals("manifest", bridge.lastGetMode);
+
+      var hooks = helm.release().getHooks(spec -> spec.releaseName("nginx"));
+      assertEquals("pre-install", hooks.hooks().getFirst().name());
+      assertEquals("hooks", bridge.lastGetMode);
+
+      var notes = helm.release().getNotes(spec -> spec.releaseName("nginx"));
+      assertEquals("note text", notes.notes());
+      assertEquals("notes", bridge.lastGetMode);
+
+      var metadata = helm.release().getMetadata(spec -> spec.releaseName("nginx"));
+      assertEquals("nginx", metadata.name());
+      assertEquals("metadata", bridge.lastGetMode);
+    }
+
+    assertEquals("nginx", bridge.lastGetReleaseName);
+  }
+
+  @Test
+  void upgradeUninstallAndRollbackFailuresMapToTypedFailures() {
+    var bridge = new StubHelmBridge();
+    bridge.setUpgradeFailure("cannot upgrade", "runOperation", "upgrade");
+    bridge.setUninstallFailure("cannot uninstall", "runOperation", "uninstall");
+    bridge.setRollbackFailure("cannot rollback", "runOperation", "rollback");
+
+    try (var helm = Helm.client(spec -> spec.withBridge(bridge))) {
+      var upgrade =
+          helm.release()
+              .upgrade(spec -> spec.releaseName("nginx").chart(ChartRef.repo("bitnami/nginx")));
+      var upgradeFailure = assertInstanceOf(UpgradeFailure.class, upgrade);
+      assertEquals("cannot upgrade", upgradeFailure.message());
+
+      var uninstall = helm.release().uninstall(spec -> spec.releaseName("nginx"));
+      var uninstallFailure = assertInstanceOf(UninstallFailure.class, uninstall);
+      assertEquals("cannot uninstall", uninstallFailure.message());
+
+      var rollback = helm.release().rollback(spec -> spec.releaseName("nginx"));
+      var rollbackFailure = assertInstanceOf(RollbackFailure.class, rollback);
+      assertEquals("cannot rollback", rollbackFailure.message());
+    }
   }
 
   @Test
@@ -480,13 +567,36 @@ class HelmClientGoldenPathTest {
     bridge.setLintSuccess(1, 1, 0);
 
     try (var helm = Helm.client(spec -> spec.withBridge(bridge))) {
-      var result = helm.chart().lint(java.nio.file.Path.of("/tmp/chart"));
+      var result = helm.chart().lint(spec -> spec.chartPath(java.nio.file.Path.of("/tmp/chart")));
       assertTrue(result.passed());
       assertEquals(1, result.totalCharts());
       assertEquals(0, result.chartsFailed());
     }
 
     assertTrue(bridge.lastLintChartPath.endsWith("/tmp/chart"));
+  }
+
+  @Test
+  void lintSeverityIsParsedFromWireValues() {
+    var bridge = new StubHelmBridge();
+    bridge.setLintSuccess(
+        List.of(
+            Map.of("severity", "INFO", "message", "ok"),
+            Map.of("severity", "WARNING", "message", "warn"),
+            Map.of("severity", "ERROR", "message", "err"),
+            Map.of("severity", "something-else", "message", "unknown")),
+        4,
+        4,
+        1);
+
+    try (var helm = Helm.client(spec -> spec.withBridge(bridge))) {
+      var result = helm.chart().lint(spec -> spec.chartPath(java.nio.file.Path.of("/tmp/chart")));
+      assertFalse(result.passed());
+      assertEquals(LintSeverity.INFO, result.messages().get(0).severity());
+      assertEquals(LintSeverity.WARNING, result.messages().get(1).severity());
+      assertEquals(LintSeverity.ERROR, result.messages().get(2).severity());
+      assertEquals(LintSeverity.UNKNOWN, result.messages().get(3).severity());
+    }
   }
 
   @Test
@@ -499,6 +609,20 @@ class HelmClientGoldenPathTest {
       assertEquals("0.1.0", info.version());
       assertEquals("go1.26", info.goVersion());
       assertEquals("v4.1.1", info.helmVersion());
+    }
+  }
+
+  @Test
+  void clientBuilderAcceptsCustomObjectMapper() {
+    var bridge = new StubHelmBridge();
+    bridge.setVersionSuccess("0.2.0", "go1.26", "v4.1.2");
+
+    try (var helm =
+        Helm.client(
+            spec -> spec.withBridge(bridge).withObjectMapper(JsonMapper.builder().build()))) {
+      var info = helm.version();
+      assertEquals("0.2.0", info.version());
+      assertEquals("v4.1.2", info.helmVersion());
     }
   }
 
@@ -520,25 +644,33 @@ class HelmClientGoldenPathTest {
       assertEquals(1, listed.size());
       assertEquals("nginx", listed.first().orElseThrow().name());
 
-      var pull = helm.chart().pull("bitnami/nginx");
+      var pull = helm.chart().pull(spec -> spec.chartReference("bitnami/nginx"));
       assertTrue(pull.output().contains("Pulled"));
 
-      var push = helm.chart().push("/tmp/nginx-19.0.0.tgz", "oci://registry.example/charts");
+      var push =
+          helm.chart()
+              .push(
+                  spec ->
+                      spec.chartReference("/tmp/nginx-19.0.0.tgz")
+                          .remote("oci://registry.example/charts"));
       assertTrue(push.output().contains("Pushed"));
 
-      var pkg = helm.chart().packageChart(Path.of("/tmp/chart"));
+      var pkg = helm.chart().packageChart(spec -> spec.chartPath(Path.of("/tmp/chart")));
       assertEquals("/tmp/nginx-19.0.0.tgz", pkg.path());
 
-      var deps = helm.chart().dependency(Path.of("/tmp/chart"));
+      var deps = helm.chart().dependency(spec -> spec.chartPath(Path.of("/tmp/chart")));
       assertTrue(deps.output().contains("common"));
 
-      var login = helm.repo().registryLogin("registry.example", "user", "secret");
+      var login =
+          helm.repo()
+              .registryLogin(
+                  spec -> spec.hostname("registry.example").username("user").password("secret"));
       assertEquals("registry.example", login.hostname());
 
-      var logout = helm.repo().registryLogout("registry.example");
+      var logout = helm.repo().registryLogout(spec -> spec.hostname("registry.example"));
       assertEquals("ok", logout.status());
 
-      var test = helm.release().test("nginx");
+      var test = helm.release().test(spec -> spec.releaseName("nginx"));
       assertEquals("nginx", test.release().name());
       assertEquals(1, test.results().size());
       assertEquals("nginx-test", test.results().getFirst().name());
@@ -563,6 +695,7 @@ class HelmClientGoldenPathTest {
     private byte[] rollbackResponse = utf8("{}");
     private byte[] historyResponse = utf8("{}");
     private byte[] getResponse = utf8("{}");
+    private final Map<String, byte[]> getResponses = new HashMap<>();
     private byte[] listResponse = utf8("{}");
     private byte[] pullResponse = utf8("{}");
     private byte[] pushResponse = utf8("{}");
@@ -661,9 +794,17 @@ class HelmClientGoldenPathTest {
           asJsonBytes(Map.of("release", releaseMap(name, namespace, revision, status)));
     }
 
+    void setUpgradeFailure(String message, String stage, String operation) {
+      this.upgradeResponse = errorPayload(message, stage, operation);
+    }
+
     void setUninstallSuccess(String info) {
       var release = releaseMap("my-release", "default", 1, "uninstalled");
       this.uninstallResponse = asJsonBytes(Map.of("release", release, "info", info));
+    }
+
+    void setUninstallFailure(String message, String stage, String operation) {
+      this.uninstallResponse = errorPayload(message, stage, operation);
     }
 
     void setStatusSuccess(String name, String namespace, int revision, String status) {
@@ -675,12 +816,81 @@ class HelmClientGoldenPathTest {
       this.rollbackResponse = asJsonBytes(Map.of("releaseName", releaseName, "revision", revision));
     }
 
+    void setRollbackFailure(String message, String stage, String operation) {
+      this.rollbackResponse = errorPayload(message, stage, operation);
+    }
+
     void setHistorySuccess(List<Map<String, Object>> entries) {
       this.historyResponse = asJsonBytes(Map.of("entries", entries));
     }
 
     void setGetValuesSuccess(Map<String, Object> values) {
-      this.getResponse = asJsonBytes(Map.of("values", values));
+      this.getResponses.put("values", asJsonBytes(Map.of("values", values)));
+    }
+
+    void setGetAllSuccess(
+        Map<String, Object> release,
+        Map<String, Object> values,
+        String manifest,
+        List<Map<String, Object>> hooks,
+        String notes) {
+      this.getResponses.put(
+          "all",
+          asJsonBytes(
+              Map.of(
+                  "release",
+                  release,
+                  "values",
+                  values,
+                  "manifest",
+                  manifest,
+                  "hooks",
+                  hooks,
+                  "notes",
+                  notes)));
+    }
+
+    void setGetManifestSuccess(String manifest) {
+      this.getResponses.put("manifest", asJsonBytes(Map.of("manifest", manifest)));
+    }
+
+    void setGetHooksSuccess(List<Map<String, Object>> hooks) {
+      this.getResponses.put("hooks", asJsonBytes(Map.of("hooks", hooks)));
+    }
+
+    void setGetNotesSuccess(String notes) {
+      this.getResponses.put("notes", asJsonBytes(Map.of("notes", notes)));
+    }
+
+    void setGetMetadataSuccess(
+        String name,
+        String namespace,
+        int revision,
+        String status,
+        String chart,
+        String chartVersion,
+        String appVersion,
+        String deployedAt) {
+      this.getResponses.put(
+          "metadata",
+          asJsonBytes(
+              Map.of(
+                  "name",
+                  name,
+                  "namespace",
+                  namespace,
+                  "revision",
+                  revision,
+                  "status",
+                  status,
+                  "chart",
+                  chart,
+                  "chartVersion",
+                  chartVersion,
+                  "appVersion",
+                  appVersion,
+                  "deployedAt",
+                  deployedAt)));
     }
 
     void setTemplateSuccess(String name, String namespace, int revision, String manifest) {
@@ -694,10 +904,15 @@ class HelmClientGoldenPathTest {
     }
 
     void setLintSuccess(int totalCharts, int chartsTested, int chartsFailed) {
+      setLintSuccess(List.of(), totalCharts, chartsTested, chartsFailed);
+    }
+
+    void setLintSuccess(
+        List<Map<String, String>> messages, int totalCharts, int chartsTested, int chartsFailed) {
       this.lintResponse =
           asJsonBytes(
               Map.of(
-                  "messages", List.of(),
+                  "messages", messages,
                   "totalCharts", totalCharts,
                   "chartsTested", chartsTested,
                   "chartsFailed", chartsFailed));
@@ -836,7 +1051,7 @@ class HelmClientGoldenPathTest {
     public byte[] get(byte[] mode, byte[] releaseName, byte[] optionsJson) {
       this.lastGetMode = fromUtf8(mode);
       this.lastGetReleaseName = fromUtf8(releaseName);
-      return getResponse;
+      return getResponses.getOrDefault(lastGetMode, getResponse);
     }
 
     @Override

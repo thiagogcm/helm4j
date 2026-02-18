@@ -3,14 +3,16 @@ package dev.nthings.helm4j.release;
 import java.time.Duration;
 import java.util.List;
 
+import dev.nthings.helm4j.internal.model.ModelSupport;
+
 /** Request parameters for running release tests. */
 public record TestRequest(
     String releaseName, String namespace, Duration timeout, List<String> filter) {
 
   public TestRequest {
-    releaseName = normalize(releaseName);
-    namespace = normalize(namespace);
-    filter = filter == null ? List.of() : List.copyOf(filter);
+    releaseName = ModelSupport.normalizeBlankToNull(releaseName);
+    namespace = ModelSupport.normalizeBlankToNull(namespace);
+    filter = ModelSupport.immutableListOrEmpty(filter);
   }
 
   public static Builder builder() {
@@ -48,13 +50,5 @@ public record TestRequest(
     public TestRequest build() {
       return new TestRequest(releaseName, namespace, timeout, filter);
     }
-  }
-
-  private static String normalize(String value) {
-    if (value == null) {
-      return null;
-    }
-    var normalized = value.trim();
-    return normalized.isEmpty() ? null : normalized;
   }
 }

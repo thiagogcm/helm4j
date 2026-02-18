@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"strings"
 	"time"
 
@@ -67,11 +68,7 @@ func Run(releaseName string, opts Options) (string, error) {
 	client.WaitForJobs = opts.WaitForJobs
 
 	if opts.ServerSideApply != nil {
-		if *opts.ServerSideApply {
-			client.ServerSideApply = "true"
-		} else {
-			client.ServerSideApply = "false"
-		}
+		client.ServerSideApply = strconv.FormatBool(*opts.ServerSideApply)
 	}
 	if opts.DryRun != "" {
 		client.DryRunStrategy = action.DryRunStrategy(opts.DryRun)

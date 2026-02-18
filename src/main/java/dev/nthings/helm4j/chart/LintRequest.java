@@ -1,9 +1,10 @@
 package dev.nthings.helm4j.chart;
 
 import java.nio.file.Path;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+
+import dev.nthings.helm4j.internal.model.ModelSupport;
 
 /** Request parameters for linting a chart. */
 public record LintRequest(
@@ -15,7 +16,7 @@ public record LintRequest(
 
   public LintRequest {
     chartPath = Objects.requireNonNull(chartPath, "chartPath").toAbsolutePath();
-    values = copyMap(values);
+    values = ModelSupport.immutableMapOrEmpty(values);
   }
 
   public static Builder builder() {
@@ -59,10 +60,5 @@ public record LintRequest(
     public LintRequest build() {
       return new LintRequest(chartPath, strict, quiet, withSubcharts, values);
     }
-  }
-
-  private static <T> Map<String, T> copyMap(Map<String, T> value) {
-    if (value == null || value.isEmpty()) return Map.of();
-    return Map.copyOf(new LinkedHashMap<>(value));
   }
 }

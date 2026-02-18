@@ -10,8 +10,8 @@ import (
 	"os"
 
 	"helm.sh/helm/v4/pkg/action"
-	chart "helm.sh/helm/v4/pkg/chart/v2"
-	"helm.sh/helm/v4/pkg/chart/v2/loader"
+	"helm.sh/helm/v4/pkg/chart"
+	"helm.sh/helm/v4/pkg/chart/loader"
 	"helm.sh/helm/v4/pkg/cli"
 
 	"github.com/thiagogcm/libhelm4j/internal/helmlog"
@@ -65,7 +65,7 @@ func NewWithOptions(opts Options) (*Env, error) {
 // LocateAndLoadChart resolves the chart reference to a path on disk and
 // loads it. If devel is true and version is empty, prerelease versions
 // are included.
-func LocateAndLoadChart(chartRef, version string, devel bool, settings *cli.EnvSettings, locator ChartLocator) (string, *chart.Chart, error) {
+func LocateAndLoadChart(chartRef, version string, devel bool, settings *cli.EnvSettings, locator ChartLocator) (string, chart.Charter, error) {
 	if version == "" && devel {
 		version = ">0.0.0-0"
 	}

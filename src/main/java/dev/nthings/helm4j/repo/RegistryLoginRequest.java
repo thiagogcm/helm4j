@@ -1,5 +1,7 @@
 package dev.nthings.helm4j.repo;
 
+import dev.nthings.helm4j.internal.model.ModelSupport;
+
 /** Request parameters for registry login. */
 public record RegistryLoginRequest(
     String hostname,
@@ -12,12 +14,12 @@ public record RegistryLoginRequest(
     boolean plainHttp) {
 
   public RegistryLoginRequest {
-    hostname = normalize(hostname);
-    username = normalize(username);
-    password = normalize(password);
-    certificateFile = normalize(certificateFile);
-    keyFile = normalize(keyFile);
-    certificateAuthorityFile = normalize(certificateAuthorityFile);
+    hostname = ModelSupport.normalizeBlankToNull(hostname);
+    username = ModelSupport.normalizeBlankToNull(username);
+    password = ModelSupport.normalizeBlankToNull(password);
+    certificateFile = ModelSupport.normalizeBlankToNull(certificateFile);
+    keyFile = ModelSupport.normalizeBlankToNull(keyFile);
+    certificateAuthorityFile = ModelSupport.normalizeBlankToNull(certificateAuthorityFile);
   }
 
   public static Builder builder() {
@@ -87,13 +89,5 @@ public record RegistryLoginRequest(
           insecure,
           plainHttp);
     }
-  }
-
-  private static String normalize(String value) {
-    if (value == null) {
-      return null;
-    }
-    var normalized = value.trim();
-    return normalized.isEmpty() ? null : normalized;
   }
 }

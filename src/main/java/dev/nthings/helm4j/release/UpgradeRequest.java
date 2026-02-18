@@ -1,11 +1,11 @@
 package dev.nthings.helm4j.release;
 
 import java.time.Duration;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 
+import dev.nthings.helm4j.internal.model.ModelSupport;
 import dev.nthings.helm4j.types.ChartRef;
 import dev.nthings.helm4j.types.ChartSource;
 
@@ -29,6 +29,7 @@ public record UpgradeRequest(
     boolean subNotes,
     boolean enableDns,
     boolean takeOwnership,
+    boolean dependencyUpdate,
     boolean cleanupOnFail,
     int maxHistory,
     boolean reuseValues,
@@ -39,14 +40,14 @@ public record UpgradeRequest(
     Map<String, String> labels) {
 
   public UpgradeRequest {
-    releaseName = normalize(releaseName);
+    releaseName = ModelSupport.normalizeBlankToNull(releaseName);
     chart = Objects.requireNonNull(chart, "chart");
     source = Objects.requireNonNullElseGet(source, ChartSource::defaults);
-    namespace = normalize(namespace);
-    description = normalize(description);
+    namespace = ModelSupport.normalizeBlankToNull(namespace);
+    description = ModelSupport.normalizeBlankToNull(description);
     applyStrategy = Objects.requireNonNullElse(applyStrategy, ApplyStrategy.SERVER_SIDE_APPLY);
-    values = copyMap(values);
-    labels = copyMap(labels);
+    values = ModelSupport.immutableMapOrEmpty(values);
+    labels = ModelSupport.immutableMapOrEmpty(labels);
   }
 
   public static Builder builder() {
@@ -73,6 +74,7 @@ public record UpgradeRequest(
     private boolean subNotes;
     private boolean enableDns;
     private boolean takeOwnership;
+    private boolean dependencyUpdate;
     private boolean cleanupOnFail;
     private int maxHistory;
     private boolean reuseValues;
@@ -179,6 +181,11 @@ public record UpgradeRequest(
       return this;
     }
 
+    public Builder dependencyUpdate(boolean value) {
+      this.dependencyUpdate = value;
+      return this;
+    }
+
     public Builder cleanupOnFail(boolean value) {
       this.cleanupOnFail = value;
       return this;
@@ -241,6 +248,7 @@ public record UpgradeRequest(
           subNotes,
           enableDns,
           takeOwnership,
+          dependencyUpdate,
           cleanupOnFail,
           maxHistory,
           reuseValues,
@@ -250,16 +258,5 @@ public record UpgradeRequest(
           values,
           labels);
     }
-  }
-
-  private static String normalize(String value) {
-    if (value == null) return null;
-    var normalized = value.trim();
-    return normalized.isEmpty() ? null : normalized;
-  }
-
-  private static <T> Map<String, T> copyMap(Map<String, T> value) {
-    if (value == null || value.isEmpty()) return Map.of();
-    return Map.copyOf(new LinkedHashMap<>(value));
   }
 }

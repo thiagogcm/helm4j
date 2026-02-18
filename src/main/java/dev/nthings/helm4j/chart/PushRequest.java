@@ -1,5 +1,7 @@
 package dev.nthings.helm4j.chart;
 
+import dev.nthings.helm4j.internal.model.ModelSupport;
+
 /** Request parameters for pushing a packaged chart to an OCI registry. */
 public record PushRequest(
     String chartReference,
@@ -11,11 +13,11 @@ public record PushRequest(
     String certificateAuthorityFile) {
 
   public PushRequest {
-    chartReference = normalize(chartReference);
-    remote = normalize(remote);
-    certificateFile = normalize(certificateFile);
-    keyFile = normalize(keyFile);
-    certificateAuthorityFile = normalize(certificateAuthorityFile);
+    chartReference = ModelSupport.normalizeBlankToNull(chartReference);
+    remote = ModelSupport.normalizeBlankToNull(remote);
+    certificateFile = ModelSupport.normalizeBlankToNull(certificateFile);
+    keyFile = ModelSupport.normalizeBlankToNull(keyFile);
+    certificateAuthorityFile = ModelSupport.normalizeBlankToNull(certificateAuthorityFile);
   }
 
   public static Builder builder() {
@@ -78,13 +80,5 @@ public record PushRequest(
           keyFile,
           certificateAuthorityFile);
     }
-  }
-
-  private static String normalize(String value) {
-    if (value == null) {
-      return null;
-    }
-    var normalized = value.trim();
-    return normalized.isEmpty() ? null : normalized;
   }
 }

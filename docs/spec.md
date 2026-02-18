@@ -36,59 +36,43 @@ public final class HelmClient implements AutoCloseable {
 ### 2.2 Namespace Clients
 
 - `RepoClient`
-  - `RepoAddResult add(String name, String url)`
   - `RepoAddResult add(Consumer<RepoAddRequest.Builder> spec)`
   - `RepoAddResult add(RepoAddRequest request)`
   - `RepoUpdateResult update()`
   - `RepoUpdateResult update(Consumer<RepoUpdateRequest.Builder> spec)`
   - `RepoUpdateResult update(RepoUpdateRequest request)`
   - `RepoListResult list()`
-  - `RepoRemoveResult remove(String... names)`
   - `RepoRemoveResult remove(Consumer<RepoRemoveRequest.Builder> spec)`
   - `RepoRemoveResult remove(RepoRemoveRequest request)`
-  - `RegistryResult registryLogin(String hostname, String username, String password)`
   - `RegistryResult registryLogin(Consumer<RegistryLoginRequest.Builder> spec)`
   - `RegistryResult registryLogin(RegistryLoginRequest request)`
-  - `RegistryResult registryLogout(String hostname)`
   - `RegistryResult registryLogout(Consumer<RegistryLogoutRequest.Builder> spec)`
   - `RegistryResult registryLogout(RegistryLogoutRequest request)`
 - `ChartClient`
-  - `RepoSearchResult searchRepo(String keyword)`
-  - `RepoSearchResult searchRepo(String keyword, Consumer<RepoSearchRequest.Builder> spec)`
+  - `RepoSearchResult searchRepo(Consumer<RepoSearchRequest.Builder> spec)`
   - `RepoSearchResult searchRepo(RepoSearchRequest request)`
-  - `HubSearchResult searchHub(String keyword)`
-  - `HubSearchResult searchHub(String keyword, Consumer<HubSearchRequest.Builder> spec)`
+  - `HubSearchResult searchHub(Consumer<HubSearchRequest.Builder> spec)`
   - `HubSearchResult searchHub(HubSearchRequest request)`
-  - `ShowChartResult chart(ChartRef chartReference)`
   - `ShowChartResult chart(ChartRef chartReference, Consumer<ShowRequest.Builder> spec)`
   - `ShowChartResult chart(ChartRef chartReference, ShowRequest request)`
-  - `ShowValuesResult values(ChartRef chartReference)`
   - `ShowValuesResult values(ChartRef chartReference, Consumer<ShowRequest.Builder> spec)`
   - `ShowValuesResult values(ChartRef chartReference, ShowRequest request)`
-  - `ShowReadmeResult readme(ChartRef chartReference)`
   - `ShowReadmeResult readme(ChartRef chartReference, Consumer<ShowRequest.Builder> spec)`
   - `ShowReadmeResult readme(ChartRef chartReference, ShowRequest request)`
-  - `ShowCrdsResult crds(ChartRef chartReference)`
   - `ShowCrdsResult crds(ChartRef chartReference, Consumer<ShowRequest.Builder> spec)`
   - `ShowCrdsResult crds(ChartRef chartReference, ShowRequest request)`
-  - `ShowAllResult all(ChartRef chartReference)`
   - `ShowAllResult all(ChartRef chartReference, Consumer<ShowRequest.Builder> spec)`
   - `ShowAllResult all(ChartRef chartReference, ShowRequest request)`
   - `TemplateResult template(Consumer<TemplateRequest.Builder> spec)`
   - `TemplateResult template(TemplateRequest request)`
-  - `LintResult lint(Path chartPath)`
   - `LintResult lint(Consumer<LintRequest.Builder> spec)`
   - `LintResult lint(LintRequest request)`
-  - `PullResult pull(String chartReference)`
-  - `PullResult pull(String chartReference, Consumer<PullRequest.Builder> spec)`
+  - `PullResult pull(Consumer<PullRequest.Builder> spec)`
   - `PullResult pull(PullRequest request)`
-  - `PushResult push(String chartReference, String remote)`
-  - `PushResult push(String chartReference, String remote, Consumer<PushRequest.Builder> spec)`
+  - `PushResult push(Consumer<PushRequest.Builder> spec)`
   - `PushResult push(PushRequest request)`
-  - `PackageChartResult packageChart(Path chartPath)`
   - `PackageChartResult packageChart(Consumer<PackageChartRequest.Builder> spec)`
   - `PackageChartResult packageChart(PackageChartRequest request)`
-  - `DependencyResult dependency(Path chartPath)`
   - `DependencyResult dependency(Consumer<DependencyRequest.Builder> spec)`
   - `DependencyResult dependency(DependencyRequest request)`
 - `ReleaseClient`
@@ -96,30 +80,37 @@ public final class HelmClient implements AutoCloseable {
   - `InstallResult install(InstallRequest request)`
   - `UpgradeResult upgrade(Consumer<UpgradeRequest.Builder> spec)`
   - `UpgradeResult upgrade(UpgradeRequest request)`
-  - `UninstallResult uninstall(String releaseName)`
   - `UninstallResult uninstall(Consumer<UninstallRequest.Builder> spec)`
   - `UninstallResult uninstall(UninstallRequest request)`
-  - `StatusResult status(String releaseName)`
   - `StatusResult status(Consumer<StatusRequest.Builder> spec)`
   - `StatusResult status(StatusRequest request)`
   - `RollbackResult rollback(Consumer<RollbackRequest.Builder> spec)`
   - `RollbackResult rollback(RollbackRequest request)`
-  - `HistoryResult history(String releaseName)`
   - `HistoryResult history(Consumer<HistoryRequest.Builder> spec)`
   - `HistoryResult history(HistoryRequest request)`
   - `ReleaseListResult list()`
   - `ReleaseListResult list(Consumer<ReleaseListRequest.Builder> spec)`
   - `ReleaseListResult list(ReleaseListRequest request)`
-  - `TestResult test(String releaseName)`
   - `TestResult test(Consumer<TestRequest.Builder> spec)`
   - `TestResult test(TestRequest request)`
-  - `GetAllResult getAll(String releaseName)`
-  - `GetValuesResult getValues(String releaseName)`
-  - `GetManifestResult getManifest(String releaseName)`
-  - `GetHooksResult getHooks(String releaseName)`
-  - `GetNotesResult getNotes(String releaseName)`
-  - `GetMetadataResult getMetadata(String releaseName)`
-  - _(all get* methods also accept Consumer<GetRequest.Builder> and GetRequest overloads)_
+  - `GetAllResult getAll(Consumer<GetRequest.Builder> spec)`
+  - `GetAllResult getAll(GetRequest request)`
+  - `GetValuesResult getValues(Consumer<GetRequest.Builder> spec)`
+  - `GetValuesResult getValues(GetRequest request)`
+  - `GetManifestResult getManifest(Consumer<GetRequest.Builder> spec)`
+  - `GetManifestResult getManifest(GetRequest request)`
+  - `GetHooksResult getHooks(Consumer<GetRequest.Builder> spec)`
+  - `GetHooksResult getHooks(GetRequest request)`
+  - `GetNotesResult getNotes(Consumer<GetRequest.Builder> spec)`
+  - `GetNotesResult getNotes(GetRequest request)`
+  - `GetMetadataResult getMetadata(Consumer<GetRequest.Builder> spec)`
+  - `GetMetadataResult getMetadata(GetRequest request)`
+
+Normalization rule:
+- Operations use a consistent pair of overloads:
+  - `operation(Request request)`
+  - `operation(Consumer<Request.Builder> spec)`
+- No scalar convenience overloads are part of the public API contract.
 
 ### 2.3 Model Strategy
 

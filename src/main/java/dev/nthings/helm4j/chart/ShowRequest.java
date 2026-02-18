@@ -3,6 +3,7 @@ package dev.nthings.helm4j.chart;
 import java.util.Objects;
 import java.util.function.Consumer;
 
+import dev.nthings.helm4j.internal.model.ModelSupport;
 import dev.nthings.helm4j.types.ChartSource;
 
 /** Shared request options for Helm show operations. */
@@ -10,11 +11,7 @@ public record ShowRequest(ChartSource source, String valuesJsonPath) {
 
   public ShowRequest {
     source = Objects.requireNonNullElseGet(source, ChartSource::defaults);
-    valuesJsonPath = normalize(valuesJsonPath);
-  }
-
-  public static ShowRequest defaults() {
-    return builder().build();
+    valuesJsonPath = ModelSupport.normalizeBlankToNull(valuesJsonPath);
   }
 
   public static Builder builder() {
@@ -48,13 +45,5 @@ public record ShowRequest(ChartSource source, String valuesJsonPath) {
           source != null ? source.merge(sourceBuilder.build()) : sourceBuilder.build();
       return new ShowRequest(resolvedSource, valuesJsonPath);
     }
-  }
-
-  private static String normalize(String value) {
-    if (value == null) {
-      return null;
-    }
-    var normalized = value.trim();
-    return normalized.isEmpty() ? null : normalized;
   }
 }

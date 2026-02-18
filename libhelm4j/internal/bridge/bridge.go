@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"maps"
 	"strings"
 
 	"github.com/thiagogcm/libhelm4j/internal/helmlog"
@@ -42,9 +43,7 @@ type OperationError struct {
 // format expected by the Java gateway error decoder.
 func (e OperationError) MarshalJSON() ([]byte, error) {
 	m := make(map[string]string, len(e.Context)+2)
-	for k, v := range e.Context {
-		m[k] = v
-	}
+	maps.Copy(m, e.Context)
 	if e.Stage != "" {
 		m["stage"] = e.Stage
 	}

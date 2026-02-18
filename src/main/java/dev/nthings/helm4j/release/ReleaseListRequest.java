@@ -2,6 +2,8 @@ package dev.nthings.helm4j.release;
 
 import java.util.List;
 
+import dev.nthings.helm4j.internal.model.ModelSupport;
+
 /** Request parameters for listing releases. */
 public record ReleaseListRequest(
     String namespace,
@@ -15,10 +17,10 @@ public record ReleaseListRequest(
     String selector) {
 
   public ReleaseListRequest {
-    namespace = normalize(namespace);
-    filter = normalize(filter);
-    states = states == null ? List.of() : List.copyOf(states);
-    selector = normalize(selector);
+    namespace = ModelSupport.normalizeBlankToNull(namespace);
+    filter = ModelSupport.normalizeBlankToNull(filter);
+    states = ModelSupport.immutableListOrEmpty(states);
+    selector = ModelSupport.normalizeBlankToNull(selector);
   }
 
   public static Builder builder() {
@@ -95,13 +97,5 @@ public record ReleaseListRequest(
           sortReverse,
           selector);
     }
-  }
-
-  private static String normalize(String value) {
-    if (value == null) {
-      return null;
-    }
-    var normalized = value.trim();
-    return normalized.isEmpty() ? null : normalized;
   }
 }

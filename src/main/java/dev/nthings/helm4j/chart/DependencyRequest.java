@@ -2,6 +2,8 @@ package dev.nthings.helm4j.chart;
 
 import java.nio.file.Path;
 
+import dev.nthings.helm4j.internal.model.ModelSupport;
+
 /** Request parameters for listing chart dependencies. */
 public record DependencyRequest(
     Path chartPath,
@@ -16,10 +18,10 @@ public record DependencyRequest(
 
   public DependencyRequest {
     chartPath = chartPath == null ? null : chartPath.toAbsolutePath();
-    keyring = normalize(keyring);
-    certificateFile = normalize(certificateFile);
-    keyFile = normalize(keyFile);
-    certificateAuthorityFile = normalize(certificateAuthorityFile);
+    keyring = ModelSupport.normalizeBlankToNull(keyring);
+    certificateFile = ModelSupport.normalizeBlankToNull(certificateFile);
+    keyFile = ModelSupport.normalizeBlankToNull(keyFile);
+    certificateAuthorityFile = ModelSupport.normalizeBlankToNull(certificateAuthorityFile);
   }
 
   public static Builder builder() {
@@ -96,13 +98,5 @@ public record DependencyRequest(
           keyFile,
           certificateAuthorityFile);
     }
-  }
-
-  private static String normalize(String value) {
-    if (value == null) {
-      return null;
-    }
-    var normalized = value.trim();
-    return normalized.isEmpty() ? null : normalized;
   }
 }

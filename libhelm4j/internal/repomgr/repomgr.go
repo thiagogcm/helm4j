@@ -9,8 +9,8 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"helm.sh/helm/v4/pkg/getter"
@@ -216,32 +216,15 @@ func Update(opts UpdateOptions) (UpdateResponse, error) {
 	}
 
 	getters := getter.All(env.Settings, getter.WithTimeout(parseTimeout(opts.Timeout)))
-	results := make([]UpdateEntry, 0, len(entries))
+	results := make([]UpdateEntry, len(entries))
 
-	for _, entry := range entries {
-		chartRepo, err := repo.NewChartRepository(entry, getters)
-		if err != nil {
-			results = append(results, UpdateEntry{
-				Name:   entry.Name,
-				Status: fmt.Sprintf("error: %v", err),
-			})
-			continue
-		}
-		chartRepo.CachePath = env.Settings.RepositoryCache
-
-		if _, err := chartRepo.DownloadIndexFile(); err != nil {
-			results = append(results, UpdateEntry{
-				Name:   entry.Name,
-				Status: fmt.Sprintf("error: %v", err),
-			})
-			continue
-		}
-
-		results = append(results, UpdateEntry{
-			Name:   entry.Name,
-			Status: "ok",
+	var wg sync.WaitGroup
+	for i, entry := range entries {
+		wg.Go(func() {
+			results[i] = updateOneRepo(entry, getters, env.Settings.RepositoryCache)
 		})
 	}
+	wg.Wait()
 
 	log.Debug("helm repo update completed", slog.Int("count", len(results)))
 
@@ -328,6 +311,28 @@ func Remove(opts RemoveOptions) (RemoveResponse, error) {
 // Helpers
 // ---------------------------------------------------------------------------
 
+// updateOneRepo downloads the index for a single repository entry. It is
+// designed to be called concurrently from Update via sync.WaitGroup.Go.
+func updateOneRepo(entry *repo.Entry, getters getter.Providers, cacheDir string) UpdateEntry {
+	chartRepo, err := repo.NewChartRepository(entry, getters)
+	if err != nil {
+		return UpdateEntry{
+			Name:   entry.Name,
+			Status: fmt.Sprintf("error: %v", err),
+		}
+	}
+	chartRepo.CachePath = cacheDir
+
+	if _, err := chartRepo.DownloadIndexFile(); err != nil {
+		return UpdateEntry{
+			Name:   entry.Name,
+			Status: fmt.Sprintf("error: %v", err),
+		}
+	}
+
+	return UpdateEntry{Name: entry.Name, Status: "ok"}
+}
+
 // loadRepoFile loads the repository configuration file. It returns
 // ErrNoRepositoriesConfigured when the file is missing or contains no
 // entries.
@@ -388,16 +393,29 @@ func parseTimeout(rawTimeout string) time.Duration {
 }
 
 // removeCachedFiles deletes the index and chart-list files for the named
-// repository from the cache directory. Errors are logged but not propagated.
+// repository from the cache directory. Uses os.OpenRoot to confine file
+// operations within the cache directory, preventing path traversal via
+// malicious repository names. Errors are logged but not propagated.
 func removeCachedFiles(cacheDir, name string, log *slog.Logger) {
-	for _, file := range []string{
-		filepath.Join(cacheDir, helmpath.CacheIndexFile(name)),
-		filepath.Join(cacheDir, helmpath.CacheChartsFile(name)),
+	root, err := os.OpenRoot(cacheDir)
+	if err != nil {
+		log.Warn(
+			"failed to open cache directory",
+			slog.String("cacheDir", cacheDir),
+			slog.Any("error", err),
+		)
+		return
+	}
+	defer root.Close()
+
+	for _, rel := range []string{
+		helmpath.CacheIndexFile(name),
+		helmpath.CacheChartsFile(name),
 	} {
-		if err := os.Remove(file); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		if err := root.Remove(rel); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			log.Warn(
 				"failed to remove cached file",
-				slog.String("file", file),
+				slog.String("file", rel),
 				slog.Any("error", err),
 			)
 		}

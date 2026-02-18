@@ -3,11 +3,13 @@ package dev.nthings.helm4j.release;
 import java.util.List;
 import java.util.Optional;
 
+import dev.nthings.helm4j.internal.model.ModelSupport;
+
 /** Result of a release history query. */
 public record HistoryResult(List<HistoryEntry> entries) {
 
   public HistoryResult {
-    entries = entries == null ? List.of() : List.copyOf(entries);
+    entries = ModelSupport.immutableListOrEmpty(entries);
   }
 
   public int size() {

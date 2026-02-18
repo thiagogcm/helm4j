@@ -14,20 +14,8 @@ import (
 
 // Options captures the Helm flags relevant to `helm pull`.
 type Options struct {
-	// Chart resolution (ChartPathOptions)
-	Version               string `json:"version,omitempty"`
-	RepoURL               string `json:"repo,omitempty"`
-	Username              string `json:"username,omitempty"`
-	Password              string `json:"password,omitempty"`
-	PlainHTTP             bool   `json:"plainHttp,omitempty"`
-	InsecureSkipTLSVerify bool   `json:"insecureSkipTlsVerify,omitempty"`
-	Keyring               string `json:"keyring,omitempty"`
-	CertFile              string `json:"certFile,omitempty"`
-	KeyFile               string `json:"keyFile,omitempty"`
-	CaFile                string `json:"caFile,omitempty"`
-	PassCredentialsAll    bool   `json:"passCredentialsAll,omitempty"`
-	Verify                bool   `json:"verify,omitempty"`
-	Devel                 bool   `json:"devel,omitempty"`
+	// Chart resolution (shared with install, upgrade, template, show)
+	helmenv.ChartPathOpts
 
 	// Pull behaviour
 	Untar    bool   `json:"untar,omitempty"`
@@ -59,15 +47,7 @@ func Run(chartRef string, opts Options) (string, error) {
 		return "", fmt.Errorf("bootstrap helm: %w", err)
 	}
 
-	regClient, err := helmenv.BuildRegistryClient(env.Settings, helmenv.RegistryOptions{
-		CertFile:              opts.CertFile,
-		KeyFile:               opts.KeyFile,
-		CaFile:                opts.CaFile,
-		InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
-		PlainHTTP:             opts.PlainHTTP,
-		Username:              opts.Username,
-		Password:              opts.Password,
-	})
+	regClient, err := helmenv.BuildRegistryClient(env.Settings, helmenv.RegistryOptsFromChartPath(opts.ChartPathOpts))
 	if err != nil {
 		return "", fmt.Errorf("registry client: %w", err)
 	}
@@ -76,19 +56,7 @@ func Run(chartRef string, opts Options) (string, error) {
 	client.Settings = env.Settings
 	client.SetRegistryClient(regClient)
 
-	// ChartPathOptions
-	client.ChartPathOptions.Version = opts.Version
-	client.ChartPathOptions.RepoURL = opts.RepoURL
-	client.ChartPathOptions.Username = opts.Username
-	client.ChartPathOptions.Password = opts.Password
-	client.ChartPathOptions.PlainHTTP = opts.PlainHTTP
-	client.ChartPathOptions.InsecureSkipTLSVerify = opts.InsecureSkipTLSVerify
-	client.ChartPathOptions.Keyring = opts.Keyring
-	client.ChartPathOptions.CertFile = opts.CertFile
-	client.ChartPathOptions.KeyFile = opts.KeyFile
-	client.ChartPathOptions.CaFile = opts.CaFile
-	client.ChartPathOptions.PassCredentialsAll = opts.PassCredentialsAll
-	client.ChartPathOptions.Verify = opts.Verify
+	helmenv.ApplyChartPathOptions(&client.ChartPathOptions, opts.ChartPathOpts)
 	client.Devel = opts.Devel
 
 	// Pull-specific

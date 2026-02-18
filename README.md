@@ -30,13 +30,15 @@ try (var helm = Helm.client()) {
     System.out.println("Added repo: " + success.name());
   }
 
-  var search = helm.chart().searchRepo("nginx", spec -> spec.includeAllVersions(true));
+  var search =
+      helm.chart()
+          .searchRepo(spec -> spec.keyword("nginx").includeAllVersions(true));
   search.first().ifPresent(chart -> System.out.println(chart.name()));
 
-  var hub = helm.chart().searchHub("nginx");
+  var hub = helm.chart().searchHub(spec -> spec.keyword("nginx"));
   hub.first().ifPresent(chart -> System.out.println(chart.url()));
 
-  var metadata = helm.chart().chart(ChartRef.repo("bitnami/nginx"));
+  var metadata = helm.chart().chart(ChartRef.repo("bitnami/nginx"), spec -> {});
   System.out.println(metadata.metadataYaml());
 
   var repos = helm.repo().list();
@@ -63,10 +65,17 @@ try (var helm = Helm.client()) {
 
 - `Helm.client()`
 - `Helm.client(spec -> ...)`
-- `HelmClient.repo().add(...)`, `.update(...)`, `.list()`, `.remove(...)`
-- `HelmClient.chart().searchRepo(...)`, `.searchHub(...)`
+- `HelmClient.repo().add(...)`, `.update(...)`, `.list()`, `.remove(...)` using request/spec overloads
+- `HelmClient.chart().searchRepo(...)`, `.searchHub(...)` using request/spec overloads
 - `HelmClient.chart().chart(...)`, `.values(...)`, `.readme(...)`, `.crds(...)`, `.all(...)`
 - `HelmClient.release().install(...)`
+
+### API Normalization
+
+- Convenience scalar overloads were removed in favor of a consistent pair:
+  - `operation(Request request)`
+  - `operation(Consumer<Request.Builder> spec)`
+- Default no-arg methods are kept only for semantically default actions (for example `repo().list()`, `repo().update()`, `release().list()`).
 
 ## Native Bridge
 

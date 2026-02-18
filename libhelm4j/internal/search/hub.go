@@ -40,6 +40,9 @@ func runHub(opts Options) ([]Result, error) {
 	hubClient := &http.Client{Timeout: 30 * time.Second}
 	res, err := hubClient.Do(req)
 	if err != nil {
+		if uerr, ok := errors.AsType[*url.Error](err); ok {
+			return nil, fmt.Errorf("hub request failed (%s): %w", uerr.Op, err)
+		}
 		return nil, err
 	}
 	defer res.Body.Close()

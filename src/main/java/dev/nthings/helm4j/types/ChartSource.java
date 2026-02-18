@@ -2,6 +2,8 @@ package dev.nthings.helm4j.types;
 
 import java.util.Objects;
 
+import dev.nthings.helm4j.internal.model.ModelSupport;
+
 /** Shared chart resolution, TLS, and auth options across chart-consuming operations. */
 public record ChartSource(
     String version,
@@ -19,14 +21,14 @@ public record ChartSource(
     boolean includePreReleaseVersions) {
 
   public ChartSource {
-    version = normalize(version);
-    repositoryUrl = normalize(repositoryUrl);
-    username = normalize(username);
-    password = normalize(password);
-    keyringPath = normalize(keyringPath);
-    certificateFile = normalize(certificateFile);
-    keyFile = normalize(keyFile);
-    certificateAuthorityFile = normalize(certificateAuthorityFile);
+    version = ModelSupport.normalizeBlankToNull(version);
+    repositoryUrl = ModelSupport.normalizeBlankToNull(repositoryUrl);
+    username = ModelSupport.normalizeBlankToNull(username);
+    password = ModelSupport.normalizeBlankToNull(password);
+    keyringPath = ModelSupport.normalizeBlankToNull(keyringPath);
+    certificateFile = ModelSupport.normalizeBlankToNull(certificateFile);
+    keyFile = ModelSupport.normalizeBlankToNull(keyFile);
+    certificateAuthorityFile = ModelSupport.normalizeBlankToNull(certificateAuthorityFile);
   }
 
   public static ChartSource defaults() {
@@ -135,14 +137,6 @@ public record ChartSource(
           verifySignatures,
           includePreReleaseVersions);
     }
-  }
-
-  private static String normalize(String value) {
-    if (value == null) {
-      return null;
-    }
-    var normalized = value.trim();
-    return normalized.isEmpty() ? null : normalized;
   }
 
   public ChartSource merge(ChartSource overrides) {

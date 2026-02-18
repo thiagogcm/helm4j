@@ -3,6 +3,8 @@ package dev.nthings.helm4j.repo;
 import java.util.Arrays;
 import java.util.List;
 
+import dev.nthings.helm4j.internal.model.ModelSupport;
+
 /** Request options for repository remove operations. */
 public record RepoRemoveRequest(List<String> names) {
 
@@ -38,14 +40,6 @@ public record RepoRemoveRequest(List<String> names) {
     if (value == null || value.isEmpty()) {
       return List.of();
     }
-    return value.stream().map(RepoRemoveRequest::normalize).filter(v -> v != null).toList();
-  }
-
-  private static String normalize(String value) {
-    if (value == null) {
-      return null;
-    }
-    var normalized = value.trim();
-    return normalized.isEmpty() ? null : normalized;
+    return value.stream().map(ModelSupport::normalizeBlankToNull).filter(v -> v != null).toList();
   }
 }

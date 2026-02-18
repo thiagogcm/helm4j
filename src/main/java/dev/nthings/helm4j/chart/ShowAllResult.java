@@ -1,7 +1,8 @@
 package dev.nthings.helm4j.chart;
 
 import java.util.List;
-import java.util.Objects;
+
+import dev.nthings.helm4j.internal.model.ModelSupport;
 
 /** Result of {@code show all}. */
 public record ShowAllResult(
@@ -14,7 +15,6 @@ public record ShowAllResult(
     String rawOutput) {
 
   public ShowAllResult {
-    customResourceDefinitions =
-        List.copyOf(Objects.requireNonNullElse(customResourceDefinitions, List.of()));
+    customResourceDefinitions = ModelSupport.immutableListOrEmpty(customResourceDefinitions);
   }
 }

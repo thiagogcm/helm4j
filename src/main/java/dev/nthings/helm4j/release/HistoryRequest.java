@@ -1,11 +1,13 @@
 package dev.nthings.helm4j.release;
 
+import dev.nthings.helm4j.internal.model.ModelSupport;
+
 /** Request parameters for viewing release history. */
 public record HistoryRequest(String releaseName, String namespace, int max) {
 
   public HistoryRequest {
-    releaseName = normalize(releaseName);
-    namespace = normalize(namespace);
+    releaseName = ModelSupport.normalizeBlankToNull(releaseName);
+    namespace = ModelSupport.normalizeBlankToNull(namespace);
   }
 
   public static Builder builder() {
@@ -37,11 +39,5 @@ public record HistoryRequest(String releaseName, String namespace, int max) {
     public HistoryRequest build() {
       return new HistoryRequest(releaseName, namespace, max);
     }
-  }
-
-  private static String normalize(String value) {
-    if (value == null) return null;
-    var normalized = value.trim();
-    return normalized.isEmpty() ? null : normalized;
   }
 }

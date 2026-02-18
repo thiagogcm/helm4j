@@ -1,5 +1,7 @@
 package dev.nthings.helm4j.chart;
 
+import dev.nthings.helm4j.internal.model.ModelSupport;
+
 /** Request parameters for searching the Helm hub endpoint. */
 public record HubSearchRequest(
     String keyword,
@@ -9,12 +11,8 @@ public record HubSearchRequest(
     int maxColumnWidth) {
 
   public HubSearchRequest {
-    keyword = normalize(keyword);
-    endpoint = normalize(endpoint);
-  }
-
-  public static HubSearchRequest defaults(String keyword) {
-    return builder().keyword(keyword).build();
+    keyword = ModelSupport.normalizeBlankToNull(keyword);
+    endpoint = ModelSupport.normalizeBlankToNull(endpoint);
   }
 
   public static Builder builder() {
@@ -59,13 +57,5 @@ public record HubSearchRequest(
       return new HubSearchRequest(
           keyword, endpoint, failIfNoResults, listRepositoryUrl, maxColumnWidth);
     }
-  }
-
-  private static String normalize(String value) {
-    if (value == null) {
-      return null;
-    }
-    var normalized = value.trim();
-    return normalized.isEmpty() ? null : normalized;
   }
 }

@@ -3,6 +3,7 @@ package dev.nthings.helm4j.release;
 import java.util.Objects;
 import java.util.function.Consumer;
 
+import dev.nthings.helm4j.internal.api.ClientSupport;
 import dev.nthings.helm4j.internal.sdk.HelmGateway;
 
 /** Release namespace for lifecycle operations. */
@@ -15,10 +16,8 @@ public final class ReleaseClient {
   }
 
   public InstallResult install(Consumer<InstallRequest.Builder> spec) {
-    Objects.requireNonNull(spec, "spec");
-    var builder = InstallRequest.builder();
-    spec.accept(builder);
-    return install(builder.build());
+    return ClientSupport.buildAndCall(
+        InstallRequest::builder, spec, InstallRequest.Builder::build, this::install);
   }
 
   public InstallResult install(InstallRequest request) {
@@ -27,10 +26,8 @@ public final class ReleaseClient {
   }
 
   public UpgradeResult upgrade(Consumer<UpgradeRequest.Builder> spec) {
-    Objects.requireNonNull(spec, "spec");
-    var builder = UpgradeRequest.builder();
-    spec.accept(builder);
-    return upgrade(builder.build());
+    return ClientSupport.buildAndCall(
+        UpgradeRequest::builder, spec, UpgradeRequest.Builder::build, this::upgrade);
   }
 
   public UpgradeResult upgrade(UpgradeRequest request) {
@@ -38,15 +35,9 @@ public final class ReleaseClient {
     return gateway.upgrade(request);
   }
 
-  public UninstallResult uninstall(String releaseName) {
-    return uninstall(UninstallRequest.builder().releaseName(releaseName).build());
-  }
-
   public UninstallResult uninstall(Consumer<UninstallRequest.Builder> spec) {
-    Objects.requireNonNull(spec, "spec");
-    var builder = UninstallRequest.builder();
-    spec.accept(builder);
-    return uninstall(builder.build());
+    return ClientSupport.buildAndCall(
+        UninstallRequest::builder, spec, UninstallRequest.Builder::build, this::uninstall);
   }
 
   public UninstallResult uninstall(UninstallRequest request) {
@@ -54,15 +45,9 @@ public final class ReleaseClient {
     return gateway.uninstall(request);
   }
 
-  public StatusResult status(String releaseName) {
-    return status(StatusRequest.builder().releaseName(releaseName).build());
-  }
-
   public StatusResult status(Consumer<StatusRequest.Builder> spec) {
-    Objects.requireNonNull(spec, "spec");
-    var builder = StatusRequest.builder();
-    spec.accept(builder);
-    return status(builder.build());
+    return ClientSupport.buildAndCall(
+        StatusRequest::builder, spec, StatusRequest.Builder::build, this::status);
   }
 
   public StatusResult status(StatusRequest request) {
@@ -71,10 +56,8 @@ public final class ReleaseClient {
   }
 
   public RollbackResult rollback(Consumer<RollbackRequest.Builder> spec) {
-    Objects.requireNonNull(spec, "spec");
-    var builder = RollbackRequest.builder();
-    spec.accept(builder);
-    return rollback(builder.build());
+    return ClientSupport.buildAndCall(
+        RollbackRequest::builder, spec, RollbackRequest.Builder::build, this::rollback);
   }
 
   public RollbackResult rollback(RollbackRequest request) {
@@ -82,15 +65,9 @@ public final class ReleaseClient {
     return gateway.rollback(request);
   }
 
-  public HistoryResult history(String releaseName) {
-    return history(HistoryRequest.builder().releaseName(releaseName).build());
-  }
-
   public HistoryResult history(Consumer<HistoryRequest.Builder> spec) {
-    Objects.requireNonNull(spec, "spec");
-    var builder = HistoryRequest.builder();
-    spec.accept(builder);
-    return history(builder.build());
+    return ClientSupport.buildAndCall(
+        HistoryRequest::builder, spec, HistoryRequest.Builder::build, this::history);
   }
 
   public HistoryResult history(HistoryRequest request) {
@@ -103,10 +80,8 @@ public final class ReleaseClient {
   }
 
   public ReleaseListResult list(Consumer<ReleaseListRequest.Builder> spec) {
-    Objects.requireNonNull(spec, "spec");
-    var builder = ReleaseListRequest.builder();
-    spec.accept(builder);
-    return list(builder.build());
+    return ClientSupport.buildAndCall(
+        ReleaseListRequest::builder, spec, ReleaseListRequest.Builder::build, this::list);
   }
 
   public ReleaseListResult list(ReleaseListRequest request) {
@@ -114,15 +89,9 @@ public final class ReleaseClient {
     return gateway.list(request);
   }
 
-  public TestResult test(String releaseName) {
-    return test(TestRequest.builder().releaseName(releaseName).build());
-  }
-
   public TestResult test(Consumer<TestRequest.Builder> spec) {
-    Objects.requireNonNull(spec, "spec");
-    var builder = TestRequest.builder();
-    spec.accept(builder);
-    return test(builder.build());
+    return ClientSupport.buildAndCall(
+        TestRequest::builder, spec, TestRequest.Builder::build, this::test);
   }
 
   public TestResult test(TestRequest request) {
@@ -130,15 +99,9 @@ public final class ReleaseClient {
     return gateway.test(request);
   }
 
-  public GetAllResult getAll(String releaseName) {
-    return getAll(GetRequest.builder().releaseName(releaseName).build());
-  }
-
   public GetAllResult getAll(Consumer<GetRequest.Builder> spec) {
-    Objects.requireNonNull(spec, "spec");
-    var builder = GetRequest.builder();
-    spec.accept(builder);
-    return getAll(builder.build());
+    return ClientSupport.buildAndCall(
+        GetRequest::builder, spec, GetRequest.Builder::build, this::getAll);
   }
 
   public GetAllResult getAll(GetRequest request) {
@@ -146,15 +109,9 @@ public final class ReleaseClient {
     return gateway.getAll(request);
   }
 
-  public GetValuesResult getValues(String releaseName) {
-    return getValues(GetRequest.builder().releaseName(releaseName).build());
-  }
-
   public GetValuesResult getValues(Consumer<GetRequest.Builder> spec) {
-    Objects.requireNonNull(spec, "spec");
-    var builder = GetRequest.builder();
-    spec.accept(builder);
-    return getValues(builder.build());
+    return ClientSupport.buildAndCall(
+        GetRequest::builder, spec, GetRequest.Builder::build, this::getValues);
   }
 
   public GetValuesResult getValues(GetRequest request) {
@@ -162,15 +119,9 @@ public final class ReleaseClient {
     return gateway.getValues(request);
   }
 
-  public GetManifestResult getManifest(String releaseName) {
-    return getManifest(GetRequest.builder().releaseName(releaseName).build());
-  }
-
   public GetManifestResult getManifest(Consumer<GetRequest.Builder> spec) {
-    Objects.requireNonNull(spec, "spec");
-    var builder = GetRequest.builder();
-    spec.accept(builder);
-    return getManifest(builder.build());
+    return ClientSupport.buildAndCall(
+        GetRequest::builder, spec, GetRequest.Builder::build, this::getManifest);
   }
 
   public GetManifestResult getManifest(GetRequest request) {
@@ -178,15 +129,9 @@ public final class ReleaseClient {
     return gateway.getManifest(request);
   }
 
-  public GetHooksResult getHooks(String releaseName) {
-    return getHooks(GetRequest.builder().releaseName(releaseName).build());
-  }
-
   public GetHooksResult getHooks(Consumer<GetRequest.Builder> spec) {
-    Objects.requireNonNull(spec, "spec");
-    var builder = GetRequest.builder();
-    spec.accept(builder);
-    return getHooks(builder.build());
+    return ClientSupport.buildAndCall(
+        GetRequest::builder, spec, GetRequest.Builder::build, this::getHooks);
   }
 
   public GetHooksResult getHooks(GetRequest request) {
@@ -194,15 +139,9 @@ public final class ReleaseClient {
     return gateway.getHooks(request);
   }
 
-  public GetNotesResult getNotes(String releaseName) {
-    return getNotes(GetRequest.builder().releaseName(releaseName).build());
-  }
-
   public GetNotesResult getNotes(Consumer<GetRequest.Builder> spec) {
-    Objects.requireNonNull(spec, "spec");
-    var builder = GetRequest.builder();
-    spec.accept(builder);
-    return getNotes(builder.build());
+    return ClientSupport.buildAndCall(
+        GetRequest::builder, spec, GetRequest.Builder::build, this::getNotes);
   }
 
   public GetNotesResult getNotes(GetRequest request) {
@@ -210,15 +149,9 @@ public final class ReleaseClient {
     return gateway.getNotes(request);
   }
 
-  public GetMetadataResult getMetadata(String releaseName) {
-    return getMetadata(GetRequest.builder().releaseName(releaseName).build());
-  }
-
   public GetMetadataResult getMetadata(Consumer<GetRequest.Builder> spec) {
-    Objects.requireNonNull(spec, "spec");
-    var builder = GetRequest.builder();
-    spec.accept(builder);
-    return getMetadata(builder.build());
+    return ClientSupport.buildAndCall(
+        GetRequest::builder, spec, GetRequest.Builder::build, this::getMetadata);
   }
 
   public GetMetadataResult getMetadata(GetRequest request) {

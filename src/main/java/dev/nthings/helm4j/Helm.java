@@ -4,7 +4,9 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
+import dev.nthings.helm4j.internal.api.ClientSupport;
 import dev.nthings.helm4j.release.ApplyStrategy;
 import dev.nthings.helm4j.release.DryRunMode;
 import dev.nthings.helm4j.release.InstallRequest;
@@ -24,10 +26,8 @@ public final class Helm {
   }
 
   public static HelmClient client(Consumer<HelmClient.Builder> spec) {
-    Objects.requireNonNull(spec, "spec");
-    var builder = HelmClient.builder();
-    spec.accept(builder);
-    return builder.build();
+    return ClientSupport.buildAndCall(
+        HelmClient::builder, spec, HelmClient.Builder::build, Function.identity());
   }
 
   /** Begin a fluent install operation for the given chart reference. */
@@ -35,19 +35,9 @@ public final class Helm {
     return new InstallBuilder(chart);
   }
 
-  /** Begin a fluent install operation for a repository chart reference. */
-  public static InstallBuilder install(String repoChart) {
-    return new InstallBuilder(ChartRef.repo(repoChart));
-  }
-
   /** Begin a fluent upgrade operation for the given chart reference. */
   public static UpgradeBuilder upgrade(ChartRef chart) {
     return new UpgradeBuilder(chart);
-  }
-
-  /** Begin a fluent upgrade operation for a repository chart reference. */
-  public static UpgradeBuilder upgrade(String repoChart) {
-    return new UpgradeBuilder(ChartRef.repo(repoChart));
   }
 
   /** Get the Helm SDK and Go runtime version info. */
@@ -117,9 +107,7 @@ public final class Helm {
 
     /** Execute the install operation using a default client. */
     public InstallResult run() {
-      try (var helm = Helm.client()) {
-        return helm.release().install(requestBuilder.build());
-      }
+      return runWithDefaultClient(helm -> helm.release().install(requestBuilder.build()));
     }
 
     /** Execute the install operation using the provided client. */
@@ -189,15 +177,20 @@ public final class Helm {
 
     /** Execute the upgrade operation using a default client. */
     public UpgradeResult run() {
-      try (var helm = Helm.client()) {
-        return helm.release().upgrade(requestBuilder.build());
-      }
+      return runWithDefaultClient(helm -> helm.release().upgrade(requestBuilder.build()));
     }
 
     /** Execute the upgrade operation using the provided client. */
     public UpgradeResult run(HelmClient client) {
       Objects.requireNonNull(client, "client");
       return client.release().upgrade(requestBuilder.build());
+    }
+  }
+
+  private static <T> T runWithDefaultClient(Function<HelmClient, T> operation) {
+    Objects.requireNonNull(operation, "operation");
+    try (var helm = Helm.client()) {
+      return operation.apply(helm);
     }
   }
 }

@@ -1,11 +1,11 @@
 package dev.nthings.helm4j.release;
 
 import java.time.Duration;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 
+import dev.nthings.helm4j.internal.model.ModelSupport;
 import dev.nthings.helm4j.types.ChartRef;
 import dev.nthings.helm4j.types.ChartSource;
 
@@ -32,20 +32,21 @@ public record InstallRequest(
     boolean subNotes,
     boolean enableDns,
     boolean takeOwnership,
+    boolean dependencyUpdate,
     ApplyStrategy applyStrategy,
     Map<String, Object> values,
     Map<String, String> labels) {
 
   public InstallRequest {
-    releaseName = normalize(releaseName);
+    releaseName = ModelSupport.normalizeBlankToNull(releaseName);
     chart = Objects.requireNonNull(chart, "chart");
     source = Objects.requireNonNullElseGet(source, ChartSource::defaults);
-    namespace = normalize(namespace);
-    description = normalize(description);
-    nameTemplate = normalize(nameTemplate);
+    namespace = ModelSupport.normalizeBlankToNull(namespace);
+    description = ModelSupport.normalizeBlankToNull(description);
+    nameTemplate = ModelSupport.normalizeBlankToNull(nameTemplate);
     applyStrategy = Objects.requireNonNullElse(applyStrategy, ApplyStrategy.SERVER_SIDE_APPLY);
-    values = copyMap(values);
-    labels = copyMap(labels);
+    values = ModelSupport.immutableMapOrEmpty(values);
+    labels = ModelSupport.immutableMapOrEmpty(labels);
   }
 
   public static Builder builder() {
@@ -75,6 +76,7 @@ public record InstallRequest(
     private boolean subNotes;
     private boolean enableDns;
     private boolean takeOwnership;
+    private boolean dependencyUpdate;
     private ApplyStrategy applyStrategy = ApplyStrategy.SERVER_SIDE_APPLY;
     private Map<String, Object> values;
     private Map<String, String> labels;
@@ -191,6 +193,11 @@ public record InstallRequest(
       return this;
     }
 
+    public Builder dependencyUpdate(boolean value) {
+      this.dependencyUpdate = value;
+      return this;
+    }
+
     public Builder applyStrategy(ApplyStrategy value) {
       this.applyStrategy = value;
       return this;
@@ -231,24 +238,10 @@ public record InstallRequest(
           subNotes,
           enableDns,
           takeOwnership,
+          dependencyUpdate,
           applyStrategy,
           values,
           labels);
     }
-  }
-
-  private static String normalize(String value) {
-    if (value == null) {
-      return null;
-    }
-    var normalized = value.trim();
-    return normalized.isEmpty() ? null : normalized;
-  }
-
-  private static <T> Map<String, T> copyMap(Map<String, T> value) {
-    if (value == null || value.isEmpty()) {
-      return Map.of();
-    }
-    return Map.copyOf(new LinkedHashMap<>(value));
   }
 }

@@ -2,6 +2,8 @@ package dev.nthings.helm4j.chart;
 
 import java.nio.file.Path;
 
+import dev.nthings.helm4j.internal.model.ModelSupport;
+
 /** Request parameters for packaging a chart directory. */
 public record PackageChartRequest(
     Path chartPath,
@@ -21,15 +23,15 @@ public record PackageChartRequest(
 
   public PackageChartRequest {
     chartPath = chartPath == null ? null : chartPath.toAbsolutePath();
-    version = normalize(version);
-    appVersion = normalize(appVersion);
+    version = ModelSupport.normalizeBlankToNull(version);
+    appVersion = ModelSupport.normalizeBlankToNull(appVersion);
     destination = destination == null ? null : destination.toAbsolutePath();
-    key = normalize(key);
-    keyring = normalize(keyring);
-    passphraseFile = normalize(passphraseFile);
-    certificateFile = normalize(certificateFile);
-    keyFile = normalize(keyFile);
-    certificateAuthorityFile = normalize(certificateAuthorityFile);
+    key = ModelSupport.normalizeBlankToNull(key);
+    keyring = ModelSupport.normalizeBlankToNull(keyring);
+    passphraseFile = ModelSupport.normalizeBlankToNull(passphraseFile);
+    certificateFile = ModelSupport.normalizeBlankToNull(certificateFile);
+    keyFile = ModelSupport.normalizeBlankToNull(keyFile);
+    certificateAuthorityFile = ModelSupport.normalizeBlankToNull(certificateAuthorityFile);
   }
 
   public static Builder builder() {
@@ -141,13 +143,5 @@ public record PackageChartRequest(
           keyFile,
           certificateAuthorityFile);
     }
-  }
-
-  private static String normalize(String value) {
-    if (value == null) {
-      return null;
-    }
-    var normalized = value.trim();
-    return normalized.isEmpty() ? null : normalized;
   }
 }

@@ -1,11 +1,11 @@
 package dev.nthings.helm4j.chart;
 
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 
+import dev.nthings.helm4j.internal.model.ModelSupport;
 import dev.nthings.helm4j.types.ChartRef;
 import dev.nthings.helm4j.types.ChartSource;
 
@@ -29,15 +29,15 @@ public record TemplateRequest(
     Map<String, String> labels) {
 
   public TemplateRequest {
-    releaseName = normalize(releaseName);
+    releaseName = ModelSupport.normalizeBlankToNull(releaseName);
     chart = Objects.requireNonNull(chart, "chart");
     source = Objects.requireNonNullElseGet(source, ChartSource::defaults);
-    namespace = normalize(namespace);
-    description = normalize(description);
-    nameTemplate = normalize(nameTemplate);
-    apiVersions = apiVersions == null ? List.of() : List.copyOf(apiVersions);
-    values = copyMap(values);
-    labels = copyMap(labels);
+    namespace = ModelSupport.normalizeBlankToNull(namespace);
+    description = ModelSupport.normalizeBlankToNull(description);
+    nameTemplate = ModelSupport.normalizeBlankToNull(nameTemplate);
+    apiVersions = ModelSupport.immutableListOrEmpty(apiVersions);
+    values = ModelSupport.immutableMapOrEmpty(values);
+    labels = ModelSupport.immutableMapOrEmpty(labels);
   }
 
   public static Builder builder() {
@@ -171,16 +171,5 @@ public record TemplateRequest(
           values,
           labels);
     }
-  }
-
-  private static String normalize(String value) {
-    if (value == null) return null;
-    var normalized = value.trim();
-    return normalized.isEmpty() ? null : normalized;
-  }
-
-  private static <T> Map<String, T> copyMap(Map<String, T> value) {
-    if (value == null || value.isEmpty()) return Map.of();
-    return Map.copyOf(new LinkedHashMap<>(value));
   }
 }

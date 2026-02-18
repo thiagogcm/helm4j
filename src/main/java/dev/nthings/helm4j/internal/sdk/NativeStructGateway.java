@@ -119,12 +119,10 @@ public final class NativeStructGateway implements HelmGateway {
     }
 
     log.debug("Adding repository: name={}, url={}", request.name(), request.url());
-    var payload =
-        invoke(
-            () -> bridge.repo(utf8("add"), toJsonBytes(repoAddOptions(request), "repo add")),
+    var root =
+        invokeRoot(
             "repo add",
-            "invokeNative");
-    var root = parse(payload, "repo add");
+            () -> bridge.repo(utf8("add"), toJsonBytes(repoAddOptions(request), "repo add")));
 
     var failure = operationError(root, "repo add");
     if (failure != null) {
@@ -145,18 +143,12 @@ public final class NativeStructGateway implements HelmGateway {
     Objects.requireNonNull(request, "request");
 
     log.debug("Updating repositories: names={}", request.names());
-    var payload =
-        invoke(
-            () ->
-                bridge.repo(utf8("update"), toJsonBytes(repoUpdateOptions(request), "repo update")),
+    var root =
+        invokeRootOrThrow(
             "repo update",
-            "invokeNative");
-    var root = parse(payload, "repo update");
-
-    var failure = operationError(root, "repo update");
-    if (failure != null) {
-      throw asException(failure);
-    }
+            () ->
+                bridge.repo(
+                    utf8("update"), toJsonBytes(repoUpdateOptions(request), "repo update")));
 
     var response = convert(root, RepoUpdatePayload.class, "repo update");
     var repositories =
@@ -169,17 +161,9 @@ public final class NativeStructGateway implements HelmGateway {
   @Override
   public RepoListResult repoList() {
     log.debug("Listing repositories");
-    var payload =
-        invoke(
-            () -> bridge.repo(utf8("list"), toJsonBytes(Map.of(), "repo list")),
-            "repo list",
-            "invokeNative");
-    var root = parse(payload, "repo list");
-
-    var failure = operationError(root, "repo list");
-    if (failure != null) {
-      throw asException(failure);
-    }
+    var root =
+        invokeRootOrThrow(
+            "repo list", () -> bridge.repo(utf8("list"), toJsonBytes(Map.of(), "repo list")));
 
     var response = convert(root, RepoListPayload.class, "repo list");
     var repositories =
@@ -194,18 +178,12 @@ public final class NativeStructGateway implements HelmGateway {
     Objects.requireNonNull(request, "request");
 
     log.debug("Removing repositories: names={}", request.names());
-    var payload =
-        invoke(
-            () ->
-                bridge.repo(utf8("remove"), toJsonBytes(repoRemoveOptions(request), "repo remove")),
+    var root =
+        invokeRootOrThrow(
             "repo remove",
-            "invokeNative");
-    var root = parse(payload, "repo remove");
-
-    var failure = operationError(root, "repo remove");
-    if (failure != null) {
-      throw asException(failure);
-    }
+            () ->
+                bridge.repo(
+                    utf8("remove"), toJsonBytes(repoRemoveOptions(request), "repo remove")));
 
     var response = convert(root, RepoRemovePayload.class, "repo remove");
     return new RepoRemoveResult(listOrEmpty(response == null ? null : response.removed()));
@@ -216,18 +194,12 @@ public final class NativeStructGateway implements HelmGateway {
     Objects.requireNonNull(request, "request");
 
     log.debug("Searching repositories: keyword={}", request.keyword());
-    var payload =
-        invoke(
-            () ->
-                bridge.search(utf8("repo"), toJsonBytes(searchRepoOptions(request), "search repo")),
+    var root =
+        invokeRootOrThrow(
             "search repo",
-            "invokeNative");
-    var root = parse(payload, "search repo");
-
-    var failure = operationError(root, "search repo");
-    if (failure != null) {
-      throw asException(failure);
-    }
+            () ->
+                bridge.search(
+                    utf8("repo"), toJsonBytes(searchRepoOptions(request), "search repo")));
 
     var response = convert(root, SearchPayload.class, "search repo");
     var charts =
@@ -251,17 +223,10 @@ public final class NativeStructGateway implements HelmGateway {
     Objects.requireNonNull(request, "request");
 
     log.debug("Searching hub: keyword={}", request.keyword());
-    var payload =
-        invoke(
-            () -> bridge.search(utf8("hub"), toJsonBytes(searchHubOptions(request), "search hub")),
+    var root =
+        invokeRootOrThrow(
             "search hub",
-            "invokeNative");
-    var root = parse(payload, "search hub");
-
-    var failure = operationError(root, "search hub");
-    if (failure != null) {
-      throw asException(failure);
-    }
+            () -> bridge.search(utf8("hub"), toJsonBytes(searchHubOptions(request), "search hub")));
 
     var response = convert(root, SearchPayload.class, "search hub");
     var charts =
@@ -289,19 +254,12 @@ public final class NativeStructGateway implements HelmGateway {
     }
 
     log.debug("Pulling chart: chartRef={}", request.chartReference());
-    var payload =
-        invoke(
+    var root =
+        invokeRootOrThrow(
+            "pull",
             () ->
                 bridge.pull(
-                    utf8(request.chartReference()), toJsonBytes(pullOptions(request), "pull")),
-            "pull",
-            "invokeNative");
-    var root = parse(payload, "pull");
-
-    var failure = operationError(root, "pull");
-    if (failure != null) {
-      throw asException(failure);
-    }
+                    utf8(request.chartReference()), toJsonBytes(pullOptions(request), "pull")));
 
     var response = convert(root, PullPayload.class, "pull");
     return new PullResult(response == null ? "" : response.output());
@@ -315,21 +273,14 @@ public final class NativeStructGateway implements HelmGateway {
     }
 
     log.debug("Pushing chart: chartRef={}, remote={}", request.chartReference(), request.remote());
-    var payload =
-        invoke(
+    var root =
+        invokeRootOrThrow(
+            "push",
             () ->
                 bridge.push(
                     utf8(request.chartReference()),
                     utf8(request.remote()),
-                    toJsonBytes(pushOptions(request), "push")),
-            "push",
-            "invokeNative");
-    var root = parse(payload, "push");
-
-    var failure = operationError(root, "push");
-    if (failure != null) {
-      throw asException(failure);
-    }
+                    toJsonBytes(pushOptions(request), "push")));
 
     var response = convert(root, PushPayload.class, "push");
     return new PushResult(response == null ? "" : response.output());
@@ -343,20 +294,13 @@ public final class NativeStructGateway implements HelmGateway {
     }
 
     log.debug("Packaging chart: chartPath={}", request.chartPath());
-    var payload =
-        invoke(
+    var root =
+        invokeRootOrThrow(
+            "package",
             () ->
                 bridge.packageChart(
                     utf8(request.chartPath().toString()),
-                    toJsonBytes(packageOptions(request), "package")),
-            "package",
-            "invokeNative");
-    var root = parse(payload, "package");
-
-    var failure = operationError(root, "package");
-    if (failure != null) {
-      throw asException(failure);
-    }
+                    toJsonBytes(packageOptions(request), "package")));
 
     var response = convert(root, PackagePayload.class, "package");
     return new PackageChartResult(response == null ? null : response.path());
@@ -370,20 +314,13 @@ public final class NativeStructGateway implements HelmGateway {
     }
 
     log.debug("Listing chart dependencies: chartPath={}", request.chartPath());
-    var payload =
-        invoke(
+    var root =
+        invokeRootOrThrow(
+            "dependency",
             () ->
                 bridge.dependency(
                     utf8(request.chartPath().toString()),
-                    toJsonBytes(dependencyOptions(request), "dependency")),
-            "dependency",
-            "invokeNative");
-    var root = parse(payload, "dependency");
-
-    var failure = operationError(root, "dependency");
-    if (failure != null) {
-      throw asException(failure);
-    }
+                    toJsonBytes(dependencyOptions(request), "dependency")));
 
     var response = convert(root, DependencyPayload.class, "dependency");
     return new DependencyResult(response == null ? "" : response.output());
@@ -453,16 +390,14 @@ public final class NativeStructGateway implements HelmGateway {
         "Installing release: name={}, chart={}",
         request.releaseName(),
         request.chart().asReference());
-    var payload =
-        invoke(
+    var root =
+        invokeRoot(
+            "install",
             () ->
                 bridge.install(
                     utf8(request.releaseName()),
                     utf8(request.chart().asReference()),
-                    toJsonBytes(installOptions(request), "install")),
-            "install",
-            "invokeNative");
-    var root = parse(payload, "install");
+                    toJsonBytes(installOptions(request), "install")));
 
     var failure = operationError(root, "install");
     if (failure != null) {
@@ -495,16 +430,14 @@ public final class NativeStructGateway implements HelmGateway {
         "Upgrading release: name={}, chart={}",
         request.releaseName(),
         request.chart().asReference());
-    var payload =
-        invoke(
+    var root =
+        invokeRoot(
+            "upgrade",
             () ->
                 bridge.upgrade(
                     utf8(request.releaseName()),
                     utf8(request.chart().asReference()),
-                    toJsonBytes(upgradeOptions(request), "upgrade")),
-            "upgrade",
-            "invokeNative");
-    var root = parse(payload, "upgrade");
+                    toJsonBytes(upgradeOptions(request), "upgrade")));
 
     var failure = operationError(root, "upgrade");
     if (failure != null) {
@@ -530,15 +463,13 @@ public final class NativeStructGateway implements HelmGateway {
     Objects.requireNonNull(request, "request");
 
     log.debug("Uninstalling release: name={}", request.releaseName());
-    var payload =
-        invoke(
+    var root =
+        invokeRoot(
+            "uninstall",
             () ->
                 bridge.uninstall(
                     utf8(request.releaseName()),
-                    toJsonBytes(uninstallOptions(request), "uninstall")),
-            "uninstall",
-            "invokeNative");
-    var root = parse(payload, "uninstall");
+                    toJsonBytes(uninstallOptions(request), "uninstall")));
 
     var failure = operationError(root, "uninstall");
     if (failure != null) {
@@ -561,19 +492,12 @@ public final class NativeStructGateway implements HelmGateway {
     Objects.requireNonNull(request, "request");
 
     log.debug("Getting status: name={}", request.releaseName());
-    var payload =
-        invoke(
+    var root =
+        invokeRootOrThrow(
+            "status",
             () ->
                 bridge.status(
-                    utf8(request.releaseName()), toJsonBytes(statusOptions(request), "status")),
-            "status",
-            "invokeNative");
-    var root = parse(payload, "status");
-
-    var failure = operationError(root, "status");
-    if (failure != null) {
-      throw asException(failure);
-    }
+                    utf8(request.releaseName()), toJsonBytes(statusOptions(request), "status")));
 
     var response = convert(root, ReleasePayload.class, "status");
     if (response == null || response.release() == null) {
@@ -588,14 +512,13 @@ public final class NativeStructGateway implements HelmGateway {
     Objects.requireNonNull(request, "request");
 
     log.debug("Rolling back release: name={}", request.releaseName());
-    var payload =
-        invoke(
+    var root =
+        invokeRoot(
+            "rollback",
             () ->
                 bridge.rollback(
-                    utf8(request.releaseName()), toJsonBytes(rollbackOptions(request), "rollback")),
-            "rollback",
-            "invokeNative");
-    var root = parse(payload, "rollback");
+                    utf8(request.releaseName()),
+                    toJsonBytes(rollbackOptions(request), "rollback")));
 
     var failure = operationError(root, "rollback");
     if (failure != null) {
@@ -617,19 +540,12 @@ public final class NativeStructGateway implements HelmGateway {
     Objects.requireNonNull(request, "request");
 
     log.debug("Getting history: name={}", request.releaseName());
-    var payload =
-        invoke(
+    var root =
+        invokeRootOrThrow(
+            "history",
             () ->
                 bridge.history(
-                    utf8(request.releaseName()), toJsonBytes(historyOptions(request), "history")),
-            "history",
-            "invokeNative");
-    var root = parse(payload, "history");
-
-    var failure = operationError(root, "history");
-    if (failure != null) {
-      throw asException(failure);
-    }
+                    utf8(request.releaseName()), toJsonBytes(historyOptions(request), "history")));
 
     var response = convert(root, HistoryPayload.class, "history");
     var entries =
@@ -656,15 +572,8 @@ public final class NativeStructGateway implements HelmGateway {
         "Listing releases: namespace={}, allNamespaces={}",
         request.namespace(),
         request.allNamespaces());
-    var payload =
-        invoke(
-            () -> bridge.list(toJsonBytes(listOptions(request), "list")), "list", "invokeNative");
-    var root = parse(payload, "list");
-
-    var failure = operationError(root, "list");
-    if (failure != null) {
-      throw asException(failure);
-    }
+    var root =
+        invokeRootOrThrow("list", () -> bridge.list(toJsonBytes(listOptions(request), "list")));
 
     var response = convert(root, ListPayload.class, "list");
     var releases =
@@ -682,18 +591,12 @@ public final class NativeStructGateway implements HelmGateway {
     }
 
     log.debug("Testing release: name={}", request.releaseName());
-    var payload =
-        invoke(
-            () ->
-                bridge.test(utf8(request.releaseName()), toJsonBytes(testOptions(request), "test")),
+    var root =
+        invokeRootOrThrow(
             "test",
-            "invokeNative");
-    var root = parse(payload, "test");
-
-    var failure = operationError(root, "test");
-    if (failure != null) {
-      throw asException(failure);
-    }
+            () ->
+                bridge.test(
+                    utf8(request.releaseName()), toJsonBytes(testOptions(request), "test")));
 
     var response = convert(root, TestPayload.class, "test");
     if (response == null || response.release() == null) {
@@ -710,8 +613,7 @@ public final class NativeStructGateway implements HelmGateway {
   @Override
   public GetAllResult getAll(GetRequest request) {
     Objects.requireNonNull(request, "request");
-    var payload = runGet(GetMode.ALL, request);
-    var response = convert(parse(payload, "get all"), GetAllPayload.class, "get all");
+    var response = convert(runGetRoot(GetMode.ALL, request), GetAllPayload.class, "get all");
     if (response == null || response.release() == null) {
       throw new HelmException(
           "Native get all response missing release", "decodeResponse", "get all");
@@ -727,42 +629,38 @@ public final class NativeStructGateway implements HelmGateway {
   @Override
   public GetValuesResult getValues(GetRequest request) {
     Objects.requireNonNull(request, "request");
-    var payload = runGet(GetMode.VALUES, request);
-    var response = convert(parse(payload, "get values"), GetValuesPayload.class, "get values");
+    var response =
+        convert(runGetRoot(GetMode.VALUES, request), GetValuesPayload.class, "get values");
     return new GetValuesResult(mapOrEmpty(response == null ? null : response.values()));
   }
 
   @Override
   public GetManifestResult getManifest(GetRequest request) {
     Objects.requireNonNull(request, "request");
-    var payload = runGet(GetMode.MANIFEST, request);
     var response =
-        convert(parse(payload, "get manifest"), GetManifestPayload.class, "get manifest");
+        convert(runGetRoot(GetMode.MANIFEST, request), GetManifestPayload.class, "get manifest");
     return new GetManifestResult(response == null ? "" : response.manifest());
   }
 
   @Override
   public GetHooksResult getHooks(GetRequest request) {
     Objects.requireNonNull(request, "request");
-    var payload = runGet(GetMode.HOOKS, request);
-    var response = convert(parse(payload, "get hooks"), GetHooksPayload.class, "get hooks");
+    var response = convert(runGetRoot(GetMode.HOOKS, request), GetHooksPayload.class, "get hooks");
     return new GetHooksResult(mapHooks(response == null ? null : response.hooks()));
   }
 
   @Override
   public GetNotesResult getNotes(GetRequest request) {
     Objects.requireNonNull(request, "request");
-    var payload = runGet(GetMode.NOTES, request);
-    var response = convert(parse(payload, "get notes"), GetNotesPayload.class, "get notes");
+    var response = convert(runGetRoot(GetMode.NOTES, request), GetNotesPayload.class, "get notes");
     return new GetNotesResult(response == null ? "" : response.notes());
   }
 
   @Override
   public GetMetadataResult getMetadata(GetRequest request) {
     Objects.requireNonNull(request, "request");
-    var payload = runGet(GetMode.METADATA, request);
     var response =
-        convert(parse(payload, "get metadata"), GetMetadataPayload.class, "get metadata");
+        convert(runGetRoot(GetMode.METADATA, request), GetMetadataPayload.class, "get metadata");
     if (response == null) {
       throw new HelmException(
           "Native get metadata response missing data", "decodeResponse", "get metadata");
@@ -789,21 +687,14 @@ public final class NativeStructGateway implements HelmGateway {
         "Templating chart: name={}, chart={}",
         request.releaseName(),
         request.chart().asReference());
-    var payload =
-        invoke(
+    var root =
+        invokeRootOrThrow(
+            "template",
             () ->
                 bridge.template(
                     utf8(request.releaseName()),
                     utf8(request.chart().asReference()),
-                    toJsonBytes(templateOptions(request), "template")),
-            "template",
-            "invokeNative");
-    var root = parse(payload, "template");
-
-    var failure = operationError(root, "template");
-    if (failure != null) {
-      throw asException(failure);
-    }
+                    toJsonBytes(templateOptions(request), "template")));
 
     var response = convert(root, TemplatePayload.class, "template");
     if (response == null || response.release() == null) {
@@ -819,20 +710,13 @@ public final class NativeStructGateway implements HelmGateway {
     Objects.requireNonNull(request, "request");
 
     log.debug("Linting chart: path={}", request.chartPath());
-    var payload =
-        invoke(
+    var root =
+        invokeRootOrThrow(
+            "lint",
             () ->
                 bridge.lint(
                     utf8(request.chartPath().toString()),
-                    toJsonBytes(lintOptions(request), "lint")),
-            "lint",
-            "invokeNative");
-    var root = parse(payload, "lint");
-
-    var failure = operationError(root, "lint");
-    if (failure != null) {
-      throw asException(failure);
-    }
+                    toJsonBytes(lintOptions(request), "lint")));
 
     var response = convert(root, LintPayload.class, "lint");
     var messages =
@@ -854,21 +738,14 @@ public final class NativeStructGateway implements HelmGateway {
     }
 
     log.debug("Registry login: hostname={}", request.hostname());
-    var payload =
-        invoke(
+    var root =
+        invokeRootOrThrow(
+            "registry login",
             () ->
                 bridge.registry(
                     utf8("login"),
                     utf8(request.hostname()),
-                    toJsonBytes(registryLoginOptions(request), "registry login")),
-            "registry login",
-            "invokeNative");
-    var root = parse(payload, "registry login");
-
-    var failure = operationError(root, "registry login");
-    if (failure != null) {
-      throw asException(failure);
-    }
+                    toJsonBytes(registryLoginOptions(request), "registry login")));
 
     var response = convert(root, RegistryPayload.class, "registry login");
     if (response == null) {
@@ -886,21 +763,14 @@ public final class NativeStructGateway implements HelmGateway {
     }
 
     log.debug("Registry logout: hostname={}", request.hostname());
-    var payload =
-        invoke(
+    var root =
+        invokeRootOrThrow(
+            "registry logout",
             () ->
                 bridge.registry(
                     utf8("logout"),
                     utf8(request.hostname()),
-                    toJsonBytes(Map.of(), "registry logout")),
-            "registry logout",
-            "invokeNative");
-    var root = parse(payload, "registry logout");
-
-    var failure = operationError(root, "registry logout");
-    if (failure != null) {
-      throw asException(failure);
-    }
+                    toJsonBytes(Map.of(), "registry logout")));
 
     var response = convert(root, RegistryPayload.class, "registry logout");
     if (response == null) {
@@ -913,13 +783,7 @@ public final class NativeStructGateway implements HelmGateway {
   @Override
   public VersionInfo version() {
     log.debug("Getting version info");
-    var payload = invoke(bridge::version, "version", "invokeNative");
-    var root = parse(payload, "version");
-
-    var failure = operationError(root, "version");
-    if (failure != null) {
-      throw asException(failure);
-    }
+    var root = invokeRootOrThrow("version", bridge::version);
 
     var response = convert(root, VersionPayload.class, "version");
     if (response == null) {
@@ -935,21 +799,14 @@ public final class NativeStructGateway implements HelmGateway {
 
     var operation = "show " + mode.wireValue();
     log.debug("Show operation: mode={}, chart={}", mode.wireValue(), chartReference.asReference());
-    var payload =
-        invoke(
+    var root =
+        invokeRootOrThrow(
+            operation,
             () ->
                 bridge.show(
                     utf8(mode.wireValue()),
                     utf8(chartReference.asReference()),
-                    toJsonBytes(showOptions(request), operation)),
-            operation,
-            "invokeNative");
-    var root = parse(payload, operation);
-
-    var failure = operationError(root, operation);
-    if (failure != null) {
-      throw asException(failure);
-    }
+                    toJsonBytes(showOptions(request), operation)));
 
     var response = convert(root, ShowPayload.class, operation);
     if (response == null || response.sections() == null) {
@@ -975,6 +832,19 @@ public final class NativeStructGateway implements HelmGateway {
       throw new HelmException("Native bridge returned empty response", stage, operation);
     }
     return payload;
+  }
+
+  private JsonNode invokeRoot(String operation, ByteArrayInvocation invocation) {
+    return parse(invoke(invocation, operation, "invokeNative"), operation);
+  }
+
+  private JsonNode invokeRootOrThrow(String operation, ByteArrayInvocation invocation) {
+    var root = invokeRoot(operation, invocation);
+    var failure = operationError(root, operation);
+    if (failure != null) {
+      throw asException(failure);
+    }
+    return root;
   }
 
   private JsonNode parse(byte[] payload, String operation) {
@@ -1020,7 +890,7 @@ public final class NativeStructGateway implements HelmGateway {
     if (value == null || value.isNull()) {
       return null;
     }
-    return value.asText();
+    return value.asString();
   }
 
   private byte[] toJsonBytes(Map<String, Object> payload, String operation) {
@@ -1150,6 +1020,7 @@ public final class NativeStructGateway implements HelmGateway {
     options.put("subNotes", request.subNotes());
     options.put("enableDns", request.enableDns());
     options.put("takeOwnership", request.takeOwnership());
+    options.put("dependencyUpdate", request.dependencyUpdate());
 
     if (!request.values().isEmpty()) {
       options.put("values", request.values());
@@ -1198,6 +1069,7 @@ public final class NativeStructGateway implements HelmGateway {
     options.put("subNotes", request.subNotes());
     options.put("enableDns", request.enableDns());
     options.put("takeOwnership", request.takeOwnership());
+    options.put("dependencyUpdate", request.dependencyUpdate());
     options.put("cleanupOnFail", request.cleanupOnFail());
     options.put("maxHistory", request.maxHistory());
     options.put("reuseValues", request.reuseValues());
@@ -1436,17 +1308,16 @@ public final class NativeStructGateway implements HelmGateway {
     return options;
   }
 
-  private byte[] runGet(GetMode mode, GetRequest request) {
+  private JsonNode runGetRoot(GetMode mode, GetRequest request) {
     var operation = "get " + mode.wireValue();
     log.debug("Get operation: mode={}, release={}", mode.wireValue(), request.releaseName());
-    return invoke(
+    return invokeRootOrThrow(
+        operation,
         () ->
             bridge.get(
                 utf8(mode.wireValue()),
                 utf8(request.releaseName()),
-                toJsonBytes(getOptions(request), operation)),
-        operation,
-        "invokeNative");
+                toJsonBytes(getOptions(request), operation)));
   }
 
   private static ReleaseInfo mapReleasePayload(NativeReleasePayload r) {

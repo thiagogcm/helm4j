@@ -1,9 +1,9 @@
 package dev.nthings.helm4j.chart;
 
-import java.nio.file.Path;
 import java.util.Objects;
 import java.util.function.Consumer;
 
+import dev.nthings.helm4j.internal.api.ClientSupport;
 import dev.nthings.helm4j.internal.sdk.HelmGateway;
 import dev.nthings.helm4j.types.ChartRef;
 
@@ -16,15 +16,9 @@ public final class ChartClient {
     this.gateway = Objects.requireNonNull(gateway, "gateway");
   }
 
-  public RepoSearchResult searchRepo(String keyword) {
-    return searchRepo(RepoSearchRequest.defaults(keyword));
-  }
-
-  public RepoSearchResult searchRepo(String keyword, Consumer<RepoSearchRequest.Builder> spec) {
-    Objects.requireNonNull(spec, "spec");
-    var builder = RepoSearchRequest.builder().keyword(keyword);
-    spec.accept(builder);
-    return searchRepo(builder.build());
+  public RepoSearchResult searchRepo(Consumer<RepoSearchRequest.Builder> spec) {
+    return ClientSupport.buildAndCall(
+        RepoSearchRequest::builder, spec, RepoSearchRequest.Builder::build, this::searchRepo);
   }
 
   public RepoSearchResult searchRepo(RepoSearchRequest request) {
@@ -32,15 +26,9 @@ public final class ChartClient {
     return gateway.searchRepo(request);
   }
 
-  public HubSearchResult searchHub(String keyword) {
-    return searchHub(HubSearchRequest.defaults(keyword));
-  }
-
-  public HubSearchResult searchHub(String keyword, Consumer<HubSearchRequest.Builder> spec) {
-    Objects.requireNonNull(spec, "spec");
-    var builder = HubSearchRequest.builder().keyword(keyword);
-    spec.accept(builder);
-    return searchHub(builder.build());
+  public HubSearchResult searchHub(Consumer<HubSearchRequest.Builder> spec) {
+    return ClientSupport.buildAndCall(
+        HubSearchRequest::builder, spec, HubSearchRequest.Builder::build, this::searchHub);
   }
 
   public HubSearchResult searchHub(HubSearchRequest request) {
@@ -48,15 +36,13 @@ public final class ChartClient {
     return gateway.searchHub(request);
   }
 
-  public ShowChartResult chart(ChartRef chartReference) {
-    return chart(chartReference, ShowRequest.defaults());
-  }
-
   public ShowChartResult chart(ChartRef chartReference, Consumer<ShowRequest.Builder> spec) {
-    Objects.requireNonNull(spec, "spec");
-    var builder = ShowRequest.builder();
-    spec.accept(builder);
-    return chart(chartReference, builder.build());
+    Objects.requireNonNull(chartReference, "chartReference");
+    return ClientSupport.buildAndCall(
+        ShowRequest::builder,
+        spec,
+        ShowRequest.Builder::build,
+        request -> chart(chartReference, request));
   }
 
   public ShowChartResult chart(ChartRef chartReference, ShowRequest request) {
@@ -65,15 +51,13 @@ public final class ChartClient {
     return gateway.showChart(chartReference, request);
   }
 
-  public ShowValuesResult values(ChartRef chartReference) {
-    return values(chartReference, ShowRequest.defaults());
-  }
-
   public ShowValuesResult values(ChartRef chartReference, Consumer<ShowRequest.Builder> spec) {
-    Objects.requireNonNull(spec, "spec");
-    var builder = ShowRequest.builder();
-    spec.accept(builder);
-    return values(chartReference, builder.build());
+    Objects.requireNonNull(chartReference, "chartReference");
+    return ClientSupport.buildAndCall(
+        ShowRequest::builder,
+        spec,
+        ShowRequest.Builder::build,
+        request -> values(chartReference, request));
   }
 
   public ShowValuesResult values(ChartRef chartReference, ShowRequest request) {
@@ -82,15 +66,13 @@ public final class ChartClient {
     return gateway.showValues(chartReference, request);
   }
 
-  public ShowReadmeResult readme(ChartRef chartReference) {
-    return readme(chartReference, ShowRequest.defaults());
-  }
-
   public ShowReadmeResult readme(ChartRef chartReference, Consumer<ShowRequest.Builder> spec) {
-    Objects.requireNonNull(spec, "spec");
-    var builder = ShowRequest.builder();
-    spec.accept(builder);
-    return readme(chartReference, builder.build());
+    Objects.requireNonNull(chartReference, "chartReference");
+    return ClientSupport.buildAndCall(
+        ShowRequest::builder,
+        spec,
+        ShowRequest.Builder::build,
+        request -> readme(chartReference, request));
   }
 
   public ShowReadmeResult readme(ChartRef chartReference, ShowRequest request) {
@@ -99,15 +81,13 @@ public final class ChartClient {
     return gateway.showReadme(chartReference, request);
   }
 
-  public ShowCrdsResult crds(ChartRef chartReference) {
-    return crds(chartReference, ShowRequest.defaults());
-  }
-
   public ShowCrdsResult crds(ChartRef chartReference, Consumer<ShowRequest.Builder> spec) {
-    Objects.requireNonNull(spec, "spec");
-    var builder = ShowRequest.builder();
-    spec.accept(builder);
-    return crds(chartReference, builder.build());
+    Objects.requireNonNull(chartReference, "chartReference");
+    return ClientSupport.buildAndCall(
+        ShowRequest::builder,
+        spec,
+        ShowRequest.Builder::build,
+        request -> crds(chartReference, request));
   }
 
   public ShowCrdsResult crds(ChartRef chartReference, ShowRequest request) {
@@ -116,15 +96,13 @@ public final class ChartClient {
     return gateway.showCrds(chartReference, request);
   }
 
-  public ShowAllResult all(ChartRef chartReference) {
-    return all(chartReference, ShowRequest.defaults());
-  }
-
   public ShowAllResult all(ChartRef chartReference, Consumer<ShowRequest.Builder> spec) {
-    Objects.requireNonNull(spec, "spec");
-    var builder = ShowRequest.builder();
-    spec.accept(builder);
-    return all(chartReference, builder.build());
+    Objects.requireNonNull(chartReference, "chartReference");
+    return ClientSupport.buildAndCall(
+        ShowRequest::builder,
+        spec,
+        ShowRequest.Builder::build,
+        request -> all(chartReference, request));
   }
 
   public ShowAllResult all(ChartRef chartReference, ShowRequest request) {
@@ -134,10 +112,8 @@ public final class ChartClient {
   }
 
   public TemplateResult template(Consumer<TemplateRequest.Builder> spec) {
-    Objects.requireNonNull(spec, "spec");
-    var builder = TemplateRequest.builder();
-    spec.accept(builder);
-    return template(builder.build());
+    return ClientSupport.buildAndCall(
+        TemplateRequest::builder, spec, TemplateRequest.Builder::build, this::template);
   }
 
   public TemplateResult template(TemplateRequest request) {
@@ -145,15 +121,9 @@ public final class ChartClient {
     return gateway.template(request);
   }
 
-  public LintResult lint(java.nio.file.Path chartPath) {
-    return lint(LintRequest.builder().chartPath(chartPath).build());
-  }
-
   public LintResult lint(Consumer<LintRequest.Builder> spec) {
-    Objects.requireNonNull(spec, "spec");
-    var builder = LintRequest.builder();
-    spec.accept(builder);
-    return lint(builder.build());
+    return ClientSupport.buildAndCall(
+        LintRequest::builder, spec, LintRequest.Builder::build, this::lint);
   }
 
   public LintResult lint(LintRequest request) {
@@ -161,15 +131,9 @@ public final class ChartClient {
     return gateway.lint(request);
   }
 
-  public PullResult pull(String chartReference) {
-    return pull(PullRequest.builder().chartReference(chartReference).build());
-  }
-
-  public PullResult pull(String chartReference, Consumer<PullRequest.Builder> spec) {
-    Objects.requireNonNull(spec, "spec");
-    var builder = PullRequest.builder().chartReference(chartReference);
-    spec.accept(builder);
-    return pull(builder.build());
+  public PullResult pull(Consumer<PullRequest.Builder> spec) {
+    return ClientSupport.buildAndCall(
+        PullRequest::builder, spec, PullRequest.Builder::build, this::pull);
   }
 
   public PullResult pull(PullRequest request) {
@@ -177,15 +141,9 @@ public final class ChartClient {
     return gateway.pull(request);
   }
 
-  public PushResult push(String chartReference, String remote) {
-    return push(PushRequest.builder().chartReference(chartReference).remote(remote).build());
-  }
-
-  public PushResult push(String chartReference, String remote, Consumer<PushRequest.Builder> spec) {
-    Objects.requireNonNull(spec, "spec");
-    var builder = PushRequest.builder().chartReference(chartReference).remote(remote);
-    spec.accept(builder);
-    return push(builder.build());
+  public PushResult push(Consumer<PushRequest.Builder> spec) {
+    return ClientSupport.buildAndCall(
+        PushRequest::builder, spec, PushRequest.Builder::build, this::push);
   }
 
   public PushResult push(PushRequest request) {
@@ -193,15 +151,9 @@ public final class ChartClient {
     return gateway.push(request);
   }
 
-  public PackageChartResult packageChart(Path chartPath) {
-    return packageChart(PackageChartRequest.builder().chartPath(chartPath).build());
-  }
-
   public PackageChartResult packageChart(Consumer<PackageChartRequest.Builder> spec) {
-    Objects.requireNonNull(spec, "spec");
-    var builder = PackageChartRequest.builder();
-    spec.accept(builder);
-    return packageChart(builder.build());
+    return ClientSupport.buildAndCall(
+        PackageChartRequest::builder, spec, PackageChartRequest.Builder::build, this::packageChart);
   }
 
   public PackageChartResult packageChart(PackageChartRequest request) {
@@ -209,15 +161,9 @@ public final class ChartClient {
     return gateway.packageChart(request);
   }
 
-  public DependencyResult dependency(Path chartPath) {
-    return dependency(DependencyRequest.builder().chartPath(chartPath).build());
-  }
-
   public DependencyResult dependency(Consumer<DependencyRequest.Builder> spec) {
-    Objects.requireNonNull(spec, "spec");
-    var builder = DependencyRequest.builder();
-    spec.accept(builder);
-    return dependency(builder.build());
+    return ClientSupport.buildAndCall(
+        DependencyRequest::builder, spec, DependencyRequest.Builder::build, this::dependency);
   }
 
   public DependencyResult dependency(DependencyRequest request) {

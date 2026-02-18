@@ -98,13 +98,29 @@ func Run(mode, releaseName string, opts Options) (string, error) {
 	}
 }
 
-func getAll(env *helmenv.Env, releaseName string, opts Options) (string, error) {
+// fetchAccessor creates a NewGet action, executes it, and returns both the
+// raw release and its Accessor.
+func fetchAccessor(env *helmenv.Env, releaseName string, opts Options, mode string) (release.Releaser, release.Accessor, error) {
 	client := action.NewGet(env.Config)
 	client.Version = opts.Revision
 
 	rel, err := client.Run(releaseName)
 	if err != nil {
-		return "", fmt.Errorf("helm get all: %w", err)
+		return nil, nil, fmt.Errorf("helm get %s: %w", mode, err)
+	}
+
+	acc, err := release.NewAccessor(rel)
+	if err != nil {
+		return nil, nil, fmt.Errorf("create accessor: %w", err)
+	}
+
+	return rel, acc, nil
+}
+
+func getAll(env *helmenv.Env, releaseName string, opts Options) (string, error) {
+	rel, acc, err := fetchAccessor(env, releaseName, opts, "all")
+	if err != nil {
+		return "", err
 	}
 
 	info, err := releaseutil.MapRelease(rel)
@@ -112,21 +128,17 @@ func getAll(env *helmenv.Env, releaseName string, opts Options) (string, error) 
 		return "", fmt.Errorf("map release: %w", err)
 	}
 
-	acc, err := release.NewAccessor(rel)
-	if err != nil {
-		return "", fmt.Errorf("create accessor: %w", err)
-	}
-
 	resp := Response{
 		Mode:     "all",
 		Release:  &info,
 		Manifest: acc.Manifest(),
 		Notes:    acc.Notes(),
+		Hooks:    mapHooks(acc.Hooks()),
 	}
 
+	// Values (config) are only available on the v1 release type.
 	if v1, ok := rel.(*v1release.Release); ok {
 		resp.Values = v1.Config
-		resp.Hooks = mapHooks(v1)
 	}
 
 	return bridge.MarshalJSON(resp)
@@ -147,17 +159,9 @@ func getValues(env *helmenv.Env, releaseName string, opts Options) (string, erro
 }
 
 func getManifest(env *helmenv.Env, releaseName string, opts Options) (string, error) {
-	client := action.NewGet(env.Config)
-	client.Version = opts.Revision
-
-	rel, err := client.Run(releaseName)
+	_, acc, err := fetchAccessor(env, releaseName, opts, "manifest")
 	if err != nil {
-		return "", fmt.Errorf("helm get manifest: %w", err)
-	}
-
-	acc, err := release.NewAccessor(rel)
-	if err != nil {
-		return "", fmt.Errorf("create accessor: %w", err)
+		return "", err
 	}
 
 	resp := Response{Mode: "manifest", Manifest: acc.Manifest()}
@@ -165,18 +169,12 @@ func getManifest(env *helmenv.Env, releaseName string, opts Options) (string, er
 }
 
 func getHooks(env *helmenv.Env, releaseName string, opts Options) (string, error) {
-	client := action.NewGet(env.Config)
-	client.Version = opts.Revision
-
-	rel, err := client.Run(releaseName)
+	_, acc, err := fetchAccessor(env, releaseName, opts, "hooks")
 	if err != nil {
-		return "", fmt.Errorf("helm get hooks: %w", err)
+		return "", err
 	}
 
-	var hooks []HookEntry
-	if v1, ok := rel.(*v1release.Release); ok {
-		hooks = mapHooks(v1)
-	}
+	hooks := mapHooks(acc.Hooks())
 	if hooks == nil {
 		hooks = []HookEntry{}
 	}
@@ -186,17 +184,9 @@ func getHooks(env *helmenv.Env, releaseName string, opts Options) (string, error
 }
 
 func getNotes(env *helmenv.Env, releaseName string, opts Options) (string, error) {
-	client := action.NewGet(env.Config)
-	client.Version = opts.Revision
-
-	rel, err := client.Run(releaseName)
+	_, acc, err := fetchAccessor(env, releaseName, opts, "notes")
 	if err != nil {
-		return "", fmt.Errorf("helm get notes: %w", err)
-	}
-
-	acc, err := release.NewAccessor(rel)
-	if err != nil {
-		return "", fmt.Errorf("create accessor: %w", err)
+		return "", err
 	}
 
 	resp := Response{Mode: "notes", Notes: acc.Notes()}
@@ -227,20 +217,32 @@ func getMetadata(env *helmenv.Env, releaseName string, opts Options) (string, er
 	return bridge.MarshalJSON(resp)
 }
 
-func mapHooks(v1 *v1release.Release) []HookEntry {
-	var hooks []HookEntry
-	for _, hook := range v1.Hooks {
+// mapHooks converts the accessor's hook slice into the serialisable HookEntry
+// type. Hook fields beyond Path and Manifest (Name, Kind, Events, Weight) require
+// a v1type assertion since the release.HookAccessor interface only exposes
+// Path() and Manifest().
+func mapHooks(hooks []release.Hook) []HookEntry {
+	var entries []HookEntry
+	for _, h := range hooks {
+		v1h, ok := h.(*v1release.Hook)
+		if !ok {
+			v, cast := h.(v1release.Hook)
+			if !cast {
+				continue
+			}
+			v1h = &v
+		}
 		var events []string
-		for _, e := range hook.Events {
+		for _, e := range v1h.Events {
 			events = append(events, string(e))
 		}
-		hooks = append(hooks, HookEntry{
-			Name:   hook.Name,
-			Kind:   hook.Kind,
-			Path:   hook.Path,
+		entries = append(entries, HookEntry{
+			Name:   v1h.Name,
+			Kind:   v1h.Kind,
+			Path:   v1h.Path,
 			Events: events,
-			Weight: hook.Weight,
+			Weight: v1h.Weight,
 		})
 	}
-	return hooks
+	return entries
 }

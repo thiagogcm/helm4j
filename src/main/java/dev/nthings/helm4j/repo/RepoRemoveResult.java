@@ -1,14 +1,15 @@
 package dev.nthings.helm4j.repo;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
+
+import dev.nthings.helm4j.internal.model.ModelSupport;
 
 /** Structured response for repository remove operations. */
 public record RepoRemoveResult(List<String> removed) {
 
   public RepoRemoveResult {
-    removed = List.copyOf(Objects.requireNonNullElse(removed, List.of()));
+    removed = ModelSupport.immutableListOrEmpty(removed);
   }
 
   public int size() {
@@ -16,6 +17,6 @@ public record RepoRemoveResult(List<String> removed) {
   }
 
   public Optional<String> first() {
-    return removed.stream().findFirst();
+    return removed.isEmpty() ? Optional.empty() : Optional.of(removed.getFirst());
   }
 }

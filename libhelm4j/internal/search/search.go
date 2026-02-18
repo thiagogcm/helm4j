@@ -6,12 +6,10 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
-	"path/filepath"
-	"regexp"
-	"sort"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	"helm.sh/helm/v4/pkg/cmd/search"
 	"helm.sh/helm/v4/pkg/helmpath"
 	"helm.sh/helm/v4/pkg/repo/v1"
 
@@ -19,7 +17,10 @@ import (
 	"github.com/thiagogcm/libhelm4j/internal/helmlog"
 )
 
-const maxScore = 25
+// searchMaxScore is the threshold passed to the upstream search.Index.
+// The upstream uses lower-is-better scoring; anything below this threshold
+// is considered a match.
+const searchMaxScore = 25
 
 // ErrNoRepositoriesConfigured is returned when no repositories are configured.
 var ErrNoRepositoriesConfigured = errors.New("no repositories configured")
@@ -55,18 +56,6 @@ type Response struct {
 	Results []Result `json:"results"`
 }
 
-type indexedChart struct {
-	Name    string
-	Repo    string
-	RepoURL string
-	Chart   *repo.ChartVersion
-}
-
-type scoredChart struct {
-	Entry indexedChart
-	Score int
-}
-
 func runRepo(opts Options) ([]Result, error) {
 	log := helmlog.Logger()
 
@@ -83,50 +72,62 @@ func runRepo(opts Options) ([]Result, error) {
 		return nil, fmt.Errorf("bootstrap helm: %w", err)
 	}
 
-	entries, err := buildIndex(
-		env.Settings.RepositoryConfig,
-		env.Settings.RepositoryCache,
-		opts.Versions || opts.Version != "",
-	)
+	// Build a search index using the upstream search package.
+	rf, repoURLByName, err := loadRepoIndex(env.Settings.RepositoryConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	matched, err := filterAndScore(entries, opts.Keyword, opts.Regexp)
-	if err != nil {
-		return nil, err
+	allVersions := opts.Versions || opts.Version != ""
+	idx := search.NewIndex()
+	for _, repository := range rf.Repositories {
+		indexFile := helmpath.CacheIndexFile(repository.Name)
+		ind, err := repo.LoadIndexFile(env.Settings.RepositoryCache + "/" + indexFile)
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				log.Warn("repository index not found; skipping repository",
+					slog.String("repository", repository.Name))
+			} else {
+				log.Warn("failed to load repository index; skipping repository",
+					slog.String("repository", repository.Name),
+					slog.Any("error", err))
+			}
+			continue
+		}
+		idx.AddRepo(repository.Name, ind, allVersions)
 	}
 
-	sort.SliceStable(matched, func(i, j int) bool {
-		if matched[i].Score != matched[j].Score {
-			return matched[i].Score > matched[j].Score
+	// Search or return all entries.
+	var matched []*search.Result
+	if opts.Keyword == "" {
+		matched = idx.All()
+	} else {
+		matched, err = idx.Search(opts.Keyword, searchMaxScore, opts.Regexp)
+		if err != nil {
+			return nil, fmt.Errorf("search index: %w", err)
 		}
-		left := normalizeVersion(matched[i].Entry.Chart.Version)
-		right := normalizeVersion(matched[j].Entry.Chart.Version)
-		if left != nil && right != nil && !left.Equal(right) {
-			return left.GreaterThan(right)
-		}
-		return matched[i].Entry.Name < matched[j].Entry.Name
-	})
+	}
+
+	search.SortScore(matched)
 
 	// Apply version constraints.
-	if opts.Version == "" {
+	versionExpr := opts.Version
+	if versionExpr == "" {
 		if opts.Devel {
-			opts.Version = ">0.0.0-0"
+			versionExpr = ">0.0.0-0"
 		} else {
-			opts.Version = ">0.0.0"
+			versionExpr = ">0.0.0"
 		}
 	}
 
-	constraint, err := semver.NewConstraint(opts.Version)
+	constraint, err := semver.NewConstraint(versionExpr)
 	if err != nil {
 		return nil, fmt.Errorf("an invalid version/constraint format: %w", err)
 	}
 
-	var filtered []scoredChart
+	var filtered []*search.Result
 	foundNames := map[string]struct{}{}
-	for _, candidate := range matched {
-		r := candidate.Entry
+	for _, r := range matched {
 		if !opts.Versions {
 			if _, seen := foundNames[r.Name]; seen {
 				continue
@@ -139,16 +140,14 @@ func runRepo(opts Options) ([]Result, error) {
 
 		v, err := semver.NewVersion(r.Chart.Version)
 		if err != nil {
-			log.Debug(
-				"skipping chart with invalid version",
+			log.Debug("skipping chart with invalid version",
 				slog.String("name", r.Name),
 				slog.String("version", r.Chart.Version),
-				slog.Any("error", err),
-			)
+				slog.Any("error", err))
 			continue
 		}
 		if constraint.Check(v) {
-			filtered = append(filtered, candidate)
+			filtered = append(filtered, r)
 			foundNames[r.Name] = struct{}{}
 		}
 	}
@@ -158,21 +157,19 @@ func runRepo(opts Options) ([]Result, error) {
 	}
 
 	results := make([]Result, len(filtered))
-	for idx, candidate := range filtered {
-		r := candidate.Entry
-		// r.Name has the form "repoName/chartName" — extract the repo name.
+	for i, r := range filtered {
 		repoName := ""
 		if parts := strings.SplitN(r.Name, "/", 2); len(parts) == 2 {
 			repoName = parts[0]
 		}
-		results[idx] = Result{
+		results[i] = Result{
 			Name:           r.Name,
 			Version:        r.Chart.Version,
 			AppVersion:     r.Chart.AppVersion,
 			Description:    r.Chart.Description,
-			Score:          candidate.Score,
+			Score:          r.Score,
 			RepositoryName: repoName,
-			RepositoryURL:  r.RepoURL,
+			RepositoryURL:  repoURLByName[repoName],
 		}
 	}
 
@@ -181,133 +178,31 @@ func runRepo(opts Options) ([]Result, error) {
 	return results, nil
 }
 
-func buildIndex(repoFile, repoCacheDir string, includeAllVersions bool) ([]indexedChart, error) {
+// loadRepoIndex loads the repository file and returns the repo file plus a
+// name→URL map for enriching search results.
+func loadRepoIndex(repoFile string) (*repo.File, map[string]string, error) {
 	log := helmlog.Logger()
 
 	rf, err := repo.LoadFile(repoFile)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			log.Debug("repository configuration missing", slog.String("repoFile", repoFile))
-			return nil, ErrNoRepositoriesConfigured
+			return nil, nil, ErrNoRepositoriesConfigured
 		}
-		return nil, fmt.Errorf("load repository config %q: %w", repoFile, err)
+		return nil, nil, fmt.Errorf("load repository config %q: %w", repoFile, err)
 	}
 
 	if len(rf.Repositories) == 0 {
 		log.Debug("repository configuration is empty", slog.String("repoFile", repoFile))
-		return nil, ErrNoRepositoriesConfigured
+		return nil, nil, ErrNoRepositoriesConfigured
 	}
 
-	charts := make([]indexedChart, 0)
-	for _, repository := range rf.Repositories {
-		repoName := repository.Name
-		indexFile := filepath.Join(repoCacheDir, helmpath.CacheIndexFile(repoName))
-		ind, err := repo.LoadIndexFile(indexFile)
-		if err != nil {
-			if errors.Is(err, fs.ErrNotExist) {
-				log.Warn(
-					"repository index not found; skipping repository",
-					slog.String("repository", repoName),
-					slog.String("indexFile", indexFile),
-				)
-			} else {
-				log.Warn(
-					"failed to load repository index; skipping repository",
-					slog.String("repository", repoName),
-					slog.String("indexFile", indexFile),
-					slog.Any("error", err),
-				)
-			}
-			continue
-		}
-
-		ind.SortEntries()
-		for chartName, versions := range ind.Entries {
-			if len(versions) == 0 {
-				continue
-			}
-
-			selected := versions
-			if !includeAllVersions {
-				selected = versions[:1]
-			}
-
-			for _, cv := range selected {
-				if cv == nil || cv.Metadata == nil {
-					continue
-				}
-				charts = append(charts, indexedChart{
-					Name:    repoName + "/" + chartName,
-					Repo:    repoName,
-					RepoURL: repository.URL,
-					Chart:   cv,
-				})
-			}
-		}
+	urlByName := make(map[string]string, len(rf.Repositories))
+	for _, r := range rf.Repositories {
+		urlByName[r.Name] = r.URL
 	}
 
-	return charts, nil
-}
-
-func filterAndScore(entries []indexedChart, keyword string, useRegexp bool) ([]scoredChart, error) {
-	if keyword == "" {
-		results := make([]scoredChart, 0, len(entries))
-		for _, entry := range entries {
-			results = append(results, scoredChart{Entry: entry, Score: maxScore})
-		}
-		return results, nil
-	}
-
-	var matcher *regexp.Regexp
-	if useRegexp {
-		compiled, err := regexp.Compile(keyword)
-		if err != nil {
-			return nil, fmt.Errorf("search index: %w", err)
-		}
-		matcher = compiled
-	}
-
-	normalizedKeyword := strings.ToLower(keyword)
-	results := make([]scoredChart, 0)
-	for _, entry := range entries {
-		description := ""
-		if entry.Chart != nil {
-			description = entry.Chart.Description
-		}
-
-		score := scoreMatch(entry.Name, description, normalizedKeyword, matcher)
-		if score > 0 {
-			results = append(results, scoredChart{Entry: entry, Score: score})
-		}
-	}
-
-	return results, nil
-}
-
-func scoreMatch(name, description, keyword string, matcher *regexp.Regexp) int {
-	if matcher != nil {
-		if matcher.MatchString(name) {
-			return maxScore
-		}
-		if matcher.MatchString(description) {
-			return 18
-		}
-		return 0
-	}
-
-	normalizedName := strings.ToLower(name)
-	normalizedDescription := strings.ToLower(description)
-
-	switch {
-	case normalizedName == keyword:
-		return maxScore
-	case strings.Contains(normalizedName, keyword):
-		return 20
-	case strings.Contains(normalizedDescription, keyword):
-		return 12
-	default:
-		return 0
-	}
+	return rf, urlByName, nil
 }
 
 func normalizeVersion(raw string) *semver.Version {

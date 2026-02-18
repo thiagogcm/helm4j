@@ -2,6 +2,8 @@ package dev.nthings.helm4j.repo;
 
 import java.time.Duration;
 
+import dev.nthings.helm4j.internal.model.ModelSupport;
+
 /** Request parameters for adding a chart repository. */
 public record RepoAddRequest(
     String name,
@@ -18,17 +20,13 @@ public record RepoAddRequest(
     Duration timeout) {
 
   public RepoAddRequest {
-    name = normalize(name);
-    url = normalize(url);
-    username = normalize(username);
-    password = normalize(password);
-    certificateFile = normalize(certificateFile);
-    keyFile = normalize(keyFile);
-    certificateAuthorityFile = normalize(certificateAuthorityFile);
-  }
-
-  public static RepoAddRequest defaults() {
-    return builder().build();
+    name = ModelSupport.normalizeBlankToNull(name);
+    url = ModelSupport.normalizeBlankToNull(url);
+    username = ModelSupport.normalizeBlankToNull(username);
+    password = ModelSupport.normalizeBlankToNull(password);
+    certificateFile = ModelSupport.normalizeBlankToNull(certificateFile);
+    keyFile = ModelSupport.normalizeBlankToNull(keyFile);
+    certificateAuthorityFile = ModelSupport.normalizeBlankToNull(certificateAuthorityFile);
   }
 
   public static Builder builder() {
@@ -126,13 +124,5 @@ public record RepoAddRequest(
           allowDeprecatedRepositories,
           timeout);
     }
-  }
-
-  private static String normalize(String value) {
-    if (value == null) {
-      return null;
-    }
-    var normalized = value.trim();
-    return normalized.isEmpty() ? null : normalized;
   }
 }

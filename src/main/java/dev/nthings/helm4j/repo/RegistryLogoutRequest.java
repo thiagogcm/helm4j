@@ -1,10 +1,12 @@
 package dev.nthings.helm4j.repo;
 
+import dev.nthings.helm4j.internal.model.ModelSupport;
+
 /** Request parameters for registry logout. */
 public record RegistryLogoutRequest(String hostname) {
 
   public RegistryLogoutRequest {
-    hostname = normalize(hostname);
+    hostname = ModelSupport.normalizeBlankToNull(hostname);
   }
 
   public static Builder builder() {
@@ -24,13 +26,5 @@ public record RegistryLogoutRequest(String hostname) {
     public RegistryLogoutRequest build() {
       return new RegistryLogoutRequest(hostname);
     }
-  }
-
-  private static String normalize(String value) {
-    if (value == null) {
-      return null;
-    }
-    var normalized = value.trim();
-    return normalized.isEmpty() ? null : normalized;
   }
 }

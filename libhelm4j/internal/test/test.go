@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 
 	"helm.sh/helm/v4/pkg/action"
+	"helm.sh/helm/v4/pkg/release"
 	v1release "helm.sh/helm/v4/pkg/release/v1"
 
 	"github.com/thiagogcm/libhelm4j/internal/bridge"
@@ -82,19 +84,28 @@ func Run(releaseName string, opts Options) (string, error) {
 		return "", fmt.Errorf("map release: %w", mapErr)
 	}
 
-	// Collect test hook results from the v1 release type.
+	acc, accErr := release.NewAccessor(rel)
+	if accErr != nil {
+		return "", fmt.Errorf("create accessor: %w", accErr)
+	}
+
+	// Collect test hook results. Hook events and phase require the v1 type;
+	// the release.HookAccessor interface only provides Path() and Manifest().
 	var results []TestResult
-	if v1, ok := rel.(*v1release.Release); ok {
-		for _, h := range v1.Hooks {
-			for _, e := range h.Events {
-				if e == v1release.HookTest {
-					results = append(results, TestResult{
-						Name:   h.Name,
-						Status: string(h.LastRun.Phase),
-					})
-					break
-				}
+	for _, h := range acc.Hooks() {
+		v1h, ok := h.(*v1release.Hook)
+		if !ok {
+			v, cast := h.(v1release.Hook)
+			if !cast {
+				continue
 			}
+			v1h = &v
+		}
+		if slices.Contains(v1h.Events, v1release.HookTest) {
+			results = append(results, TestResult{
+				Name:   v1h.Name,
+				Status: string(v1h.LastRun.Phase),
+			})
 		}
 	}
 	if results == nil {

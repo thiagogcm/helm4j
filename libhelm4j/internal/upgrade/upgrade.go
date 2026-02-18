@@ -7,11 +7,16 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"strings"
 	"time"
 
 	"helm.sh/helm/v4/pkg/action"
+	"helm.sh/helm/v4/pkg/chart"
+	"helm.sh/helm/v4/pkg/downloader"
+	"helm.sh/helm/v4/pkg/getter"
 	"helm.sh/helm/v4/pkg/kube"
+	"helm.sh/helm/v4/pkg/storage/driver"
 
 	"github.com/thiagogcm/libhelm4j/internal/bridge"
 	"github.com/thiagogcm/libhelm4j/internal/helmenv"
@@ -21,20 +26,8 @@ import (
 
 // Options captures the Helm flags relevant to `helm upgrade`.
 type Options struct {
-	// Chart resolution (ChartPathOptions)
-	Version               string `json:"version,omitempty"`
-	RepoURL               string `json:"repo,omitempty"`
-	Username              string `json:"username,omitempty"`
-	Password              string `json:"password,omitempty"`
-	PlainHTTP             bool   `json:"plainHttp,omitempty"`
-	InsecureSkipTLSVerify bool   `json:"insecureSkipTlsVerify,omitempty"`
-	Keyring               string `json:"keyring,omitempty"`
-	CertFile              string `json:"certFile,omitempty"`
-	KeyFile               string `json:"keyFile,omitempty"`
-	CaFile                string `json:"caFile,omitempty"`
-	PassCredentialsAll    bool   `json:"passCredentialsAll,omitempty"`
-	Verify                bool   `json:"verify,omitempty"`
-	Devel                 bool   `json:"devel,omitempty"`
+	// Chart resolution (shared with install, template, show, pull)
+	helmenv.ChartPathOpts
 
 	// Upgrade behaviour
 	Namespace                string `json:"namespace,omitempty"`
@@ -59,6 +52,7 @@ type Options struct {
 	ReuseValues              bool   `json:"reuseValues,omitempty"`
 	ResetValues              bool   `json:"resetValues,omitempty"`
 	ResetThenReuseValues     bool   `json:"resetThenReuseValues,omitempty"`
+	DependencyUpdate         bool   `json:"dependencyUpdate,omitempty"`
 
 	Values map[string]any    `json:"values,omitempty"`
 	Labels map[string]string `json:"labels,omitempty"`
@@ -98,15 +92,7 @@ func Run(releaseName, chartRef string, opts Options) (string, error) {
 		return "", fmt.Errorf("bootstrap helm: %w", err)
 	}
 
-	regClient, err := helmenv.BuildRegistryClient(env.Settings, helmenv.RegistryOptions{
-		CertFile:              opts.CertFile,
-		KeyFile:               opts.KeyFile,
-		CaFile:                opts.CaFile,
-		InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
-		PlainHTTP:             opts.PlainHTTP,
-		Username:              opts.Username,
-		Password:              opts.Password,
-	})
+	regClient, err := helmenv.BuildRegistryClient(env.Settings, helmenv.RegistryOptsFromChartPath(opts.ChartPathOpts))
 	if err != nil {
 		return "", fmt.Errorf("registry client: %w", err)
 	}
@@ -116,7 +102,13 @@ func Run(releaseName, chartRef string, opts Options) (string, error) {
 	client.SetRegistryClient(regClient)
 	applyOptions(client, opts)
 
-	_, ch, err := helmenv.LocateAndLoadChart(chartRef, client.Version, client.Devel, env.Settings, client)
+	chartPath, ch, err := helmenv.LocateAndLoadChart(chartRef, client.Version, client.Devel, env.Settings, client)
+	if err != nil {
+		return "", err
+	}
+
+	// --- dependency preflight ---
+	ch, err = checkDependencies(ch, chartPath, chartRef, client, env, opts, log)
 	if err != nil {
 		return "", err
 	}
@@ -133,39 +125,100 @@ func Run(releaseName, chartRef string, opts Options) (string, error) {
 		defer cancel()
 	}
 
+	// When install=true, check release history and fall back to install
+	// if the release does not exist. The Upgrade.Install field in the Helm
+	// SDK is informational only — the actual fallback must be done here,
+	// mirroring what the Helm CLI does in pkg/cmd/upgrade.go.
+	if opts.Install {
+		rel, fallbackErr := installFallback(ctx, env, client, releaseName, ch, vals, opts)
+		if fallbackErr == nil {
+			// Fallback to install succeeded — return the install result.
+			if rel != nil {
+				return marshalResponse(rel)
+			}
+			// rel == nil means history exists, proceed with normal upgrade.
+		} else {
+			return "", fallbackErr
+		}
+	}
+
 	rel, err := client.RunWithContext(ctx, releaseName, ch, vals)
 	if err != nil {
 		return "", fmt.Errorf("helm upgrade: %w", err)
 	}
 
+	return marshalResponse(rel)
+}
+
+func marshalResponse(rel any) (string, error) {
 	info, err := releaseutil.MapRelease(rel)
 	if err != nil {
 		return "", fmt.Errorf("map release: %w", err)
 	}
 
 	resp := Response{Release: info}
-	result, err := bridge.MarshalJSON(resp)
-	if err != nil {
-		return "", err
+	return bridge.MarshalJSON(resp)
+}
+
+// installFallback checks whether the release already exists. If it does not
+// (or is fully uninstalled), it performs an install and returns the resulting
+// release. If the release exists, it returns (nil, nil) to signal the caller
+// should proceed with a normal upgrade.
+func installFallback(ctx context.Context, env *helmenv.Env, upgradeClient *action.Upgrade, releaseName string, ch chart.Charter, vals map[string]any, opts Options) (any, error) {
+	hist := action.NewHistory(env.Config)
+	hist.Max = 1
+	versions, histErr := hist.Run(releaseName)
+
+	needInstall := false
+	if histErr != nil {
+		if errors.Is(histErr, driver.ErrReleaseNotFound) {
+			needInstall = true
+		} else {
+			return nil, fmt.Errorf("history lookup: %w", histErr)
+		}
+	} else if len(versions) > 0 && releaseutil.IsAllUninstalled(versions) {
+		needInstall = true
 	}
 
-	log.Debug("helm upgrade completed successfully")
-	return result, nil
+	if !needInstall {
+		// Release exists — caller should proceed with normal upgrade.
+		return nil, nil
+	}
+
+	inst := action.NewInstall(env.Config)
+	inst.SetRegistryClient(env.Config.RegistryClient)
+	mapUpgradeToInstall(inst, upgradeClient, opts)
+	inst.ReleaseName = releaseName
+
+	rel, err := inst.RunWithContext(ctx, ch, vals)
+	if err != nil {
+		return nil, fmt.Errorf("helm install (via upgrade --install): %w", err)
+	}
+	return rel, nil
+}
+
+// mapUpgradeToInstall copies applicable upgrade options to an install action.
+func mapUpgradeToInstall(inst *action.Install, upgrade *action.Upgrade, opts Options) {
+	inst.ChartPathOptions = upgrade.ChartPathOptions
+	inst.DryRunStrategy = upgrade.DryRunStrategy
+	inst.WaitStrategy = upgrade.WaitStrategy
+	inst.WaitForJobs = upgrade.WaitForJobs
+	inst.Devel = upgrade.Devel
+	inst.Namespace = upgrade.Namespace
+	inst.Timeout = upgrade.Timeout
+	inst.Description = upgrade.Description
+	inst.SkipCRDs = upgrade.SkipCRDs
+	inst.DisableHooks = upgrade.DisableHooks
+	inst.DisableOpenAPIValidation = upgrade.DisableOpenAPIValidation
+	inst.SubNotes = upgrade.SubNotes
+	inst.EnableDNS = upgrade.EnableDNS
+	inst.TakeOwnership = upgrade.TakeOwnership
+	inst.Labels = upgrade.Labels
+	inst.CreateNamespace = true
 }
 
 func applyOptions(client *action.Upgrade, opts Options) {
-	client.ChartPathOptions.Version = opts.Version
-	client.ChartPathOptions.RepoURL = opts.RepoURL
-	client.ChartPathOptions.Username = opts.Username
-	client.ChartPathOptions.Password = opts.Password
-	client.ChartPathOptions.PlainHTTP = opts.PlainHTTP
-	client.ChartPathOptions.InsecureSkipTLSVerify = opts.InsecureSkipTLSVerify
-	client.ChartPathOptions.Keyring = opts.Keyring
-	client.ChartPathOptions.CertFile = opts.CertFile
-	client.ChartPathOptions.KeyFile = opts.KeyFile
-	client.ChartPathOptions.CaFile = opts.CaFile
-	client.ChartPathOptions.PassCredentialsAll = opts.PassCredentialsAll
-	client.ChartPathOptions.Verify = opts.Verify
+	helmenv.ApplyChartPathOptions(&client.ChartPathOptions, opts.ChartPathOpts)
 
 	client.Devel = opts.Devel
 	client.Namespace = opts.Namespace
@@ -179,11 +232,7 @@ func applyOptions(client *action.Upgrade, opts Options) {
 	client.ForceReplace = opts.ForceReplace
 	client.ForceConflicts = opts.ForceConflicts
 	if opts.ServerSideApply != nil {
-		if *opts.ServerSideApply {
-			client.ServerSideApply = "true"
-		} else {
-			client.ServerSideApply = "false"
-		}
+		client.ServerSideApply = strconv.FormatBool(*opts.ServerSideApply)
 	}
 	client.SubNotes = opts.SubNotes
 	client.EnableDNS = opts.EnableDNS
@@ -205,4 +254,47 @@ func applyOptions(client *action.Upgrade, opts Options) {
 		d, _ := time.ParseDuration(opts.Timeout) // already validated above in Run
 		client.Timeout = d
 	}
+}
+
+// checkDependencies verifies the chart's dependencies are present. When
+// opts.DependencyUpdate is true and dependencies are missing, it downloads
+// them and reloads the chart. Otherwise it returns an error.
+func checkDependencies(ch any, chartPath, chartRef string, client *action.Upgrade, env *helmenv.Env, opts Options, log *slog.Logger) (any, error) {
+	chAcc, err := chart.NewAccessor(ch)
+	if err != nil {
+		return ch, nil
+	}
+
+	deps := chAcc.MetaDependencies()
+	if len(deps) == 0 {
+		return ch, nil
+	}
+
+	if err := action.CheckDependencies(ch, deps); err != nil {
+		if !opts.DependencyUpdate {
+			return nil, fmt.Errorf("missing chart dependencies: %w; run 'helm dependency build' or set dependencyUpdate", err)
+		}
+
+		log.Debug("updating chart dependencies", slog.String("chartPath", chartPath))
+		man := &downloader.Manager{
+			ChartPath:        chartPath,
+			Getters:          getter.All(env.Settings),
+			RegistryClient:   env.Config.RegistryClient,
+			RepositoryConfig: env.Settings.RepositoryConfig,
+			RepositoryCache:  env.Settings.RepositoryCache,
+			ContentCache:     env.Settings.ContentCache,
+			Debug:            env.Settings.Debug,
+		}
+		if err := man.Update(); err != nil {
+			return nil, fmt.Errorf("update dependencies: %w", err)
+		}
+
+		_, reloaded, err := helmenv.LocateAndLoadChart(chartRef, client.Version, client.Devel, env.Settings, client)
+		if err != nil {
+			return nil, fmt.Errorf("reload chart after dependency update: %w", err)
+		}
+		return reloaded, nil
+	}
+
+	return ch, nil
 }

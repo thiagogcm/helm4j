@@ -11,6 +11,9 @@ import (
 	"time"
 
 	"helm.sh/helm/v4/pkg/action"
+	"helm.sh/helm/v4/pkg/chart"
+	"helm.sh/helm/v4/pkg/downloader"
+	"helm.sh/helm/v4/pkg/getter"
 	"helm.sh/helm/v4/pkg/kube"
 
 	"github.com/thiagogcm/libhelm4j/internal/bridge"
@@ -23,20 +26,8 @@ import (
 // discovery. JSON tags use the same camelCase convention as every other
 // operation in libhelm4j.
 type Options struct {
-	// Chart resolution (ChartPathOptions)
-	Version               string `json:"version,omitempty"`
-	RepoURL               string `json:"repo,omitempty"`
-	Username              string `json:"username,omitempty"`
-	Password              string `json:"password,omitempty"`
-	PlainHTTP             bool   `json:"plainHttp,omitempty"`
-	InsecureSkipTLSVerify bool   `json:"insecureSkipTlsVerify,omitempty"`
-	Keyring               string `json:"keyring,omitempty"`
-	CertFile              string `json:"certFile,omitempty"`
-	KeyFile               string `json:"keyFile,omitempty"`
-	CaFile                string `json:"caFile,omitempty"`
-	PassCredentialsAll    bool   `json:"passCredentialsAll,omitempty"`
-	Verify                bool   `json:"verify,omitempty"`
-	Devel                 bool   `json:"devel,omitempty"`
+	// Chart resolution (shared with upgrade, template, show, pull)
+	helmenv.ChartPathOpts
 
 	// Install behaviour
 	Namespace                string `json:"namespace,omitempty"`
@@ -59,6 +50,7 @@ type Options struct {
 	SubNotes                 bool   `json:"subNotes,omitempty"`
 	EnableDNS                bool   `json:"enableDns,omitempty"`
 	TakeOwnership            bool   `json:"takeOwnership,omitempty"`
+	DependencyUpdate         bool   `json:"dependencyUpdate,omitempty"`
 
 	// Values — a pre-merged values map from the caller.
 	Values map[string]any    `json:"values,omitempty"`
@@ -82,9 +74,6 @@ func Run(releaseName, chartRef string, opts Options) (string, error) {
 		slog.String("chartRef", chartRef),
 	)
 
-	if strings.TrimSpace(releaseName) == "" && !opts.GenerateName {
-		return "", errors.New("release name is required (or set generateName)")
-	}
 	if strings.TrimSpace(chartRef) == "" {
 		return "", errors.New("chart reference is required")
 	}
@@ -105,15 +94,7 @@ func Run(releaseName, chartRef string, opts Options) (string, error) {
 		return "", fmt.Errorf("bootstrap helm: %w", err)
 	}
 
-	regClient, err := helmenv.BuildRegistryClient(env.Settings, helmenv.RegistryOptions{
-		CertFile:              opts.CertFile,
-		KeyFile:               opts.KeyFile,
-		CaFile:                opts.CaFile,
-		InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
-		PlainHTTP:             opts.PlainHTTP,
-		Username:              opts.Username,
-		Password:              opts.Password,
-	})
+	regClient, err := helmenv.BuildRegistryClient(env.Settings, helmenv.RegistryOptsFromChartPath(opts.ChartPathOpts))
 	if err != nil {
 		log.Warn("failed to initialize registry client", slog.Any("error", err))
 		return "", fmt.Errorf("registry client: %w", err)
@@ -122,14 +103,27 @@ func Run(releaseName, chartRef string, opts Options) (string, error) {
 
 	// --- configure the install action ---
 	client := action.NewInstall(env.Config)
-	client.ReleaseName = releaseName
 	client.SetRegistryClient(regClient)
 	applyOptions(client, opts)
 
+	// Use NameAndChart to handle generateName, nameTemplate, and mutual
+	// exclusion validations exactly like the Helm CLI.
+	name, _, err := client.NameAndChart([]string{releaseName, chartRef})
+	if err != nil {
+		return "", fmt.Errorf("resolve name and chart: %w", err)
+	}
+	client.ReleaseName = name
+
 	// --- locate and load the chart ---
-	_, ch, err := helmenv.LocateAndLoadChart(chartRef, client.Version, client.Devel, env.Settings, client)
+	chartPath, ch, err := helmenv.LocateAndLoadChart(chartRef, client.Version, client.Devel, env.Settings, client)
 	if err != nil {
 		log.Warn("failed to locate or load chart", slog.Any("error", err))
+		return "", err
+	}
+
+	// --- dependency preflight ---
+	ch, err = checkDependencies(ch, chartPath, chartRef, client, env, opts, log)
+	if err != nil {
 		return "", err
 	}
 
@@ -181,18 +175,7 @@ func Run(releaseName, chartRef string, opts Options) (string, error) {
 // client, mirroring the approach used by show.applyOptions.
 func applyOptions(client *action.Install, opts Options) {
 	// ChartPathOptions
-	client.ChartPathOptions.Version = opts.Version
-	client.ChartPathOptions.RepoURL = opts.RepoURL
-	client.ChartPathOptions.Username = opts.Username
-	client.ChartPathOptions.Password = opts.Password
-	client.ChartPathOptions.PlainHTTP = opts.PlainHTTP
-	client.ChartPathOptions.InsecureSkipTLSVerify = opts.InsecureSkipTLSVerify
-	client.ChartPathOptions.Keyring = opts.Keyring
-	client.ChartPathOptions.CertFile = opts.CertFile
-	client.ChartPathOptions.KeyFile = opts.KeyFile
-	client.ChartPathOptions.CaFile = opts.CaFile
-	client.ChartPathOptions.PassCredentialsAll = opts.PassCredentialsAll
-	client.ChartPathOptions.Verify = opts.Verify
+	helmenv.ApplyChartPathOptions(&client.ChartPathOptions, opts.ChartPathOpts)
 
 	// Install-specific flags
 	client.Devel = opts.Devel
@@ -229,4 +212,49 @@ func applyOptions(client *action.Install, opts Options) {
 		d, _ := time.ParseDuration(opts.Timeout) // already validated above in Run
 		client.Timeout = d
 	}
+}
+
+// checkDependencies verifies the chart's dependencies are present. When
+// opts.DependencyUpdate is true and dependencies are missing, it downloads
+// them and reloads the chart. Otherwise it returns an error pointing the
+// caller to `helm dependency build`.
+func checkDependencies(ch any, chartPath, chartRef string, client *action.Install, env *helmenv.Env, opts Options, log *slog.Logger) (any, error) {
+	chAcc, err := chart.NewAccessor(ch)
+	if err != nil {
+		return ch, nil
+	}
+
+	deps := chAcc.MetaDependencies()
+	if len(deps) == 0 {
+		return ch, nil
+	}
+
+	if err := action.CheckDependencies(ch, deps); err != nil {
+		if !opts.DependencyUpdate {
+			return nil, fmt.Errorf("missing chart dependencies: %w; run 'helm dependency build' or set dependencyUpdate", err)
+		}
+
+		log.Debug("updating chart dependencies", slog.String("chartPath", chartPath))
+		man := &downloader.Manager{
+			ChartPath:        chartPath,
+			Getters:          getter.All(env.Settings),
+			RegistryClient:   env.Config.RegistryClient,
+			RepositoryConfig: env.Settings.RepositoryConfig,
+			RepositoryCache:  env.Settings.RepositoryCache,
+			ContentCache:     env.Settings.ContentCache,
+			Debug:            env.Settings.Debug,
+		}
+		if err := man.Update(); err != nil {
+			return nil, fmt.Errorf("update dependencies: %w", err)
+		}
+
+		// Reload the chart after dependency update.
+		_, reloaded, err := helmenv.LocateAndLoadChart(chartRef, client.Version, client.Devel, env.Settings, client)
+		if err != nil {
+			return nil, fmt.Errorf("reload chart after dependency update: %w", err)
+		}
+		return reloaded, nil
+	}
+
+	return ch, nil
 }

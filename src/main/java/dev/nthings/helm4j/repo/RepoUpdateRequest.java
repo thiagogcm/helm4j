@@ -4,15 +4,13 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 
+import dev.nthings.helm4j.internal.model.ModelSupport;
+
 /** Request options for repository update operations. */
 public record RepoUpdateRequest(List<String> names, Duration timeout) {
 
   public RepoUpdateRequest {
     names = normalizeNames(names);
-  }
-
-  public static RepoUpdateRequest defaults() {
-    return builder().build();
   }
 
   public static Builder builder() {
@@ -49,14 +47,6 @@ public record RepoUpdateRequest(List<String> names, Duration timeout) {
     if (value == null || value.isEmpty()) {
       return List.of();
     }
-    return value.stream().map(RepoUpdateRequest::normalize).filter(v -> v != null).toList();
-  }
-
-  private static String normalize(String value) {
-    if (value == null) {
-      return null;
-    }
-    var normalized = value.trim();
-    return normalized.isEmpty() ? null : normalized;
+    return value.stream().map(ModelSupport::normalizeBlankToNull).filter(v -> v != null).toList();
   }
 }

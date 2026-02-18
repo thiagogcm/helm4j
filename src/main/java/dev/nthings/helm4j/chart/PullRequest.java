@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.util.Objects;
 import java.util.function.Consumer;
 
+import dev.nthings.helm4j.internal.model.ModelSupport;
 import dev.nthings.helm4j.types.ChartSource;
 
 /** Request parameters for pulling a chart archive. */
@@ -15,7 +16,7 @@ public record PullRequest(
     Path destinationDirectory) {
 
   public PullRequest {
-    chartReference = normalize(chartReference);
+    chartReference = ModelSupport.normalizeBlankToNull(chartReference);
     source = Objects.requireNonNullElseGet(source, ChartSource::defaults);
     untarDirectory = absoluteOrNull(untarDirectory);
     destinationDirectory = absoluteOrNull(destinationDirectory);
@@ -71,14 +72,6 @@ public record PullRequest(
       return new PullRequest(
           chartReference, resolvedSource, untar, untarDirectory, destinationDirectory);
     }
-  }
-
-  private static String normalize(String value) {
-    if (value == null) {
-      return null;
-    }
-    var normalized = value.trim();
-    return normalized.isEmpty() ? null : normalized;
   }
 
   private static Path absoluteOrNull(Path value) {

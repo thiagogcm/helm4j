@@ -1,5 +1,7 @@
 package dev.nthings.helm4j.chart;
 
+import dev.nthings.helm4j.internal.model.ModelSupport;
+
 /** Request parameters for searching configured chart repositories. */
 public record RepoSearchRequest(
     String keyword,
@@ -11,12 +13,8 @@ public record RepoSearchRequest(
     int maxColumnWidth) {
 
   public RepoSearchRequest {
-    keyword = normalize(keyword);
-    versionConstraint = normalize(versionConstraint);
-  }
-
-  public static RepoSearchRequest defaults(String keyword) {
-    return builder().keyword(keyword).build();
+    keyword = ModelSupport.normalizeBlankToNull(keyword);
+    versionConstraint = ModelSupport.normalizeBlankToNull(versionConstraint);
   }
 
   public static Builder builder() {
@@ -79,13 +77,5 @@ public record RepoSearchRequest(
           failIfNoResults,
           maxColumnWidth);
     }
-  }
-
-  private static String normalize(String value) {
-    if (value == null) {
-      return null;
-    }
-    var normalized = value.trim();
-    return normalized.isEmpty() ? null : normalized;
   }
 }

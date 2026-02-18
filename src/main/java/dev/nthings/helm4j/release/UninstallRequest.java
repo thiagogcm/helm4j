@@ -2,6 +2,8 @@ package dev.nthings.helm4j.release;
 
 import java.time.Duration;
 
+import dev.nthings.helm4j.internal.model.ModelSupport;
+
 /** Request parameters for uninstalling a release. */
 public record UninstallRequest(
     String releaseName,
@@ -16,10 +18,10 @@ public record UninstallRequest(
     String deletionPropagation) {
 
   public UninstallRequest {
-    releaseName = normalize(releaseName);
-    namespace = normalize(namespace);
-    description = normalize(description);
-    deletionPropagation = normalize(deletionPropagation);
+    releaseName = ModelSupport.normalizeBlankToNull(releaseName);
+    namespace = ModelSupport.normalizeBlankToNull(namespace);
+    description = ModelSupport.normalizeBlankToNull(description);
+    deletionPropagation = ModelSupport.normalizeBlankToNull(deletionPropagation);
   }
 
   public static Builder builder() {
@@ -103,11 +105,5 @@ public record UninstallRequest(
           waitMode,
           deletionPropagation);
     }
-  }
-
-  private static String normalize(String value) {
-    if (value == null) return null;
-    var normalized = value.trim();
-    return normalized.isEmpty() ? null : normalized;
   }
 }

@@ -3,6 +3,8 @@ package dev.nthings.helm4j.release;
 import java.time.Duration;
 import java.util.Objects;
 
+import dev.nthings.helm4j.internal.model.ModelSupport;
+
 /** Request parameters for rolling back a release. */
 public record RollbackRequest(
     String releaseName,
@@ -19,8 +21,8 @@ public record RollbackRequest(
     ApplyStrategy applyStrategy) {
 
   public RollbackRequest {
-    releaseName = normalize(releaseName);
-    namespace = normalize(namespace);
+    releaseName = ModelSupport.normalizeBlankToNull(releaseName);
+    namespace = ModelSupport.normalizeBlankToNull(namespace);
     applyStrategy = Objects.requireNonNullElse(applyStrategy, ApplyStrategy.SERVER_SIDE_APPLY);
   }
 
@@ -119,11 +121,5 @@ public record RollbackRequest(
           maxHistory,
           applyStrategy);
     }
-  }
-
-  private static String normalize(String value) {
-    if (value == null) return null;
-    var normalized = value.trim();
-    return normalized.isEmpty() ? null : normalized;
   }
 }

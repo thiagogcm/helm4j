@@ -29,6 +29,9 @@ func buildTLSConfig(opts RegistryOptions) (*tls.Config, error) {
 
 		cert, err := tls.LoadX509KeyPair(opts.CertFile, opts.KeyFile)
 		if err != nil {
+			if perr, ok := errors.AsType[*os.PathError](err); ok {
+				return nil, fmt.Errorf("load client certificate (%s %q): %w", perr.Op, perr.Path, err)
+			}
 			return nil, fmt.Errorf("load client certificate: %w", err)
 		}
 		tlsConf.Certificates = []tls.Certificate{cert}
@@ -37,6 +40,9 @@ func buildTLSConfig(opts RegistryOptions) (*tls.Config, error) {
 	if opts.CaFile != "" {
 		caData, err := os.ReadFile(opts.CaFile)
 		if err != nil {
+			if perr, ok := errors.AsType[*os.PathError](err); ok {
+				return nil, fmt.Errorf("read CA file (%s %q): %w", perr.Op, perr.Path, err)
+			}
 			return nil, fmt.Errorf("read CA file: %w", err)
 		}
 		pool := x509.NewCertPool()
