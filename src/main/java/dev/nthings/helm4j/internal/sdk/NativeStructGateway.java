@@ -1,5 +1,6 @@
 package dev.nthings.helm4j.internal.sdk;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -40,6 +41,9 @@ import dev.nthings.helm4j.repo.RepoUpdateRequest;
 import dev.nthings.helm4j.repo.RepoUpdateResult;
 import dev.nthings.helm4j.types.ChartRef;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -47,10 +51,12 @@ import tools.jackson.databind.ObjectMapper;
 /** Gateway backed by JSON bridge functions exported by libhelm4j. */
 public final class NativeStructGateway implements HelmGateway {
 
-  private final NativeStructBridge bridge;
+  private static final Logger log = LoggerFactory.getLogger(NativeStructGateway.class);
+
+  private final HelmBridge bridge;
   private final ObjectMapper mapper;
 
-  public NativeStructGateway(NativeStructBridge bridge, ObjectMapper mapper) {
+  public NativeStructGateway(HelmBridge bridge, ObjectMapper mapper) {
     this.bridge = Objects.requireNonNull(bridge, "bridge");
     this.mapper = Objects.requireNonNull(mapper, "mapper");
   }
@@ -62,11 +68,11 @@ public final class NativeStructGateway implements HelmGateway {
       throw new IllegalArgumentException("Repository add requires non-null name and url");
     }
 
-    var payload =
-        invoke(
-            () -> bridge.repo("add", toJson(repoAddOptions(request), "repo add")),
-            "repo add",
-            "invokeNative");
+    log.debug("Adding repository: name={}, url={}", request.name(), request.url());
+    var payload = invoke(
+        () -> bridge.repo(utf8("add"), toJsonBytes(repoAddOptions(request), "repo add")),
+        "repo add",
+        "invokeNative");
     var root = parse(payload, "repo add");
 
     var failure = operationError(root, "repo add");
@@ -87,11 +93,11 @@ public final class NativeStructGateway implements HelmGateway {
   public RepoUpdateResult repoUpdate(RepoUpdateRequest request) {
     Objects.requireNonNull(request, "request");
 
-    var payload =
-        invoke(
-            () -> bridge.repo("update", toJson(repoUpdateOptions(request), "repo update")),
-            "repo update",
-            "invokeNative");
+    log.debug("Updating repositories: names={}", request.names());
+    var payload = invoke(
+        () -> bridge.repo(utf8("update"), toJsonBytes(repoUpdateOptions(request), "repo update")),
+        "repo update",
+        "invokeNative");
     var root = parse(payload, "repo update");
 
     var failure = operationError(root, "repo update");
@@ -100,18 +106,19 @@ public final class NativeStructGateway implements HelmGateway {
     }
 
     var response = convert(root, RepoUpdatePayload.class, "repo update");
-    var repositories =
-        listOrEmpty(response == null ? null : response.repositories()).stream()
-            .map(entry -> new RepoUpdateEntry(entry.name(), entry.status()))
-            .toList();
+    var repositories = listOrEmpty(response == null ? null : response.repositories()).stream()
+        .map(entry -> new RepoUpdateEntry(entry.name(), entry.status()))
+        .toList();
     return new RepoUpdateResult(repositories);
   }
 
   @Override
   public RepoListResult repoList() {
-    var payload =
-        invoke(
-            () -> bridge.repo("list", toJson(Map.of(), "repo list")), "repo list", "invokeNative");
+    log.debug("Listing repositories");
+    var payload = invoke(
+        () -> bridge.repo(utf8("list"), toJsonBytes(Map.of(), "repo list")),
+        "repo list",
+        "invokeNative");
     var root = parse(payload, "repo list");
 
     var failure = operationError(root, "repo list");
@@ -120,10 +127,9 @@ public final class NativeStructGateway implements HelmGateway {
     }
 
     var response = convert(root, RepoListPayload.class, "repo list");
-    var repositories =
-        listOrEmpty(response == null ? null : response.repositories()).stream()
-            .map(entry -> new RepoSummary(entry.name(), entry.url()))
-            .toList();
+    var repositories = listOrEmpty(response == null ? null : response.repositories()).stream()
+        .map(entry -> new RepoSummary(entry.name(), entry.url()))
+        .toList();
     return new RepoListResult(repositories);
   }
 
@@ -131,11 +137,11 @@ public final class NativeStructGateway implements HelmGateway {
   public RepoRemoveResult repoRemove(RepoRemoveRequest request) {
     Objects.requireNonNull(request, "request");
 
-    var payload =
-        invoke(
-            () -> bridge.repo("remove", toJson(repoRemoveOptions(request), "repo remove")),
-            "repo remove",
-            "invokeNative");
+    log.debug("Removing repositories: names={}", request.names());
+    var payload = invoke(
+        () -> bridge.repo(utf8("remove"), toJsonBytes(repoRemoveOptions(request), "repo remove")),
+        "repo remove",
+        "invokeNative");
     var root = parse(payload, "repo remove");
 
     var failure = operationError(root, "repo remove");
@@ -151,11 +157,11 @@ public final class NativeStructGateway implements HelmGateway {
   public RepoSearchResult searchRepo(RepoSearchRequest request) {
     Objects.requireNonNull(request, "request");
 
-    var payload =
-        invoke(
-            () -> bridge.search("repo", toJson(searchRepoOptions(request), "search repo")),
-            "search repo",
-            "invokeNative");
+    log.debug("Searching repositories: keyword={}", request.keyword());
+    var payload = invoke(
+        () -> bridge.search(utf8("repo"), toJsonBytes(searchRepoOptions(request), "search repo")),
+        "search repo",
+        "invokeNative");
     var root = parse(payload, "search repo");
 
     var failure = operationError(root, "search repo");
@@ -164,19 +170,17 @@ public final class NativeStructGateway implements HelmGateway {
     }
 
     var response = convert(root, SearchPayload.class, "search repo");
-    var charts =
-        listOrEmpty(response == null ? null : response.results()).stream()
-            .map(
-                entry ->
-                    new RepoChartSummary(
-                        entry.name(),
-                        entry.version(),
-                        entry.appVersion(),
-                        entry.description(),
-                        entry.score(),
-                        entry.repositoryName(),
-                        entry.repositoryUrl()))
-            .toList();
+    var charts = listOrEmpty(response == null ? null : response.results()).stream()
+        .map(
+            entry -> new RepoChartSummary(
+                entry.name(),
+                entry.version(),
+                entry.appVersion(),
+                entry.description(),
+                entry.score(),
+                entry.repositoryName(),
+                entry.repositoryUrl()))
+        .toList();
     return new RepoSearchResult(charts);
   }
 
@@ -184,11 +188,11 @@ public final class NativeStructGateway implements HelmGateway {
   public HubSearchResult searchHub(HubSearchRequest request) {
     Objects.requireNonNull(request, "request");
 
-    var payload =
-        invoke(
-            () -> bridge.search("hub", toJson(searchHubOptions(request), "search hub")),
-            "search hub",
-            "invokeNative");
+    log.debug("Searching hub: keyword={}", request.keyword());
+    var payload = invoke(
+        () -> bridge.search(utf8("hub"), toJsonBytes(searchHubOptions(request), "search hub")),
+        "search hub",
+        "invokeNative");
     var root = parse(payload, "search hub");
 
     var failure = operationError(root, "search hub");
@@ -197,20 +201,18 @@ public final class NativeStructGateway implements HelmGateway {
     }
 
     var response = convert(root, SearchPayload.class, "search hub");
-    var charts =
-        listOrEmpty(response == null ? null : response.results()).stream()
-            .map(
-                entry ->
-                    new HubChartSummary(
-                        entry.name(),
-                        entry.version(),
-                        entry.appVersion(),
-                        entry.description(),
-                        entry.score(),
-                        entry.url(),
-                        entry.repositoryName(),
-                        entry.repositoryUrl()))
-            .toList();
+    var charts = listOrEmpty(response == null ? null : response.results()).stream()
+        .map(
+            entry -> new HubChartSummary(
+                entry.name(),
+                entry.version(),
+                entry.appVersion(),
+                entry.description(),
+                entry.score(),
+                entry.url(),
+                entry.repositoryName(),
+                entry.repositoryUrl()))
+        .toList();
     return new HubSearchResult(charts);
   }
 
@@ -274,15 +276,17 @@ public final class NativeStructGateway implements HelmGateway {
       throw new IllegalArgumentException("Install requires chart reference");
     }
 
-    var payload =
-        invoke(
-            () ->
-                bridge.install(
-                    request.releaseName(),
-                    request.chart().asReference(),
-                    toJson(installOptions(request), "install")),
-            "install",
-            "invokeNative");
+    log.debug(
+        "Installing release: name={}, chart={}",
+        request.releaseName(),
+        request.chart().asReference());
+    var payload = invoke(
+        () -> bridge.install(
+            utf8(request.releaseName()),
+            utf8(request.chart().asReference()),
+            toJsonBytes(installOptions(request), "install")),
+        "install",
+        "invokeNative");
     var root = parse(payload, "install");
 
     var failure = operationError(root, "install");
@@ -298,19 +302,18 @@ public final class NativeStructGateway implements HelmGateway {
     }
 
     var nativeRelease = response.release();
-    var release =
-        new ReleaseInfo(
-            nativeRelease.name(),
-            nativeRelease.namespace(),
-            nativeRelease.revision(),
-            nativeRelease.status(),
-            nativeRelease.description(),
-            nativeRelease.firstDeployed(),
-            nativeRelease.lastDeployed(),
-            nativeRelease.chartName(),
-            nativeRelease.chartVersion(),
-            nativeRelease.appVersion(),
-            nativeRelease.notes());
+    var release = new ReleaseInfo(
+        nativeRelease.name(),
+        nativeRelease.namespace(),
+        nativeRelease.revision(),
+        nativeRelease.status(),
+        nativeRelease.description(),
+        nativeRelease.firstDeployed(),
+        nativeRelease.lastDeployed(),
+        nativeRelease.chartName(),
+        nativeRelease.chartVersion(),
+        nativeRelease.appVersion(),
+        nativeRelease.notes());
 
     if (isPendingStatus(release.status())) {
       return new InstallPending(release);
@@ -324,15 +327,14 @@ public final class NativeStructGateway implements HelmGateway {
     Objects.requireNonNull(request, "request");
 
     var operation = "show " + mode.wireValue();
-    var payload =
-        invoke(
-            () ->
-                bridge.show(
-                    mode.wireValue(),
-                    chartReference.asReference(),
-                    toJson(showOptions(request), operation)),
-            operation,
-            "invokeNative");
+    log.debug("Show operation: mode={}, chart={}", mode.wireValue(), chartReference.asReference());
+    var payload = invoke(
+        () -> bridge.show(
+            utf8(mode.wireValue()),
+            utf8(chartReference.asReference()),
+            toJsonBytes(showOptions(request), operation)),
+        operation,
+        "invokeNative");
     var root = parse(payload, operation);
 
     var failure = operationError(root, operation);
@@ -352,21 +354,21 @@ public final class NativeStructGateway implements HelmGateway {
     return response;
   }
 
-  private String invoke(StringInvocation invocation, String operation, String stage) {
-    final String payload;
+  private byte[] invoke(ByteArrayInvocation invocation, String operation, String stage) {
+    final byte[] payload;
     try {
       payload = invocation.invoke();
     } catch (RuntimeException error) {
       throw new HelmException("Native bridge invocation failed", stage, operation, error);
     }
 
-    if (payload == null || payload.isBlank()) {
+    if (payload == null || payload.length == 0) {
       throw new HelmException("Native bridge returned empty response", stage, operation);
     }
     return payload;
   }
 
-  private JsonNode parse(String payload, String operation) {
+  private JsonNode parse(byte[] payload, String operation) {
     try {
       return mapper.readTree(payload);
     } catch (JacksonException error) {
@@ -412,12 +414,19 @@ public final class NativeStructGateway implements HelmGateway {
     return value.asText();
   }
 
-  private String toJson(Map<String, Object> payload, String operation) {
+  private byte[] toJsonBytes(Map<String, Object> payload, String operation) {
     try {
-      return mapper.writeValueAsString(payload);
+      return mapper.writeValueAsBytes(payload);
     } catch (JacksonException error) {
       throw new HelmException("Failed to encode native options", "encodeOptions", operation, error);
     }
+  }
+
+  private static byte[] utf8(String value) {
+    if (value == null) {
+      return null;
+    }
+    return value.getBytes(StandardCharsets.UTF_8);
   }
 
   private static Map<String, Object> repoAddOptions(RepoAddRequest request) {
@@ -580,25 +589,33 @@ public final class NativeStructGateway implements HelmGateway {
   }
 
   @FunctionalInterface
-  private interface StringInvocation {
-    String invoke();
+  private interface ByteArrayInvocation {
+    byte[] invoke();
   }
 
-  private record OperationError(String message, String stage, String operation) {}
+  private record OperationError(String message, String stage, String operation) {
+  }
 
-  private record RepoAddPayload(String name, String url) {}
+  private record RepoAddPayload(String name, String url) {
+  }
 
-  private record RepoUpdatePayload(List<RepoUpdateEntryPayload> repositories) {}
+  private record RepoUpdatePayload(List<RepoUpdateEntryPayload> repositories) {
+  }
 
-  private record RepoUpdateEntryPayload(String name, String status) {}
+  private record RepoUpdateEntryPayload(String name, String status) {
+  }
 
-  private record RepoListPayload(List<RepoListEntryPayload> repositories) {}
+  private record RepoListPayload(List<RepoListEntryPayload> repositories) {
+  }
 
-  private record RepoListEntryPayload(String name, String url) {}
+  private record RepoListEntryPayload(String name, String url) {
+  }
 
-  private record RepoRemovePayload(List<String> removed) {}
+  private record RepoRemovePayload(List<String> removed) {
+  }
 
-  private record SearchPayload(List<SearchResultPayload> results) {}
+  private record SearchPayload(List<SearchResultPayload> results) {
+  }
 
   private record SearchResultPayload(
       String name,
@@ -608,19 +625,23 @@ public final class NativeStructGateway implements HelmGateway {
       int score,
       String url,
       String repositoryName,
-      String repositoryUrl) {}
+      String repositoryUrl) {
+  }
 
   private record ShowPayload(
       String mode,
       String chartRef,
       String chartPath,
       ShowSectionsPayload sections,
-      String cliOutput) {}
+      String cliOutput) {
+  }
 
   private record ShowSectionsPayload(
-      String chart, String values, String readme, List<String> crds) {}
+      String chart, String values, String readme, List<String> crds) {
+  }
 
-  private record InstallPayload(InstallReleasePayload release) {}
+  private record InstallPayload(InstallReleasePayload release) {
+  }
 
   private record InstallReleasePayload(
       String name,
@@ -633,5 +654,6 @@ public final class NativeStructGateway implements HelmGateway {
       String chartName,
       String chartVersion,
       String appVersion,
-      String notes) {}
+      String notes) {
+  }
 }
