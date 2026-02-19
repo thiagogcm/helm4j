@@ -11,9 +11,8 @@ import dev.nthings.helm4j.internal.api.ClientSupport;
 import dev.nthings.helm4j.release.ApplyStrategy;
 import dev.nthings.helm4j.release.DryRunMode;
 import dev.nthings.helm4j.release.InstallRequest;
-import dev.nthings.helm4j.release.InstallResult;
+import dev.nthings.helm4j.release.ReleaseOutcome;
 import dev.nthings.helm4j.release.UpgradeRequest;
-import dev.nthings.helm4j.release.UpgradeResult;
 import dev.nthings.helm4j.release.WaitMode;
 
 /** Standard static SDK entrypoint for Helm operations. */
@@ -106,12 +105,12 @@ public final class Helm {
     }
 
     /** Execute the install operation using a default client. */
-    public InstallResult run() {
+    public ReleaseOutcome run() {
       return runWithDefaultClient(helm -> helm.release().install(requestBuilder.build()));
     }
 
     /** Execute the install operation using the provided client. */
-    public InstallResult run(HelmClient client) {
+    public ReleaseOutcome run(HelmClient client) {
       Objects.requireNonNull(client, "client");
       return client.release().install(requestBuilder.build());
     }
@@ -176,12 +175,12 @@ public final class Helm {
     }
 
     /** Execute the upgrade operation using a default client. */
-    public UpgradeResult run() {
+    public ReleaseOutcome run() {
       return runWithDefaultClient(helm -> helm.release().upgrade(requestBuilder.build()));
     }
 
     /** Execute the upgrade operation using the provided client. */
-    public UpgradeResult run(HelmClient client) {
+    public ReleaseOutcome run(HelmClient client) {
       Objects.requireNonNull(client, "client");
       return client.release().upgrade(requestBuilder.build());
     }

@@ -13,7 +13,6 @@ import dev.nthings.helm4j.chart.DependencyRequest;
 import dev.nthings.helm4j.chart.DependencyResult;
 import dev.nthings.helm4j.chart.HubChartSummary;
 import dev.nthings.helm4j.chart.HubSearchRequest;
-import dev.nthings.helm4j.chart.HubSearchResult;
 import dev.nthings.helm4j.chart.LintMessage;
 import dev.nthings.helm4j.chart.LintRequest;
 import dev.nthings.helm4j.chart.LintResult;
@@ -26,13 +25,13 @@ import dev.nthings.helm4j.chart.PushRequest;
 import dev.nthings.helm4j.chart.PushResult;
 import dev.nthings.helm4j.chart.RepoChartSummary;
 import dev.nthings.helm4j.chart.RepoSearchRequest;
-import dev.nthings.helm4j.chart.RepoSearchResult;
 import dev.nthings.helm4j.chart.ShowMode;
 import dev.nthings.helm4j.chart.ShowRequest;
 import dev.nthings.helm4j.chart.ShowResult;
 import dev.nthings.helm4j.chart.TemplateRequest;
 import dev.nthings.helm4j.chart.TemplateResult;
 import dev.nthings.helm4j.errors.HelmException;
+import dev.nthings.helm4j.model.ListResult;
 import dev.nthings.helm4j.release.GetAllResult;
 import dev.nthings.helm4j.release.GetHooksResult;
 import dev.nthings.helm4j.release.GetManifestResult;
@@ -43,19 +42,16 @@ import dev.nthings.helm4j.release.GetRequest;
 import dev.nthings.helm4j.release.GetValuesResult;
 import dev.nthings.helm4j.release.HistoryEntry;
 import dev.nthings.helm4j.release.HistoryRequest;
-import dev.nthings.helm4j.release.HistoryResult;
 import dev.nthings.helm4j.release.HookInfo;
 import dev.nthings.helm4j.release.InstallRequest;
-import dev.nthings.helm4j.release.InstallResult;
 import dev.nthings.helm4j.release.ReleaseFailure;
 import dev.nthings.helm4j.release.ReleaseInfo;
 import dev.nthings.helm4j.release.ReleaseListRequest;
-import dev.nthings.helm4j.release.ReleaseListResult;
+import dev.nthings.helm4j.release.ReleaseOutcome;
 import dev.nthings.helm4j.release.ReleasePending;
 import dev.nthings.helm4j.release.ReleaseStatus;
 import dev.nthings.helm4j.release.ReleaseSuccess;
 import dev.nthings.helm4j.release.RollbackRequest;
-import dev.nthings.helm4j.release.RollbackResult;
 import dev.nthings.helm4j.release.RollbackSuccess;
 import dev.nthings.helm4j.release.StatusRequest;
 import dev.nthings.helm4j.release.StatusResult;
@@ -63,10 +59,8 @@ import dev.nthings.helm4j.release.TestHookResult;
 import dev.nthings.helm4j.release.TestRequest;
 import dev.nthings.helm4j.release.TestResult;
 import dev.nthings.helm4j.release.UninstallRequest;
-import dev.nthings.helm4j.release.UninstallResult;
 import dev.nthings.helm4j.release.UninstallSuccess;
 import dev.nthings.helm4j.release.UpgradeRequest;
-import dev.nthings.helm4j.release.UpgradeResult;
 import dev.nthings.helm4j.repo.RegistryLoginRequest;
 import dev.nthings.helm4j.repo.RegistryLogoutRequest;
 import dev.nthings.helm4j.repo.RegistryResult;
@@ -74,13 +68,10 @@ import dev.nthings.helm4j.repo.RepoAddFailure;
 import dev.nthings.helm4j.repo.RepoAddRequest;
 import dev.nthings.helm4j.repo.RepoAddResult;
 import dev.nthings.helm4j.repo.RepoAddSuccess;
-import dev.nthings.helm4j.repo.RepoListResult;
 import dev.nthings.helm4j.repo.RepoRemoveRequest;
-import dev.nthings.helm4j.repo.RepoRemoveResult;
 import dev.nthings.helm4j.repo.RepoSummary;
 import dev.nthings.helm4j.repo.RepoUpdateEntry;
 import dev.nthings.helm4j.repo.RepoUpdateRequest;
-import dev.nthings.helm4j.repo.RepoUpdateResult;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -131,7 +122,7 @@ public final class NativeStructGateway implements HelmGateway {
   }
 
   @Override
-  public RepoUpdateResult repoUpdate(RepoUpdateRequest request) {
+  public ListResult<RepoUpdateEntry> repoUpdate(RepoUpdateRequest request) {
     Objects.requireNonNull(request, "request");
 
     log.debug("Updating repositories: names={}", request.names());
@@ -147,11 +138,11 @@ public final class NativeStructGateway implements HelmGateway {
         listOrEmpty(response == null ? null : response.repositories()).stream()
             .map(entry -> new RepoUpdateEntry(entry.name(), entry.status()))
             .toList();
-    return new RepoUpdateResult(repositories);
+    return ListResult.of(repositories);
   }
 
   @Override
-  public RepoListResult repoList() {
+  public ListResult<RepoSummary> repoList() {
     log.debug("Listing repositories");
     var root =
         invokeRootOrThrow(
@@ -162,11 +153,11 @@ public final class NativeStructGateway implements HelmGateway {
         listOrEmpty(response == null ? null : response.repositories()).stream()
             .map(entry -> new RepoSummary(entry.name(), entry.url()))
             .toList();
-    return new RepoListResult(repositories);
+    return ListResult.of(repositories);
   }
 
   @Override
-  public RepoRemoveResult repoRemove(RepoRemoveRequest request) {
+  public ListResult<String> repoRemove(RepoRemoveRequest request) {
     Objects.requireNonNull(request, "request");
 
     log.debug("Removing repositories: names={}", request.names());
@@ -178,11 +169,11 @@ public final class NativeStructGateway implements HelmGateway {
                     utf8("remove"), toJsonBytes(NativeOptions.repoRemove(request), "repo remove")));
 
     var response = convert(root, RepoRemovePayload.class, "repo remove");
-    return new RepoRemoveResult(listOrEmpty(response == null ? null : response.removed()));
+    return ListResult.of(listOrEmpty(response == null ? null : response.removed()));
   }
 
   @Override
-  public RepoSearchResult searchRepo(RepoSearchRequest request) {
+  public ListResult<RepoChartSummary> searchRepo(RepoSearchRequest request) {
     Objects.requireNonNull(request, "request");
 
     log.debug("Searching repositories: keyword={}", request.keyword());
@@ -207,11 +198,11 @@ public final class NativeStructGateway implements HelmGateway {
                         entry.repositoryName(),
                         entry.repositoryUrl()))
             .toList();
-    return new RepoSearchResult(charts);
+    return ListResult.of(charts);
   }
 
   @Override
-  public HubSearchResult searchHub(HubSearchRequest request) {
+  public ListResult<HubChartSummary> searchHub(HubSearchRequest request) {
     Objects.requireNonNull(request, "request");
 
     log.debug("Searching hub: keyword={}", request.keyword());
@@ -237,7 +228,7 @@ public final class NativeStructGateway implements HelmGateway {
                         entry.repositoryName(),
                         entry.repositoryUrl()))
             .toList();
-    return new HubSearchResult(charts);
+    return ListResult.of(charts);
   }
 
   @Override
@@ -337,7 +328,7 @@ public final class NativeStructGateway implements HelmGateway {
   }
 
   @Override
-  public InstallResult install(InstallRequest request) {
+  public ReleaseOutcome install(InstallRequest request) {
     Objects.requireNonNull(request, "request");
     if (request.chart() == null) {
       throw new IllegalArgumentException("Install requires chart reference");
@@ -377,7 +368,7 @@ public final class NativeStructGateway implements HelmGateway {
   }
 
   @Override
-  public UpgradeResult upgrade(UpgradeRequest request) {
+  public ReleaseOutcome upgrade(UpgradeRequest request) {
     Objects.requireNonNull(request, "request");
     if (request.chart() == null) {
       throw new IllegalArgumentException("Upgrade requires chart reference");
@@ -416,7 +407,7 @@ public final class NativeStructGateway implements HelmGateway {
   }
 
   @Override
-  public UninstallResult uninstall(UninstallRequest request) {
+  public ReleaseOutcome uninstall(UninstallRequest request) {
     Objects.requireNonNull(request, "request");
 
     log.debug("Uninstalling release: name={}", request.releaseName());
@@ -467,7 +458,7 @@ public final class NativeStructGateway implements HelmGateway {
   }
 
   @Override
-  public RollbackResult rollback(RollbackRequest request) {
+  public ReleaseOutcome rollback(RollbackRequest request) {
     Objects.requireNonNull(request, "request");
 
     log.debug("Rolling back release: name={}", request.releaseName());
@@ -495,7 +486,7 @@ public final class NativeStructGateway implements HelmGateway {
   }
 
   @Override
-  public HistoryResult history(HistoryRequest request) {
+  public ListResult<HistoryEntry> history(HistoryRequest request) {
     Objects.requireNonNull(request, "request");
 
     log.debug("Getting history: name={}", request.releaseName());
@@ -521,11 +512,11 @@ public final class NativeStructGateway implements HelmGateway {
                         e.appVersion(),
                         e.description()))
             .toList();
-    return new HistoryResult(entries);
+    return ListResult.of(entries);
   }
 
   @Override
-  public ReleaseListResult list(ReleaseListRequest request) {
+  public ListResult<ReleaseInfo> list(ReleaseListRequest request) {
     Objects.requireNonNull(request, "request");
 
     log.debug(
@@ -541,7 +532,7 @@ public final class NativeStructGateway implements HelmGateway {
         listOrEmpty(response == null ? null : response.releases()).stream()
             .map(release -> mapReleasePayload(release, "list"))
             .toList();
-    return new ReleaseListResult(releases);
+    return ListResult.of(releases);
   }
 
   @Override

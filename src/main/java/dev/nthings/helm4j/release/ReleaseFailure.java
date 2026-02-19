@@ -4,7 +4,7 @@ import java.util.Objects;
 
 /** Failed release operation mapped from native domain errors. */
 public record ReleaseFailure(String message, String stage, String operation)
-    implements InstallResult, UpgradeResult, UninstallResult, RollbackResult {
+    implements ReleaseOutcome {
 
   public ReleaseFailure {
     message = Objects.requireNonNull(message, "message");

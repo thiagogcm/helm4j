@@ -1,161 +1,137 @@
 package dev.nthings.helm4j.release;
 
-import java.util.Objects;
 import java.util.function.Consumer;
 
-import dev.nthings.helm4j.internal.api.ClientSupport;
+import dev.nthings.helm4j.internal.api.NamespaceClient;
 import dev.nthings.helm4j.internal.sdk.HelmGateway;
+import dev.nthings.helm4j.model.ListResult;
 
 /** Release namespace for lifecycle operations. */
-public final class ReleaseClient {
-
-  private final HelmGateway gateway;
+public final class ReleaseClient extends NamespaceClient {
 
   public ReleaseClient(HelmGateway gateway) {
-    this.gateway = Objects.requireNonNull(gateway, "gateway");
+    super(gateway);
   }
 
-  public InstallResult install(Consumer<InstallRequest.Builder> spec) {
-    return ClientSupport.buildAndCall(
+  public ReleaseOutcome install(Consumer<InstallRequest.Builder> spec) {
+    return buildAndInvoke(
         InstallRequest::builder, spec, InstallRequest.Builder::build, this::install);
   }
 
-  public InstallResult install(InstallRequest request) {
-    Objects.requireNonNull(request, "request");
-    return gateway.install(request);
+  public ReleaseOutcome install(InstallRequest request) {
+    return invoke(request, gateway::install);
   }
 
-  public UpgradeResult upgrade(Consumer<UpgradeRequest.Builder> spec) {
-    return ClientSupport.buildAndCall(
+  public ReleaseOutcome upgrade(Consumer<UpgradeRequest.Builder> spec) {
+    return buildAndInvoke(
         UpgradeRequest::builder, spec, UpgradeRequest.Builder::build, this::upgrade);
   }
 
-  public UpgradeResult upgrade(UpgradeRequest request) {
-    Objects.requireNonNull(request, "request");
-    return gateway.upgrade(request);
+  public ReleaseOutcome upgrade(UpgradeRequest request) {
+    return invoke(request, gateway::upgrade);
   }
 
-  public UninstallResult uninstall(Consumer<UninstallRequest.Builder> spec) {
-    return ClientSupport.buildAndCall(
+  public ReleaseOutcome uninstall(Consumer<UninstallRequest.Builder> spec) {
+    return buildAndInvoke(
         UninstallRequest::builder, spec, UninstallRequest.Builder::build, this::uninstall);
   }
 
-  public UninstallResult uninstall(UninstallRequest request) {
-    Objects.requireNonNull(request, "request");
-    return gateway.uninstall(request);
+  public ReleaseOutcome uninstall(UninstallRequest request) {
+    return invoke(request, gateway::uninstall);
   }
 
   public StatusResult status(Consumer<StatusRequest.Builder> spec) {
-    return ClientSupport.buildAndCall(
-        StatusRequest::builder, spec, StatusRequest.Builder::build, this::status);
+    return buildAndInvoke(StatusRequest::builder, spec, StatusRequest.Builder::build, this::status);
   }
 
   public StatusResult status(StatusRequest request) {
-    Objects.requireNonNull(request, "request");
-    return gateway.status(request);
+    return invoke(request, gateway::status);
   }
 
-  public RollbackResult rollback(Consumer<RollbackRequest.Builder> spec) {
-    return ClientSupport.buildAndCall(
+  public ReleaseOutcome rollback(Consumer<RollbackRequest.Builder> spec) {
+    return buildAndInvoke(
         RollbackRequest::builder, spec, RollbackRequest.Builder::build, this::rollback);
   }
 
-  public RollbackResult rollback(RollbackRequest request) {
-    Objects.requireNonNull(request, "request");
-    return gateway.rollback(request);
+  public ReleaseOutcome rollback(RollbackRequest request) {
+    return invoke(request, gateway::rollback);
   }
 
-  public HistoryResult history(Consumer<HistoryRequest.Builder> spec) {
-    return ClientSupport.buildAndCall(
+  public ListResult<HistoryEntry> history(Consumer<HistoryRequest.Builder> spec) {
+    return buildAndInvoke(
         HistoryRequest::builder, spec, HistoryRequest.Builder::build, this::history);
   }
 
-  public HistoryResult history(HistoryRequest request) {
-    Objects.requireNonNull(request, "request");
-    return gateway.history(request);
+  public ListResult<HistoryEntry> history(HistoryRequest request) {
+    return invoke(request, gateway::history);
   }
 
-  public ReleaseListResult list() {
+  public ListResult<ReleaseInfo> list() {
     return list(ReleaseListRequest.builder().build());
   }
 
-  public ReleaseListResult list(Consumer<ReleaseListRequest.Builder> spec) {
-    return ClientSupport.buildAndCall(
+  public ListResult<ReleaseInfo> list(Consumer<ReleaseListRequest.Builder> spec) {
+    return buildAndInvoke(
         ReleaseListRequest::builder, spec, ReleaseListRequest.Builder::build, this::list);
   }
 
-  public ReleaseListResult list(ReleaseListRequest request) {
-    Objects.requireNonNull(request, "request");
-    return gateway.list(request);
+  public ListResult<ReleaseInfo> list(ReleaseListRequest request) {
+    return invoke(request, gateway::list);
   }
 
   public TestResult test(Consumer<TestRequest.Builder> spec) {
-    return ClientSupport.buildAndCall(
-        TestRequest::builder, spec, TestRequest.Builder::build, this::test);
+    return buildAndInvoke(TestRequest::builder, spec, TestRequest.Builder::build, this::test);
   }
 
   public TestResult test(TestRequest request) {
-    Objects.requireNonNull(request, "request");
-    return gateway.test(request);
+    return invoke(request, gateway::test);
   }
 
   public GetAllResult getAll(Consumer<GetRequest.Builder> spec) {
-    return ClientSupport.buildAndCall(
-        GetRequest::builder, spec, GetRequest.Builder::build, this::getAll);
+    return buildAndInvoke(GetRequest::builder, spec, GetRequest.Builder::build, this::getAll);
   }
 
   public GetAllResult getAll(GetRequest request) {
-    Objects.requireNonNull(request, "request");
-    return gateway.getAll(request);
+    return invoke(request, gateway::getAll);
   }
 
   public GetValuesResult getValues(Consumer<GetRequest.Builder> spec) {
-    return ClientSupport.buildAndCall(
-        GetRequest::builder, spec, GetRequest.Builder::build, this::getValues);
+    return buildAndInvoke(GetRequest::builder, spec, GetRequest.Builder::build, this::getValues);
   }
 
   public GetValuesResult getValues(GetRequest request) {
-    Objects.requireNonNull(request, "request");
-    return gateway.getValues(request);
+    return invoke(request, gateway::getValues);
   }
 
   public GetManifestResult getManifest(Consumer<GetRequest.Builder> spec) {
-    return ClientSupport.buildAndCall(
-        GetRequest::builder, spec, GetRequest.Builder::build, this::getManifest);
+    return buildAndInvoke(GetRequest::builder, spec, GetRequest.Builder::build, this::getManifest);
   }
 
   public GetManifestResult getManifest(GetRequest request) {
-    Objects.requireNonNull(request, "request");
-    return gateway.getManifest(request);
+    return invoke(request, gateway::getManifest);
   }
 
   public GetHooksResult getHooks(Consumer<GetRequest.Builder> spec) {
-    return ClientSupport.buildAndCall(
-        GetRequest::builder, spec, GetRequest.Builder::build, this::getHooks);
+    return buildAndInvoke(GetRequest::builder, spec, GetRequest.Builder::build, this::getHooks);
   }
 
   public GetHooksResult getHooks(GetRequest request) {
-    Objects.requireNonNull(request, "request");
-    return gateway.getHooks(request);
+    return invoke(request, gateway::getHooks);
   }
 
   public GetNotesResult getNotes(Consumer<GetRequest.Builder> spec) {
-    return ClientSupport.buildAndCall(
-        GetRequest::builder, spec, GetRequest.Builder::build, this::getNotes);
+    return buildAndInvoke(GetRequest::builder, spec, GetRequest.Builder::build, this::getNotes);
   }
 
   public GetNotesResult getNotes(GetRequest request) {
-    Objects.requireNonNull(request, "request");
-    return gateway.getNotes(request);
+    return invoke(request, gateway::getNotes);
   }
 
   public GetMetadataResult getMetadata(Consumer<GetRequest.Builder> spec) {
-    return ClientSupport.buildAndCall(
-        GetRequest::builder, spec, GetRequest.Builder::build, this::getMetadata);
+    return buildAndInvoke(GetRequest::builder, spec, GetRequest.Builder::build, this::getMetadata);
   }
 
   public GetMetadataResult getMetadata(GetRequest request) {
-    Objects.requireNonNull(request, "request");
-    return gateway.getMetadata(request);
+    return invoke(request, gateway::getMetadata);
   }
 }

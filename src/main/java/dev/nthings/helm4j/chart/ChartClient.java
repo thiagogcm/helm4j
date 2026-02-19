@@ -3,43 +3,40 @@ package dev.nthings.helm4j.chart;
 import java.util.Objects;
 import java.util.function.Consumer;
 
-import dev.nthings.helm4j.internal.api.ClientSupport;
+import dev.nthings.helm4j.internal.api.NamespaceClient;
 import dev.nthings.helm4j.internal.sdk.HelmGateway;
+import dev.nthings.helm4j.model.ListResult;
 
 /** Chart namespace for search and chart-content operations. */
-public final class ChartClient {
-
-  private final HelmGateway gateway;
+public final class ChartClient extends NamespaceClient {
 
   public ChartClient(HelmGateway gateway) {
-    this.gateway = Objects.requireNonNull(gateway, "gateway");
+    super(gateway);
   }
 
-  public RepoSearchResult searchRepo(Consumer<RepoSearchRequest.Builder> spec) {
-    return ClientSupport.buildAndCall(
+  public ListResult<RepoChartSummary> searchRepo(Consumer<RepoSearchRequest.Builder> spec) {
+    return buildAndInvoke(
         RepoSearchRequest::builder, spec, RepoSearchRequest.Builder::build, this::searchRepo);
   }
 
-  public RepoSearchResult searchRepo(RepoSearchRequest request) {
-    Objects.requireNonNull(request, "request");
-    return gateway.searchRepo(request);
+  public ListResult<RepoChartSummary> searchRepo(RepoSearchRequest request) {
+    return invoke(request, gateway::searchRepo);
   }
 
-  public HubSearchResult searchHub(Consumer<HubSearchRequest.Builder> spec) {
-    return ClientSupport.buildAndCall(
+  public ListResult<HubChartSummary> searchHub(Consumer<HubSearchRequest.Builder> spec) {
+    return buildAndInvoke(
         HubSearchRequest::builder, spec, HubSearchRequest.Builder::build, this::searchHub);
   }
 
-  public HubSearchResult searchHub(HubSearchRequest request) {
-    Objects.requireNonNull(request, "request");
-    return gateway.searchHub(request);
+  public ListResult<HubChartSummary> searchHub(HubSearchRequest request) {
+    return invoke(request, gateway::searchHub);
   }
 
   public ShowResult show(
       ShowMode mode, ChartRef chartReference, Consumer<ShowRequest.Builder> spec) {
     Objects.requireNonNull(mode, "mode");
     Objects.requireNonNull(chartReference, "chartReference");
-    return ClientSupport.buildAndCall(
+    return buildAndInvoke(
         ShowRequest::builder,
         spec,
         ShowRequest.Builder::build,
@@ -49,67 +46,57 @@ public final class ChartClient {
   public ShowResult show(ShowMode mode, ChartRef chartReference, ShowRequest request) {
     Objects.requireNonNull(mode, "mode");
     Objects.requireNonNull(chartReference, "chartReference");
-    Objects.requireNonNull(request, "request");
-    return gateway.show(mode, chartReference, request);
+    return invoke(request, builtRequest -> gateway.show(mode, chartReference, builtRequest));
   }
 
   public TemplateResult template(Consumer<TemplateRequest.Builder> spec) {
-    return ClientSupport.buildAndCall(
+    return buildAndInvoke(
         TemplateRequest::builder, spec, TemplateRequest.Builder::build, this::template);
   }
 
   public TemplateResult template(TemplateRequest request) {
-    Objects.requireNonNull(request, "request");
-    return gateway.template(request);
+    return invoke(request, gateway::template);
   }
 
   public LintResult lint(Consumer<LintRequest.Builder> spec) {
-    return ClientSupport.buildAndCall(
-        LintRequest::builder, spec, LintRequest.Builder::build, this::lint);
+    return buildAndInvoke(LintRequest::builder, spec, LintRequest.Builder::build, this::lint);
   }
 
   public LintResult lint(LintRequest request) {
-    Objects.requireNonNull(request, "request");
-    return gateway.lint(request);
+    return invoke(request, gateway::lint);
   }
 
   public PullResult pull(Consumer<PullRequest.Builder> spec) {
-    return ClientSupport.buildAndCall(
-        PullRequest::builder, spec, PullRequest.Builder::build, this::pull);
+    return buildAndInvoke(PullRequest::builder, spec, PullRequest.Builder::build, this::pull);
   }
 
   public PullResult pull(PullRequest request) {
-    Objects.requireNonNull(request, "request");
-    return gateway.pull(request);
+    return invoke(request, gateway::pull);
   }
 
   public PushResult push(Consumer<PushRequest.Builder> spec) {
-    return ClientSupport.buildAndCall(
-        PushRequest::builder, spec, PushRequest.Builder::build, this::push);
+    return buildAndInvoke(PushRequest::builder, spec, PushRequest.Builder::build, this::push);
   }
 
   public PushResult push(PushRequest request) {
-    Objects.requireNonNull(request, "request");
-    return gateway.push(request);
+    return invoke(request, gateway::push);
   }
 
   public PackageChartResult packageChart(Consumer<PackageChartRequest.Builder> spec) {
-    return ClientSupport.buildAndCall(
+    return buildAndInvoke(
         PackageChartRequest::builder, spec, PackageChartRequest.Builder::build, this::packageChart);
   }
 
   public PackageChartResult packageChart(PackageChartRequest request) {
-    Objects.requireNonNull(request, "request");
-    return gateway.packageChart(request);
+    return invoke(request, gateway::packageChart);
   }
 
   public DependencyResult dependency(Consumer<DependencyRequest.Builder> spec) {
-    return ClientSupport.buildAndCall(
+    return buildAndInvoke(
         DependencyRequest::builder, spec, DependencyRequest.Builder::build, this::dependency);
   }
 
   public DependencyResult dependency(DependencyRequest request) {
-    Objects.requireNonNull(request, "request");
-    return gateway.dependency(request);
+    return invoke(request, gateway::dependency);
   }
 }

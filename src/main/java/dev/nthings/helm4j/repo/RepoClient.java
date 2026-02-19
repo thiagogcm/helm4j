@@ -1,60 +1,54 @@
 package dev.nthings.helm4j.repo;
 
-import java.util.Objects;
 import java.util.function.Consumer;
 
-import dev.nthings.helm4j.internal.api.ClientSupport;
+import dev.nthings.helm4j.internal.api.NamespaceClient;
 import dev.nthings.helm4j.internal.sdk.HelmGateway;
+import dev.nthings.helm4j.model.ListResult;
 
 /** Repository and registry namespace for Helm SDK operations. */
-public final class RepoClient {
-
-  private final HelmGateway gateway;
+public final class RepoClient extends NamespaceClient {
 
   public RepoClient(HelmGateway gateway) {
-    this.gateway = Objects.requireNonNull(gateway, "gateway");
+    super(gateway);
   }
 
   public RepoAddResult add(Consumer<RepoAddRequest.Builder> spec) {
-    return ClientSupport.buildAndCall(
-        RepoAddRequest::builder, spec, RepoAddRequest.Builder::build, this::add);
+    return buildAndInvoke(RepoAddRequest::builder, spec, RepoAddRequest.Builder::build, this::add);
   }
 
   public RepoAddResult add(RepoAddRequest request) {
-    Objects.requireNonNull(request, "request");
-    return gateway.repoAdd(request);
+    return invoke(request, gateway::repoAdd);
   }
 
-  public RepoUpdateResult update() {
+  public ListResult<RepoUpdateEntry> update() {
     return update(RepoUpdateRequest.builder().build());
   }
 
-  public RepoUpdateResult update(Consumer<RepoUpdateRequest.Builder> spec) {
-    return ClientSupport.buildAndCall(
+  public ListResult<RepoUpdateEntry> update(Consumer<RepoUpdateRequest.Builder> spec) {
+    return buildAndInvoke(
         RepoUpdateRequest::builder, spec, RepoUpdateRequest.Builder::build, this::update);
   }
 
-  public RepoUpdateResult update(RepoUpdateRequest request) {
-    Objects.requireNonNull(request, "request");
-    return gateway.repoUpdate(request);
+  public ListResult<RepoUpdateEntry> update(RepoUpdateRequest request) {
+    return invoke(request, gateway::repoUpdate);
   }
 
-  public RepoListResult list() {
+  public ListResult<RepoSummary> list() {
     return gateway.repoList();
   }
 
-  public RepoRemoveResult remove(Consumer<RepoRemoveRequest.Builder> spec) {
-    return ClientSupport.buildAndCall(
+  public ListResult<String> remove(Consumer<RepoRemoveRequest.Builder> spec) {
+    return buildAndInvoke(
         RepoRemoveRequest::builder, spec, RepoRemoveRequest.Builder::build, this::remove);
   }
 
-  public RepoRemoveResult remove(RepoRemoveRequest request) {
-    Objects.requireNonNull(request, "request");
-    return gateway.repoRemove(request);
+  public ListResult<String> remove(RepoRemoveRequest request) {
+    return invoke(request, gateway::repoRemove);
   }
 
   public RegistryResult registryLogin(Consumer<RegistryLoginRequest.Builder> spec) {
-    return ClientSupport.buildAndCall(
+    return buildAndInvoke(
         RegistryLoginRequest::builder,
         spec,
         RegistryLoginRequest.Builder::build,
@@ -62,12 +56,11 @@ public final class RepoClient {
   }
 
   public RegistryResult registryLogin(RegistryLoginRequest request) {
-    Objects.requireNonNull(request, "request");
-    return gateway.registryLogin(request);
+    return invoke(request, gateway::registryLogin);
   }
 
   public RegistryResult registryLogout(Consumer<RegistryLogoutRequest.Builder> spec) {
-    return ClientSupport.buildAndCall(
+    return buildAndInvoke(
         RegistryLogoutRequest::builder,
         spec,
         RegistryLogoutRequest.Builder::build,
@@ -75,7 +68,6 @@ public final class RepoClient {
   }
 
   public RegistryResult registryLogout(RegistryLogoutRequest request) {
-    Objects.requireNonNull(request, "request");
-    return gateway.registryLogout(request);
+    return invoke(request, gateway::registryLogout);
   }
 }

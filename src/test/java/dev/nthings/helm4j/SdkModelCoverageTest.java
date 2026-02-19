@@ -31,10 +31,10 @@ import dev.nthings.helm4j.release.GetRequest;
 import dev.nthings.helm4j.release.HistoryRequest;
 import dev.nthings.helm4j.release.HookInfo;
 import dev.nthings.helm4j.release.InstallRequest;
-import dev.nthings.helm4j.release.InstallResult;
 import dev.nthings.helm4j.release.ReleaseFailure;
 import dev.nthings.helm4j.release.ReleaseInfo;
 import dev.nthings.helm4j.release.ReleaseListRequest;
+import dev.nthings.helm4j.release.ReleaseOutcome;
 import dev.nthings.helm4j.release.ReleaseStatus;
 import dev.nthings.helm4j.release.RollbackRequest;
 import dev.nthings.helm4j.release.StatusRequest;
@@ -334,7 +334,7 @@ class SdkModelCoverageTest {
     assertEquals("upgrade", upgradeFailure.operation());
     assertEquals("uninstall", uninstallFailure.operation());
     assertEquals("rollback", rollbackFailure.operation());
-    assertTrue(InstallResult.class.isSealed());
+    assertTrue(ReleaseOutcome.class.isSealed());
   }
 
   @Test
