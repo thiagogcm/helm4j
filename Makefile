@@ -25,7 +25,9 @@ help:
 # --- Go targets ---
 
 go-build:
-	cd $(GO_MOD_DIR) && CGO_ENABLED=1 go build -buildmode=c-shared -o libhelm4j.so .
+	cd $(GO_MOD_DIR) && CGO_ENABLED=1 go build -buildmode=c-shared -trimpath \
+		-ldflags="-s -w -extldflags=-Wl,--version-script=$$PWD/libhelm4j.map" \
+		-o libhelm4j.so .
 
 go-test:
 	cd $(GO_MOD_DIR) && go test -v -count=1 ./internal/...

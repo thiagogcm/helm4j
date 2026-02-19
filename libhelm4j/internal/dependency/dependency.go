@@ -126,7 +126,7 @@ func runBuildOrUpdate(chartPath string, opts Options, update bool, log *slog.Log
 		ChartPath:        chartPath,
 		Keyring:          opts.Keyring,
 		SkipUpdate:       opts.SkipRefresh,
-		Getters:          getter.All(env.Settings),
+		Getters:          getter.Getters(),
 		RegistryClient:   regClient,
 		RepositoryConfig: env.Settings.RepositoryConfig,
 		RepositoryCache:  env.Settings.RepositoryCache,
