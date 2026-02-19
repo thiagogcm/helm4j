@@ -1,4 +1,4 @@
-package dev.nthings.helm4j.types;
+package dev.nthings.helm4j.chart;
 
 import java.nio.file.Path;
 import java.util.Objects;

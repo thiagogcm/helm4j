@@ -5,7 +5,6 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 import dev.nthings.helm4j.internal.model.ModelSupport;
-import dev.nthings.helm4j.types.ChartSource;
 
 /** Request parameters for pulling a chart archive. */
 public record PullRequest(

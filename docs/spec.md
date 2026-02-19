@@ -53,16 +53,8 @@ public final class HelmClient implements AutoCloseable {
   - `RepoSearchResult searchRepo(RepoSearchRequest request)`
   - `HubSearchResult searchHub(Consumer<HubSearchRequest.Builder> spec)`
   - `HubSearchResult searchHub(HubSearchRequest request)`
-  - `ShowChartResult chart(ChartRef chartReference, Consumer<ShowRequest.Builder> spec)`
-  - `ShowChartResult chart(ChartRef chartReference, ShowRequest request)`
-  - `ShowValuesResult values(ChartRef chartReference, Consumer<ShowRequest.Builder> spec)`
-  - `ShowValuesResult values(ChartRef chartReference, ShowRequest request)`
-  - `ShowReadmeResult readme(ChartRef chartReference, Consumer<ShowRequest.Builder> spec)`
-  - `ShowReadmeResult readme(ChartRef chartReference, ShowRequest request)`
-  - `ShowCrdsResult crds(ChartRef chartReference, Consumer<ShowRequest.Builder> spec)`
-  - `ShowCrdsResult crds(ChartRef chartReference, ShowRequest request)`
-  - `ShowAllResult all(ChartRef chartReference, Consumer<ShowRequest.Builder> spec)`
-  - `ShowAllResult all(ChartRef chartReference, ShowRequest request)`
+  - `ShowResult show(ShowMode mode, ChartRef chartReference, Consumer<ShowRequest.Builder> spec)`
+  - `ShowResult show(ShowMode mode, ChartRef chartReference, ShowRequest request)`
   - `TemplateResult template(Consumer<TemplateRequest.Builder> spec)`
   - `TemplateResult template(TemplateRequest request)`
   - `LintResult lint(Consumer<LintRequest.Builder> spec)`
@@ -116,10 +108,10 @@ Normalization rule:
 
 - Request/response carriers are records
 - Install and repo add return sealed domain outcomes:
-  - `InstallResult = InstallSuccess | InstallPending | InstallFailure`
-  - `UpgradeResult = UpgradeSuccess | UpgradePending | UpgradeFailure`
-  - `UninstallResult = UninstallSuccess | UninstallFailure`
-  - `RollbackResult = RollbackSuccess | RollbackFailure`
+  - `InstallResult = ReleaseSuccess | ReleasePending | ReleaseFailure`
+  - `UpgradeResult = ReleaseSuccess | ReleasePending | ReleaseFailure`
+  - `UninstallResult = UninstallSuccess | ReleaseFailure`
+  - `RollbackResult = RollbackSuccess | ReleaseFailure`
   - `RepoAddResult = RepoAddSuccess | RepoAddFailure`
 - Typed chart references via sealed `ChartRef`:
   - `RepoChartRef`
@@ -204,7 +196,7 @@ Principles:
 - FFM bridge allocates operation-scoped C strings (`Arena.ofConfined()`)
 - Explicit native response free calls through `FreeString`
 - Error payloads (`error`, `stage`, `operation`) are mapped consistently to
-  `HelmException` or domain failures (`RepoAddFailure`, `InstallFailure`)
+  `HelmException` or domain failures (`RepoAddFailure`, `ReleaseFailure`)
 
 ## 6. Error and Outcome Model
 

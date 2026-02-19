@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import dev.nthings.helm4j.chart.ChartRef;
 import dev.nthings.helm4j.chart.HubChartSummary;
 import dev.nthings.helm4j.chart.LintSeverity;
 import dev.nthings.helm4j.chart.RepoChartSummary;
@@ -16,22 +17,17 @@ import dev.nthings.helm4j.errors.HelmException;
 import dev.nthings.helm4j.internal.sdk.HelmBridge;
 import dev.nthings.helm4j.release.ApplyStrategy;
 import dev.nthings.helm4j.release.DryRunMode;
-import dev.nthings.helm4j.release.InstallFailure;
-import dev.nthings.helm4j.release.InstallPending;
-import dev.nthings.helm4j.release.InstallSuccess;
-import dev.nthings.helm4j.release.RollbackFailure;
+import dev.nthings.helm4j.release.ReleaseFailure;
+import dev.nthings.helm4j.release.ReleasePending;
+import dev.nthings.helm4j.release.ReleaseStatus;
+import dev.nthings.helm4j.release.ReleaseSuccess;
 import dev.nthings.helm4j.release.RollbackSuccess;
-import dev.nthings.helm4j.release.UninstallFailure;
 import dev.nthings.helm4j.release.UninstallSuccess;
-import dev.nthings.helm4j.release.UpgradeFailure;
-import dev.nthings.helm4j.release.UpgradePending;
-import dev.nthings.helm4j.release.UpgradeSuccess;
 import dev.nthings.helm4j.release.WaitMode;
 import dev.nthings.helm4j.repo.RepoAddFailure;
 import dev.nthings.helm4j.repo.RepoAddSuccess;
 import dev.nthings.helm4j.repo.RepoSummary;
 import dev.nthings.helm4j.repo.RepoUpdateEntry;
-import dev.nthings.helm4j.types.ChartRef;
 
 import org.junit.jupiter.api.Test;
 
@@ -101,9 +97,9 @@ class HelmClientGoldenPathTest {
                           .timeout(Duration.ofMinutes(3))
                           .values(Map.of("service", Map.of("type", "ClusterIP"))));
 
-      var success = assertInstanceOf(InstallSuccess.class, install);
+      var success = assertInstanceOf(ReleaseSuccess.class, install);
       assertEquals("nginx", success.release().name());
-      assertEquals("deployed", success.release().status());
+      assertEquals(ReleaseStatus.DEPLOYED, success.release().status());
     }
 
     assertEquals("bitnami", bridge.lastRepoAddName);
@@ -195,19 +191,19 @@ class HelmClientGoldenPathTest {
       assertEquals("nginx", hub.first().orElseThrow().name());
 
       var chartRef = ChartRef.repo("bitnami/nginx");
-      var chart = helm.chart().chart(chartRef, spec -> {});
+      var chart = helm.chart().show(ShowMode.CHART, chartRef, spec -> {});
       assertEquals("apiVersion: v2", chart.metadataYaml());
 
-      var values = helm.chart().values(chartRef, spec -> {});
+      var values = helm.chart().show(ShowMode.VALUES, chartRef, spec -> {});
       assertEquals("service:\n  type: ClusterIP", values.valuesYaml());
 
-      var readme = helm.chart().readme(chartRef, spec -> {});
+      var readme = helm.chart().show(ShowMode.README, chartRef, spec -> {});
       assertEquals("# Nginx", readme.readmeText());
 
-      var crds = helm.chart().crds(chartRef, spec -> {});
+      var crds = helm.chart().show(ShowMode.CRDS, chartRef, spec -> {});
       assertEquals(1, crds.customResourceDefinitions().size());
 
-      var all = helm.chart().all(chartRef, spec -> {});
+      var all = helm.chart().show(ShowMode.ALL, chartRef, spec -> {});
       assertEquals("apiVersion: v2", all.metadataYaml());
       assertEquals("# Nginx", all.readmeText());
       assertEquals(1, all.customResourceDefinitions().size());
@@ -226,7 +222,7 @@ class HelmClientGoldenPathTest {
       var pending =
           helm.release()
               .install(spec -> spec.releaseName("nginx").chart(ChartRef.repo("bitnami/nginx")));
-      assertInstanceOf(InstallPending.class, pending);
+      assertInstanceOf(ReleasePending.class, pending);
     }
 
     var failedBridge = new StubHelmBridge();
@@ -236,7 +232,7 @@ class HelmClientGoldenPathTest {
       var failure =
           helm.release()
               .install(spec -> spec.releaseName("nginx").chart(ChartRef.repo("bitnami/nginx")));
-      var typedFailure = assertInstanceOf(InstallFailure.class, failure);
+      var typedFailure = assertInstanceOf(ReleaseFailure.class, failure);
       assertEquals("chart not found", typedFailure.message());
       assertEquals("runOperation", typedFailure.stage());
     }
@@ -288,9 +284,9 @@ class HelmClientGoldenPathTest {
               .labels(Map.of("team", "platform"))
               .run(helm);
 
-      var success = assertInstanceOf(InstallSuccess.class, result);
+      var success = assertInstanceOf(ReleaseSuccess.class, result);
       assertEquals("nginx", success.release().name());
-      assertEquals("deployed", success.release().status());
+      assertEquals(ReleaseStatus.DEPLOYED, success.release().status());
     }
 
     assertEquals("nginx", bridge.lastInstallReleaseName);
@@ -307,7 +303,7 @@ class HelmClientGoldenPathTest {
               .releaseName("web")
               .run(helm);
 
-      assertInstanceOf(InstallSuccess.class, result);
+      assertInstanceOf(ReleaseSuccess.class, result);
     }
 
     assertEquals("web", bridge.lastInstallReleaseName);
@@ -330,10 +326,10 @@ class HelmClientGoldenPathTest {
                           .reuseValues(true)
                           .values(Map.of("replicaCount", 3)));
 
-      var success = assertInstanceOf(UpgradeSuccess.class, result);
+      var success = assertInstanceOf(ReleaseSuccess.class, result);
       assertEquals("nginx", success.release().name());
       assertEquals(2, success.release().revision());
-      assertEquals("deployed", success.release().status());
+      assertEquals(ReleaseStatus.DEPLOYED, success.release().status());
     }
 
     assertEquals("nginx", bridge.lastUpgradeReleaseName);
@@ -348,7 +344,7 @@ class HelmClientGoldenPathTest {
       var result =
           helm.release()
               .upgrade(spec -> spec.releaseName("nginx").chart(ChartRef.repo("bitnami/nginx")));
-      assertInstanceOf(UpgradePending.class, result);
+      assertInstanceOf(ReleasePending.class, result);
     }
   }
 
@@ -366,7 +362,7 @@ class HelmClientGoldenPathTest {
               .values(Map.of("replicaCount", 3))
               .run(helm);
 
-      var success = assertInstanceOf(UpgradeSuccess.class, result);
+      var success = assertInstanceOf(ReleaseSuccess.class, result);
       assertEquals("nginx", success.release().name());
     }
 
@@ -396,7 +392,7 @@ class HelmClientGoldenPathTest {
     try (var helm = Helm.client(spec -> spec.withBridge(bridge))) {
       var result = helm.release().status(spec -> spec.releaseName("nginx"));
       assertEquals("nginx", result.release().name());
-      assertEquals("deployed", result.release().status());
+      assertEquals(ReleaseStatus.DEPLOYED, result.release().status());
     }
 
     assertEquals("nginx", bridge.lastStatusReleaseName);
@@ -443,7 +439,7 @@ class HelmClientGoldenPathTest {
       var result = helm.release().history(spec -> spec.releaseName("nginx"));
       assertEquals(1, result.size());
       assertEquals(1, result.first().orElseThrow().revision());
-      assertEquals("deployed", result.first().orElseThrow().status());
+      assertEquals(ReleaseStatus.DEPLOYED, result.first().orElseThrow().status());
     }
 
     assertEquals("nginx", bridge.lastHistoryReleaseName);
@@ -532,15 +528,15 @@ class HelmClientGoldenPathTest {
       var upgrade =
           helm.release()
               .upgrade(spec -> spec.releaseName("nginx").chart(ChartRef.repo("bitnami/nginx")));
-      var upgradeFailure = assertInstanceOf(UpgradeFailure.class, upgrade);
+      var upgradeFailure = assertInstanceOf(ReleaseFailure.class, upgrade);
       assertEquals("cannot upgrade", upgradeFailure.message());
 
       var uninstall = helm.release().uninstall(spec -> spec.releaseName("nginx"));
-      var uninstallFailure = assertInstanceOf(UninstallFailure.class, uninstall);
+      var uninstallFailure = assertInstanceOf(ReleaseFailure.class, uninstall);
       assertEquals("cannot uninstall", uninstallFailure.message());
 
       var rollback = helm.release().rollback(spec -> spec.releaseName("nginx"));
-      var rollbackFailure = assertInstanceOf(RollbackFailure.class, rollback);
+      var rollbackFailure = assertInstanceOf(ReleaseFailure.class, rollback);
       assertEquals("cannot rollback", rollbackFailure.message());
     }
   }

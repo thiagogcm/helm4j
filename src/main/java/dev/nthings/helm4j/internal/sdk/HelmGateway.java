@@ -1,6 +1,7 @@
 package dev.nthings.helm4j.internal.sdk;
 
 import dev.nthings.helm4j.VersionInfo;
+import dev.nthings.helm4j.chart.ChartRef;
 import dev.nthings.helm4j.chart.DependencyRequest;
 import dev.nthings.helm4j.chart.DependencyResult;
 import dev.nthings.helm4j.chart.HubSearchRequest;
@@ -15,12 +16,9 @@ import dev.nthings.helm4j.chart.PushRequest;
 import dev.nthings.helm4j.chart.PushResult;
 import dev.nthings.helm4j.chart.RepoSearchRequest;
 import dev.nthings.helm4j.chart.RepoSearchResult;
-import dev.nthings.helm4j.chart.ShowAllResult;
-import dev.nthings.helm4j.chart.ShowChartResult;
-import dev.nthings.helm4j.chart.ShowCrdsResult;
-import dev.nthings.helm4j.chart.ShowReadmeResult;
+import dev.nthings.helm4j.chart.ShowMode;
 import dev.nthings.helm4j.chart.ShowRequest;
-import dev.nthings.helm4j.chart.ShowValuesResult;
+import dev.nthings.helm4j.chart.ShowResult;
 import dev.nthings.helm4j.chart.TemplateRequest;
 import dev.nthings.helm4j.chart.TemplateResult;
 import dev.nthings.helm4j.release.GetAllResult;
@@ -56,7 +54,6 @@ import dev.nthings.helm4j.repo.RepoRemoveRequest;
 import dev.nthings.helm4j.repo.RepoRemoveResult;
 import dev.nthings.helm4j.repo.RepoUpdateRequest;
 import dev.nthings.helm4j.repo.RepoUpdateResult;
-import dev.nthings.helm4j.types.ChartRef;
 
 /** Internal gateway used by the public SDK namespaces. */
 public interface HelmGateway {
@@ -81,15 +78,7 @@ public interface HelmGateway {
 
   DependencyResult dependency(DependencyRequest request);
 
-  ShowChartResult showChart(ChartRef chartReference, ShowRequest request);
-
-  ShowValuesResult showValues(ChartRef chartReference, ShowRequest request);
-
-  ShowReadmeResult showReadme(ChartRef chartReference, ShowRequest request);
-
-  ShowCrdsResult showCrds(ChartRef chartReference, ShowRequest request);
-
-  ShowAllResult showAll(ChartRef chartReference, ShowRequest request);
+  ShowResult show(ShowMode mode, ChartRef chartReference, ShowRequest request);
 
   InstallResult install(InstallRequest request);
 

@@ -2,9 +2,12 @@ package dev.nthings.helm4j;
 
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
+import dev.nthings.helm4j.chart.ChartRef;
+import dev.nthings.helm4j.chart.ChartSource;
 import dev.nthings.helm4j.chart.DependencyRequest;
 import dev.nthings.helm4j.chart.HubSearchRequest;
 import dev.nthings.helm4j.chart.LintMessage;
@@ -29,22 +32,19 @@ import dev.nthings.helm4j.release.HistoryRequest;
 import dev.nthings.helm4j.release.HookInfo;
 import dev.nthings.helm4j.release.InstallRequest;
 import dev.nthings.helm4j.release.InstallResult;
+import dev.nthings.helm4j.release.ReleaseFailure;
 import dev.nthings.helm4j.release.ReleaseInfo;
 import dev.nthings.helm4j.release.ReleaseListRequest;
-import dev.nthings.helm4j.release.RollbackFailure;
+import dev.nthings.helm4j.release.ReleaseStatus;
 import dev.nthings.helm4j.release.RollbackRequest;
 import dev.nthings.helm4j.release.StatusRequest;
 import dev.nthings.helm4j.release.TestRequest;
-import dev.nthings.helm4j.release.UninstallFailure;
 import dev.nthings.helm4j.release.UninstallRequest;
-import dev.nthings.helm4j.release.UpgradeFailure;
 import dev.nthings.helm4j.release.UpgradeRequest;
 import dev.nthings.helm4j.release.WaitMode;
 import dev.nthings.helm4j.repo.RegistryLoginRequest;
 import dev.nthings.helm4j.repo.RepoAddRequest;
 import dev.nthings.helm4j.repo.RepoUpdateRequest;
-import dev.nthings.helm4j.types.ChartRef;
-import dev.nthings.helm4j.types.ChartSource;
 
 import org.junit.jupiter.api.Test;
 
@@ -300,10 +300,10 @@ class SdkModelCoverageTest {
             "nginx",
             "apps",
             2,
-            "deployed",
+            ReleaseStatus.DEPLOYED,
             "desc",
-            "2026-01-01T00:00:00Z",
-            "2026-01-01T00:00:00Z",
+            Instant.parse("2026-01-01T00:00:00Z"),
+            Instant.parse("2026-01-01T00:00:00Z"),
             "nginx",
             "19.0.0",
             "1.27.0",
@@ -313,17 +313,24 @@ class SdkModelCoverageTest {
     var notes = new GetNotesResult("release notes");
     var metadata =
         new GetMetadataResult(
-            "nginx", "apps", 2, "deployed", "nginx", "19.0.0", "1.27.0", "2026-01-01");
+            "nginx",
+            "apps",
+            2,
+            ReleaseStatus.DEPLOYED,
+            "nginx",
+            "19.0.0",
+            "1.27.0",
+            Instant.parse("2026-01-01T00:00:00Z"));
     assertTrue(hook.events().isEmpty());
     assertTrue(hooks.hooks().isEmpty());
-    assertEquals("deployed", all.release().status());
+    assertEquals(ReleaseStatus.DEPLOYED, all.release().status());
     assertTrue(manifest.manifest().contains("apiVersion"));
     assertEquals("release notes", notes.notes());
     assertEquals("nginx", metadata.name());
 
-    var upgradeFailure = new UpgradeFailure("boom", "runOperation", "upgrade");
-    var uninstallFailure = new UninstallFailure("boom", "runOperation", "uninstall");
-    var rollbackFailure = new RollbackFailure("boom", "runOperation", "rollback");
+    var upgradeFailure = new ReleaseFailure("boom", "runOperation", "upgrade");
+    var uninstallFailure = new ReleaseFailure("boom", "runOperation", "uninstall");
+    var rollbackFailure = new ReleaseFailure("boom", "runOperation", "rollback");
     assertEquals("upgrade", upgradeFailure.operation());
     assertEquals("uninstall", uninstallFailure.operation());
     assertEquals("rollback", rollbackFailure.operation());

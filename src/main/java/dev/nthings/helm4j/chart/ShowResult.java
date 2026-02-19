@@ -1,11 +1,13 @@
 package dev.nthings.helm4j.chart;
 
 import java.util.List;
+import java.util.Objects;
 
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
-/** Result of {@code show all}. */
-public record ShowAllResult(
+/** Unified result for all {@code helm show <mode>} operations. */
+public record ShowResult(
+    ShowMode mode,
     String chartReference,
     String resolvedPath,
     String metadataYaml,
@@ -14,7 +16,8 @@ public record ShowAllResult(
     List<String> customResourceDefinitions,
     String rawOutput) {
 
-  public ShowAllResult {
+  public ShowResult {
+    mode = Objects.requireNonNull(mode, "mode");
     customResourceDefinitions = ModelSupport.immutableListOrEmpty(customResourceDefinitions);
   }
 }

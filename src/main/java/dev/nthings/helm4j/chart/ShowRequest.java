@@ -4,7 +4,6 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 import dev.nthings.helm4j.internal.model.ModelSupport;
-import dev.nthings.helm4j.types.ChartSource;
 
 /** Shared request options for Helm show operations. */
 public record ShowRequest(ChartSource source, String valuesJsonPath) {

@@ -6,8 +6,6 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 import dev.nthings.helm4j.internal.model.ModelSupport;
-import dev.nthings.helm4j.types.ChartRef;
-import dev.nthings.helm4j.types.ChartSource;
 
 /** Request parameters for rendering chart templates. */
 public record TemplateRequest(

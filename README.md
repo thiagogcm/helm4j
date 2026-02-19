@@ -17,9 +17,10 @@ import java.time.Duration;
 import java.util.Map;
 
 import dev.nthings.helm4j.Helm;
+import dev.nthings.helm4j.chart.ChartRef;
+import dev.nthings.helm4j.chart.ShowMode;
 import dev.nthings.helm4j.repo.RepoAddSuccess;
-import dev.nthings.helm4j.release.InstallSuccess;
-import dev.nthings.helm4j.types.ChartRef;
+import dev.nthings.helm4j.release.ReleaseSuccess;
 
 try (var helm = Helm.client()) {
   var add =
@@ -38,7 +39,7 @@ try (var helm = Helm.client()) {
   var hub = helm.chart().searchHub(spec -> spec.keyword("nginx"));
   hub.first().ifPresent(chart -> System.out.println(chart.url()));
 
-  var metadata = helm.chart().chart(ChartRef.repo("bitnami/nginx"), spec -> {});
+  var metadata = helm.chart().show(ShowMode.CHART, ChartRef.repo("bitnami/nginx"), spec -> {});
   System.out.println(metadata.metadataYaml());
 
   var repos = helm.repo().list();
@@ -55,7 +56,7 @@ try (var helm = Helm.client()) {
                       .timeout(Duration.ofMinutes(5))
                       .values(Map.of("service", Map.of("type", "ClusterIP"))));
 
-  if (install instanceof InstallSuccess success) {
+  if (install instanceof ReleaseSuccess success) {
     System.out.println(success.release().status());
   }
 }
@@ -67,7 +68,7 @@ try (var helm = Helm.client()) {
 - `Helm.client(spec -> ...)`
 - `HelmClient.repo().add(...)`, `.update(...)`, `.list()`, `.remove(...)` using request/spec overloads
 - `HelmClient.chart().searchRepo(...)`, `.searchHub(...)` using request/spec overloads
-- `HelmClient.chart().chart(...)`, `.values(...)`, `.readme(...)`, `.crds(...)`, `.all(...)`
+- `HelmClient.chart().show(mode, ...)` for all show operations
 - `HelmClient.release().install(...)`
 
 ### API Normalization

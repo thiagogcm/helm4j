@@ -1,14 +1,14 @@
 package dev.nthings.helm4j.internal.sdk;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.util.LinkedHashMap;
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
 import dev.nthings.helm4j.VersionInfo;
+import dev.nthings.helm4j.chart.ChartRef;
 import dev.nthings.helm4j.chart.DependencyRequest;
 import dev.nthings.helm4j.chart.DependencyResult;
 import dev.nthings.helm4j.chart.HubChartSummary;
@@ -27,13 +27,9 @@ import dev.nthings.helm4j.chart.PushResult;
 import dev.nthings.helm4j.chart.RepoChartSummary;
 import dev.nthings.helm4j.chart.RepoSearchRequest;
 import dev.nthings.helm4j.chart.RepoSearchResult;
-import dev.nthings.helm4j.chart.ShowAllResult;
-import dev.nthings.helm4j.chart.ShowChartResult;
-import dev.nthings.helm4j.chart.ShowCrdsResult;
 import dev.nthings.helm4j.chart.ShowMode;
-import dev.nthings.helm4j.chart.ShowReadmeResult;
 import dev.nthings.helm4j.chart.ShowRequest;
-import dev.nthings.helm4j.chart.ShowValuesResult;
+import dev.nthings.helm4j.chart.ShowResult;
 import dev.nthings.helm4j.chart.TemplateRequest;
 import dev.nthings.helm4j.chart.TemplateResult;
 import dev.nthings.helm4j.errors.HelmException;
@@ -49,15 +45,15 @@ import dev.nthings.helm4j.release.HistoryEntry;
 import dev.nthings.helm4j.release.HistoryRequest;
 import dev.nthings.helm4j.release.HistoryResult;
 import dev.nthings.helm4j.release.HookInfo;
-import dev.nthings.helm4j.release.InstallFailure;
-import dev.nthings.helm4j.release.InstallPending;
 import dev.nthings.helm4j.release.InstallRequest;
 import dev.nthings.helm4j.release.InstallResult;
-import dev.nthings.helm4j.release.InstallSuccess;
+import dev.nthings.helm4j.release.ReleaseFailure;
 import dev.nthings.helm4j.release.ReleaseInfo;
 import dev.nthings.helm4j.release.ReleaseListRequest;
 import dev.nthings.helm4j.release.ReleaseListResult;
-import dev.nthings.helm4j.release.RollbackFailure;
+import dev.nthings.helm4j.release.ReleasePending;
+import dev.nthings.helm4j.release.ReleaseStatus;
+import dev.nthings.helm4j.release.ReleaseSuccess;
 import dev.nthings.helm4j.release.RollbackRequest;
 import dev.nthings.helm4j.release.RollbackResult;
 import dev.nthings.helm4j.release.RollbackSuccess;
@@ -66,15 +62,11 @@ import dev.nthings.helm4j.release.StatusResult;
 import dev.nthings.helm4j.release.TestHookResult;
 import dev.nthings.helm4j.release.TestRequest;
 import dev.nthings.helm4j.release.TestResult;
-import dev.nthings.helm4j.release.UninstallFailure;
 import dev.nthings.helm4j.release.UninstallRequest;
 import dev.nthings.helm4j.release.UninstallResult;
 import dev.nthings.helm4j.release.UninstallSuccess;
-import dev.nthings.helm4j.release.UpgradeFailure;
-import dev.nthings.helm4j.release.UpgradePending;
 import dev.nthings.helm4j.release.UpgradeRequest;
 import dev.nthings.helm4j.release.UpgradeResult;
-import dev.nthings.helm4j.release.UpgradeSuccess;
 import dev.nthings.helm4j.repo.RegistryLoginRequest;
 import dev.nthings.helm4j.repo.RegistryLogoutRequest;
 import dev.nthings.helm4j.repo.RegistryResult;
@@ -89,7 +81,6 @@ import dev.nthings.helm4j.repo.RepoSummary;
 import dev.nthings.helm4j.repo.RepoUpdateEntry;
 import dev.nthings.helm4j.repo.RepoUpdateRequest;
 import dev.nthings.helm4j.repo.RepoUpdateResult;
-import dev.nthings.helm4j.types.ChartRef;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -122,7 +113,8 @@ public final class NativeStructGateway implements HelmGateway {
     var root =
         invokeRoot(
             "repo add",
-            () -> bridge.repo(utf8("add"), toJsonBytes(repoAddOptions(request), "repo add")));
+            () ->
+                bridge.repo(utf8("add"), toJsonBytes(NativeOptions.repoAdd(request), "repo add")));
 
     var failure = operationError(root, "repo add");
     if (failure != null) {
@@ -148,7 +140,7 @@ public final class NativeStructGateway implements HelmGateway {
             "repo update",
             () ->
                 bridge.repo(
-                    utf8("update"), toJsonBytes(repoUpdateOptions(request), "repo update")));
+                    utf8("update"), toJsonBytes(NativeOptions.repoUpdate(request), "repo update")));
 
     var response = convert(root, RepoUpdatePayload.class, "repo update");
     var repositories =
@@ -183,7 +175,7 @@ public final class NativeStructGateway implements HelmGateway {
             "repo remove",
             () ->
                 bridge.repo(
-                    utf8("remove"), toJsonBytes(repoRemoveOptions(request), "repo remove")));
+                    utf8("remove"), toJsonBytes(NativeOptions.repoRemove(request), "repo remove")));
 
     var response = convert(root, RepoRemovePayload.class, "repo remove");
     return new RepoRemoveResult(listOrEmpty(response == null ? null : response.removed()));
@@ -199,7 +191,7 @@ public final class NativeStructGateway implements HelmGateway {
             "search repo",
             () ->
                 bridge.search(
-                    utf8("repo"), toJsonBytes(searchRepoOptions(request), "search repo")));
+                    utf8("repo"), toJsonBytes(NativeOptions.searchRepo(request), "search repo")));
 
     var response = convert(root, SearchPayload.class, "search repo");
     var charts =
@@ -226,7 +218,9 @@ public final class NativeStructGateway implements HelmGateway {
     var root =
         invokeRootOrThrow(
             "search hub",
-            () -> bridge.search(utf8("hub"), toJsonBytes(searchHubOptions(request), "search hub")));
+            () ->
+                bridge.search(
+                    utf8("hub"), toJsonBytes(NativeOptions.searchHub(request), "search hub")));
 
     var response = convert(root, SearchPayload.class, "search hub");
     var charts =
@@ -259,7 +253,8 @@ public final class NativeStructGateway implements HelmGateway {
             "pull",
             () ->
                 bridge.pull(
-                    utf8(request.chartReference()), toJsonBytes(pullOptions(request), "pull")));
+                    utf8(request.chartReference()),
+                    toJsonBytes(NativeOptions.pull(request), "pull")));
 
     var response = convert(root, PullPayload.class, "pull");
     return new PullResult(response == null ? "" : response.output());
@@ -280,7 +275,7 @@ public final class NativeStructGateway implements HelmGateway {
                 bridge.push(
                     utf8(request.chartReference()),
                     utf8(request.remote()),
-                    toJsonBytes(pushOptions(request), "push")));
+                    toJsonBytes(NativeOptions.push(request), "push")));
 
     var response = convert(root, PushPayload.class, "push");
     return new PushResult(response == null ? "" : response.output());
@@ -300,7 +295,7 @@ public final class NativeStructGateway implements HelmGateway {
             () ->
                 bridge.packageChart(
                     utf8(request.chartPath().toString()),
-                    toJsonBytes(packageOptions(request), "package")));
+                    toJsonBytes(NativeOptions.packageChart(request), "package")));
 
     var response = convert(root, PackagePayload.class, "package");
     return new PackageChartResult(response == null ? null : response.path());
@@ -320,62 +315,24 @@ public final class NativeStructGateway implements HelmGateway {
             () ->
                 bridge.dependency(
                     utf8(request.chartPath().toString()),
-                    toJsonBytes(dependencyOptions(request), "dependency")));
+                    toJsonBytes(NativeOptions.dependency(request), "dependency")));
 
     var response = convert(root, DependencyPayload.class, "dependency");
     return new DependencyResult(response == null ? "" : response.output());
   }
 
   @Override
-  public ShowChartResult showChart(ChartRef chartReference, ShowRequest request) {
-    var response = runShow(ShowMode.CHART, chartReference, request);
-    return new ShowChartResult(
+  public ShowResult show(ShowMode mode, ChartRef chartReference, ShowRequest request) {
+    var response = runShow(mode, chartReference, request);
+    var sections = response.sections();
+    return new ShowResult(
+        mode,
         response.chartRef(),
         response.chartPath(),
-        response.sections().chart(),
-        response.cliOutput());
-  }
-
-  @Override
-  public ShowValuesResult showValues(ChartRef chartReference, ShowRequest request) {
-    var response = runShow(ShowMode.VALUES, chartReference, request);
-    return new ShowValuesResult(
-        response.chartRef(),
-        response.chartPath(),
-        response.sections().values(),
-        response.cliOutput());
-  }
-
-  @Override
-  public ShowReadmeResult showReadme(ChartRef chartReference, ShowRequest request) {
-    var response = runShow(ShowMode.README, chartReference, request);
-    return new ShowReadmeResult(
-        response.chartRef(),
-        response.chartPath(),
-        response.sections().readme(),
-        response.cliOutput());
-  }
-
-  @Override
-  public ShowCrdsResult showCrds(ChartRef chartReference, ShowRequest request) {
-    var response = runShow(ShowMode.CRDS, chartReference, request);
-    return new ShowCrdsResult(
-        response.chartRef(),
-        response.chartPath(),
-        listOrEmpty(response.sections().crds()),
-        response.cliOutput());
-  }
-
-  @Override
-  public ShowAllResult showAll(ChartRef chartReference, ShowRequest request) {
-    var response = runShow(ShowMode.ALL, chartReference, request);
-    return new ShowAllResult(
-        response.chartRef(),
-        response.chartPath(),
-        response.sections().chart(),
-        response.sections().values(),
-        response.sections().readme(),
-        listOrEmpty(response.sections().crds()),
+        sections.chart(),
+        sections.values(),
+        sections.readme(),
+        listOrEmpty(sections.crds()),
         response.cliOutput());
   }
 
@@ -397,11 +354,11 @@ public final class NativeStructGateway implements HelmGateway {
                 bridge.install(
                     utf8(request.releaseName()),
                     utf8(request.chart().asReference()),
-                    toJsonBytes(installOptions(request), "install")));
+                    toJsonBytes(NativeOptions.install(request), "install")));
 
     var failure = operationError(root, "install");
     if (failure != null) {
-      return new InstallFailure(
+      return new ReleaseFailure(
           messageOrUnknown(failure.message()), failure.stage(), failure.operation());
     }
 
@@ -411,12 +368,12 @@ public final class NativeStructGateway implements HelmGateway {
           "Native install response missing release", "decodeResponse", "install");
     }
 
-    var release = mapReleasePayload(response.release());
+    var release = mapReleasePayload(response.release(), "install");
 
-    if (isPendingStatus(release.status())) {
-      return new InstallPending(release);
+    if (release.status().isPending()) {
+      return new ReleasePending(release);
     }
-    return new InstallSuccess(release);
+    return new ReleaseSuccess(release);
   }
 
   @Override
@@ -437,11 +394,11 @@ public final class NativeStructGateway implements HelmGateway {
                 bridge.upgrade(
                     utf8(request.releaseName()),
                     utf8(request.chart().asReference()),
-                    toJsonBytes(upgradeOptions(request), "upgrade")));
+                    toJsonBytes(NativeOptions.upgrade(request), "upgrade")));
 
     var failure = operationError(root, "upgrade");
     if (failure != null) {
-      return new UpgradeFailure(
+      return new ReleaseFailure(
           messageOrUnknown(failure.message()), failure.stage(), failure.operation());
     }
 
@@ -451,11 +408,11 @@ public final class NativeStructGateway implements HelmGateway {
           "Native upgrade response missing release", "decodeResponse", "upgrade");
     }
 
-    var release = mapReleasePayload(response.release());
-    if (isPendingStatus(release.status())) {
-      return new UpgradePending(release);
+    var release = mapReleasePayload(response.release(), "upgrade");
+    if (release.status().isPending()) {
+      return new ReleasePending(release);
     }
-    return new UpgradeSuccess(release);
+    return new ReleaseSuccess(release);
   }
 
   @Override
@@ -469,11 +426,11 @@ public final class NativeStructGateway implements HelmGateway {
             () ->
                 bridge.uninstall(
                     utf8(request.releaseName()),
-                    toJsonBytes(uninstallOptions(request), "uninstall")));
+                    toJsonBytes(NativeOptions.uninstall(request), "uninstall")));
 
     var failure = operationError(root, "uninstall");
     if (failure != null) {
-      return new UninstallFailure(
+      return new ReleaseFailure(
           messageOrUnknown(failure.message()), failure.stage(), failure.operation());
     }
 
@@ -483,7 +440,8 @@ public final class NativeStructGateway implements HelmGateway {
           "Native uninstall response missing data", "decodeResponse", "uninstall");
     }
 
-    var release = response.release() != null ? mapReleasePayload(response.release()) : null;
+    var release =
+        response.release() != null ? mapReleasePayload(response.release(), "uninstall") : null;
     return new UninstallSuccess(release, response.info());
   }
 
@@ -497,14 +455,15 @@ public final class NativeStructGateway implements HelmGateway {
             "status",
             () ->
                 bridge.status(
-                    utf8(request.releaseName()), toJsonBytes(statusOptions(request), "status")));
+                    utf8(request.releaseName()),
+                    toJsonBytes(NativeOptions.status(request), "status")));
 
     var response = convert(root, ReleasePayload.class, "status");
     if (response == null || response.release() == null) {
       throw new HelmException("Native status response missing release", "decodeResponse", "status");
     }
 
-    return new StatusResult(mapReleasePayload(response.release()));
+    return new StatusResult(mapReleasePayload(response.release(), "status"));
   }
 
   @Override
@@ -518,11 +477,11 @@ public final class NativeStructGateway implements HelmGateway {
             () ->
                 bridge.rollback(
                     utf8(request.releaseName()),
-                    toJsonBytes(rollbackOptions(request), "rollback")));
+                    toJsonBytes(NativeOptions.rollback(request), "rollback")));
 
     var failure = operationError(root, "rollback");
     if (failure != null) {
-      return new RollbackFailure(
+      return new ReleaseFailure(
           messageOrUnknown(failure.message()), failure.stage(), failure.operation());
     }
 
@@ -545,7 +504,8 @@ public final class NativeStructGateway implements HelmGateway {
             "history",
             () ->
                 bridge.history(
-                    utf8(request.releaseName()), toJsonBytes(historyOptions(request), "history")));
+                    utf8(request.releaseName()),
+                    toJsonBytes(NativeOptions.history(request), "history")));
 
     var response = convert(root, HistoryPayload.class, "history");
     var entries =
@@ -554,8 +514,8 @@ public final class NativeStructGateway implements HelmGateway {
                 e ->
                     new HistoryEntry(
                         e.revision(),
-                        e.updated(),
-                        e.status(),
+                        parseTimestamp(e.updated(), "history", "updated"),
+                        ReleaseStatus.fromWireValue(e.status()),
                         e.chart(),
                         e.chartVersion(),
                         e.appVersion(),
@@ -573,12 +533,13 @@ public final class NativeStructGateway implements HelmGateway {
         request.namespace(),
         request.allNamespaces());
     var root =
-        invokeRootOrThrow("list", () -> bridge.list(toJsonBytes(listOptions(request), "list")));
+        invokeRootOrThrow(
+            "list", () -> bridge.list(toJsonBytes(NativeOptions.list(request), "list")));
 
     var response = convert(root, ListPayload.class, "list");
     var releases =
         listOrEmpty(response == null ? null : response.releases()).stream()
-            .map(NativeStructGateway::mapReleasePayload)
+            .map(release -> mapReleasePayload(release, "list"))
             .toList();
     return new ReleaseListResult(releases);
   }
@@ -596,7 +557,7 @@ public final class NativeStructGateway implements HelmGateway {
             "test",
             () ->
                 bridge.test(
-                    utf8(request.releaseName()), toJsonBytes(testOptions(request), "test")));
+                    utf8(request.releaseName()), toJsonBytes(NativeOptions.test(request), "test")));
 
     var response = convert(root, TestPayload.class, "test");
     if (response == null || response.release() == null) {
@@ -607,7 +568,7 @@ public final class NativeStructGateway implements HelmGateway {
         listOrEmpty(response.results()).stream()
             .map(r -> new TestHookResult(r.name(), r.status()))
             .toList();
-    return new TestResult(mapReleasePayload(response.release()), results);
+    return new TestResult(mapReleasePayload(response.release(), "test"), results);
   }
 
   @Override
@@ -619,7 +580,7 @@ public final class NativeStructGateway implements HelmGateway {
           "Native get all response missing release", "decodeResponse", "get all");
     }
     return new GetAllResult(
-        mapReleasePayload(response.release()),
+        mapReleasePayload(response.release(), "get all"),
         mapOrEmpty(response.values()),
         response.manifest(),
         mapHooks(response.hooks()),
@@ -669,11 +630,11 @@ public final class NativeStructGateway implements HelmGateway {
         response.name(),
         response.namespace(),
         response.revision(),
-        response.status(),
+        ReleaseStatus.fromWireValue(response.status()),
         response.chart(),
         response.chartVersion(),
         response.appVersion(),
-        response.deployedAt());
+        parseTimestamp(response.deployedAt(), "get metadata", "deployedAt"));
   }
 
   @Override
@@ -694,7 +655,7 @@ public final class NativeStructGateway implements HelmGateway {
                 bridge.template(
                     utf8(request.releaseName()),
                     utf8(request.chart().asReference()),
-                    toJsonBytes(templateOptions(request), "template")));
+                    toJsonBytes(NativeOptions.template(request), "template")));
 
     var response = convert(root, TemplatePayload.class, "template");
     if (response == null || response.release() == null) {
@@ -702,7 +663,8 @@ public final class NativeStructGateway implements HelmGateway {
           "Native template response missing release", "decodeResponse", "template");
     }
 
-    return new TemplateResult(mapReleasePayload(response.release()), response.manifest());
+    return new TemplateResult(
+        mapReleasePayload(response.release(), "template"), response.manifest());
   }
 
   @Override
@@ -716,7 +678,7 @@ public final class NativeStructGateway implements HelmGateway {
             () ->
                 bridge.lint(
                     utf8(request.chartPath().toString()),
-                    toJsonBytes(lintOptions(request), "lint")));
+                    toJsonBytes(NativeOptions.lint(request), "lint")));
 
     var response = convert(root, LintPayload.class, "lint");
     var messages =
@@ -745,7 +707,7 @@ public final class NativeStructGateway implements HelmGateway {
                 bridge.registry(
                     utf8("login"),
                     utf8(request.hostname()),
-                    toJsonBytes(registryLoginOptions(request), "registry login")));
+                    toJsonBytes(NativeOptions.registryLogin(request), "registry login")));
 
     var response = convert(root, RegistryPayload.class, "registry login");
     if (response == null) {
@@ -806,7 +768,7 @@ public final class NativeStructGateway implements HelmGateway {
                 bridge.show(
                     utf8(mode.wireValue()),
                     utf8(chartReference.asReference()),
-                    toJsonBytes(showOptions(request), operation)));
+                    toJsonBytes(NativeOptions.show(request), operation)));
 
     var response = convert(root, ShowPayload.class, operation);
     if (response == null || response.sections() == null) {
@@ -908,406 +870,6 @@ public final class NativeStructGateway implements HelmGateway {
     return value.getBytes(StandardCharsets.UTF_8);
   }
 
-  private static Map<String, Object> repoAddOptions(RepoAddRequest request) {
-    var options = new LinkedHashMap<String, Object>();
-    putIfNonNull(options, "name", request.name());
-    putIfNonNull(options, "url", request.url());
-    putIfNonNull(options, "username", request.username());
-    putIfNonNull(options, "password", request.password());
-    putIfNonNull(options, "certFile", request.certificateFile());
-    putIfNonNull(options, "keyFile", request.keyFile());
-    putIfNonNull(options, "caFile", request.certificateAuthorityFile());
-    options.put("insecureSkipTlsVerify", request.insecureSkipTlsVerification());
-    options.put("passCredentialsAll", request.passCredentialsToAllHosts());
-    options.put("forceUpdate", request.forceUpdate());
-    options.put("allowDeprecatedRepos", request.allowDeprecatedRepositories());
-    putIfNonNull(options, "timeout", durationString(request.timeout()));
-    return options;
-  }
-
-  private static Map<String, Object> repoUpdateOptions(RepoUpdateRequest request) {
-    var options = new LinkedHashMap<String, Object>();
-    options.put("names", request.names());
-    putIfNonNull(options, "timeout", durationString(request.timeout()));
-    return options;
-  }
-
-  private static Map<String, Object> repoRemoveOptions(RepoRemoveRequest request) {
-    var options = new LinkedHashMap<String, Object>();
-    options.put("names", request.names());
-    return options;
-  }
-
-  private static Map<String, Object> searchRepoOptions(RepoSearchRequest request) {
-    var options = new LinkedHashMap<String, Object>();
-    putIfNonNull(options, "keyword", request.keyword());
-    options.put("regexp", request.regularExpression());
-    options.put("versions", request.includeAllVersions());
-    options.put("devel", request.includePreReleaseVersions());
-    putIfNonNull(options, "version", request.versionConstraint());
-    options.put("failOnNoResult", request.failIfNoResults());
-    options.put("maxColWidth", request.maxColumnWidth());
-    return options;
-  }
-
-  private static Map<String, Object> searchHubOptions(HubSearchRequest request) {
-    var options = new LinkedHashMap<String, Object>();
-    putIfNonNull(options, "keyword", request.keyword());
-    putIfNonNull(options, "endpoint", request.endpoint());
-    options.put("failOnNoResult", request.failIfNoResults());
-    options.put("listRepoUrl", request.listRepositoryUrl());
-    options.put("maxColWidth", request.maxColumnWidth());
-    return options;
-  }
-
-  private static Map<String, Object> showOptions(ShowRequest request) {
-    var source = request.source();
-    var options = new LinkedHashMap<String, Object>();
-    putIfNonNull(options, "version", source.version());
-    putIfNonNull(options, "repo", source.repositoryUrl());
-    putIfNonNull(options, "username", source.username());
-    putIfNonNull(options, "password", source.password());
-    options.put("plainHttp", source.plainHttp());
-    options.put("insecureSkipTlsVerify", source.insecureSkipTlsVerification());
-    putIfNonNull(options, "keyring", source.keyringPath());
-    putIfNonNull(options, "certFile", source.certificateFile());
-    putIfNonNull(options, "keyFile", source.keyFile());
-    putIfNonNull(options, "caFile", source.certificateAuthorityFile());
-    options.put("passCredentialsAll", source.passCredentialsToAllHosts());
-    options.put("verify", source.verifySignatures());
-    options.put("devel", source.includePreReleaseVersions());
-    putIfNonNull(options, "jsonpath", request.valuesJsonPath());
-    return options;
-  }
-
-  private static Map<String, Object> installOptions(InstallRequest request) {
-    var source = request.source();
-    var options = new LinkedHashMap<String, Object>();
-
-    putIfNonNull(options, "version", source.version());
-    putIfNonNull(options, "repo", source.repositoryUrl());
-    putIfNonNull(options, "username", source.username());
-    putIfNonNull(options, "password", source.password());
-    options.put("plainHttp", source.plainHttp());
-    options.put("insecureSkipTlsVerify", source.insecureSkipTlsVerification());
-    putIfNonNull(options, "keyring", source.keyringPath());
-    putIfNonNull(options, "certFile", source.certificateFile());
-    putIfNonNull(options, "keyFile", source.keyFile());
-    putIfNonNull(options, "caFile", source.certificateAuthorityFile());
-    options.put("passCredentialsAll", source.passCredentialsToAllHosts());
-    options.put("verify", source.verifySignatures());
-    options.put("devel", source.includePreReleaseVersions());
-
-    putIfNonNull(options, "namespace", request.namespace());
-    options.put("createNamespace", request.createNamespace());
-    putIfNonNull(
-        options, "dryRun", request.dryRunMode() == null ? null : request.dryRunMode().wireValue());
-    putIfNonNull(
-        options, "wait", request.waitMode() == null ? null : request.waitMode().wireValue());
-    options.put("waitForJobs", request.waitForJobs());
-    putIfNonNull(options, "timeout", durationString(request.timeout()));
-    putIfNonNull(options, "description", request.description());
-    options.put("rollbackOnFailure", request.rollbackOnFailure());
-    options.put("skipCrds", request.skipCrds());
-    options.put("disableHooks", request.disableHooks());
-    options.put("disableOpenApiValidation", request.disableOpenApiValidation());
-    options.put("forceReplace", request.forceReplace());
-    options.put("forceConflicts", request.applyStrategy().forceConflicts());
-    options.put("serverSideApply", request.applyStrategy().serverSideApply());
-    options.put("replace", request.replace());
-    options.put("generateName", request.generateName());
-    putIfNonNull(options, "nameTemplate", request.nameTemplate());
-    options.put("subNotes", request.subNotes());
-    options.put("enableDns", request.enableDns());
-    options.put("takeOwnership", request.takeOwnership());
-    options.put("dependencyUpdate", request.dependencyUpdate());
-
-    if (!request.values().isEmpty()) {
-      options.put("values", request.values());
-    }
-    if (!request.labels().isEmpty()) {
-      options.put("labels", request.labels());
-    }
-
-    return options;
-  }
-
-  private static Map<String, Object> upgradeOptions(UpgradeRequest request) {
-    var source = request.source();
-    var options = new LinkedHashMap<String, Object>();
-
-    putIfNonNull(options, "version", source.version());
-    putIfNonNull(options, "repo", source.repositoryUrl());
-    putIfNonNull(options, "username", source.username());
-    putIfNonNull(options, "password", source.password());
-    options.put("plainHttp", source.plainHttp());
-    options.put("insecureSkipTlsVerify", source.insecureSkipTlsVerification());
-    putIfNonNull(options, "keyring", source.keyringPath());
-    putIfNonNull(options, "certFile", source.certificateFile());
-    putIfNonNull(options, "keyFile", source.keyFile());
-    putIfNonNull(options, "caFile", source.certificateAuthorityFile());
-    options.put("passCredentialsAll", source.passCredentialsToAllHosts());
-    options.put("verify", source.verifySignatures());
-    options.put("devel", source.includePreReleaseVersions());
-
-    putIfNonNull(options, "namespace", request.namespace());
-    options.put("install", request.install());
-    putIfNonNull(
-        options, "dryRun", request.dryRunMode() == null ? null : request.dryRunMode().wireValue());
-    putIfNonNull(
-        options, "wait", request.waitMode() == null ? null : request.waitMode().wireValue());
-    options.put("waitForJobs", request.waitForJobs());
-    putIfNonNull(options, "timeout", durationString(request.timeout()));
-    putIfNonNull(options, "description", request.description());
-    options.put("rollbackOnFailure", request.rollbackOnFailure());
-    options.put("skipCrds", request.skipCrds());
-    options.put("disableHooks", request.disableHooks());
-    options.put("disableOpenApiValidation", request.disableOpenApiValidation());
-    options.put("forceReplace", request.forceReplace());
-    options.put("forceConflicts", request.applyStrategy().forceConflicts());
-    options.put("serverSideApply", request.applyStrategy().serverSideApply());
-    options.put("subNotes", request.subNotes());
-    options.put("enableDns", request.enableDns());
-    options.put("takeOwnership", request.takeOwnership());
-    options.put("dependencyUpdate", request.dependencyUpdate());
-    options.put("cleanupOnFail", request.cleanupOnFail());
-    options.put("maxHistory", request.maxHistory());
-    options.put("reuseValues", request.reuseValues());
-    options.put("resetValues", request.resetValues());
-    options.put("resetThenReuseValues", request.resetThenReuseValues());
-
-    if (!request.values().isEmpty()) {
-      options.put("values", request.values());
-    }
-    if (!request.labels().isEmpty()) {
-      options.put("labels", request.labels());
-    }
-
-    return options;
-  }
-
-  private static Map<String, Object> uninstallOptions(UninstallRequest request) {
-    var options = new LinkedHashMap<String, Object>();
-    putIfNonNull(options, "namespace", request.namespace());
-    options.put("dryRun", request.dryRun());
-    options.put("disableHooks", request.disableHooks());
-    options.put("keepHistory", request.keepHistory());
-    options.put("ignoreNotFound", request.ignoreNotFound());
-    putIfNonNull(options, "timeout", durationString(request.timeout()));
-    putIfNonNull(options, "description", request.description());
-    putIfNonNull(
-        options, "wait", request.waitMode() == null ? null : request.waitMode().wireValue());
-    putIfNonNull(options, "deletionPropagation", request.deletionPropagation());
-    return options;
-  }
-
-  private static Map<String, Object> statusOptions(StatusRequest request) {
-    var options = new LinkedHashMap<String, Object>();
-    putIfNonNull(options, "namespace", request.namespace());
-    options.put("revision", request.revision());
-    return options;
-  }
-
-  private static Map<String, Object> rollbackOptions(RollbackRequest request) {
-    var options = new LinkedHashMap<String, Object>();
-    putIfNonNull(options, "namespace", request.namespace());
-    options.put("revision", request.revision());
-    putIfNonNull(
-        options, "dryRun", request.dryRunMode() == null ? null : request.dryRunMode().wireValue());
-    options.put("disableHooks", request.disableHooks());
-    options.put("forceReplace", request.forceReplace());
-    putIfNonNull(options, "timeout", durationString(request.timeout()));
-    putIfNonNull(
-        options, "wait", request.waitMode() == null ? null : request.waitMode().wireValue());
-    options.put("waitForJobs", request.waitForJobs());
-    options.put("cleanupOnFail", request.cleanupOnFail());
-    options.put("maxHistory", request.maxHistory());
-    options.put("forceConflicts", request.applyStrategy().forceConflicts());
-    options.put("serverSideApply", request.applyStrategy().serverSideApply());
-    return options;
-  }
-
-  private static Map<String, Object> historyOptions(HistoryRequest request) {
-    var options = new LinkedHashMap<String, Object>();
-    putIfNonNull(options, "namespace", request.namespace());
-    options.put("max", request.max());
-    return options;
-  }
-
-  private static Map<String, Object> getOptions(GetRequest request) {
-    var options = new LinkedHashMap<String, Object>();
-    putIfNonNull(options, "namespace", request.namespace());
-    options.put("revision", request.revision());
-    options.put("allValues", request.allValues());
-    return options;
-  }
-
-  private static Map<String, Object> templateOptions(TemplateRequest request) {
-    var source = request.source();
-    var options = new LinkedHashMap<String, Object>();
-
-    putIfNonNull(options, "version", source.version());
-    putIfNonNull(options, "repo", source.repositoryUrl());
-    putIfNonNull(options, "username", source.username());
-    putIfNonNull(options, "password", source.password());
-    options.put("plainHttp", source.plainHttp());
-    options.put("insecureSkipTlsVerify", source.insecureSkipTlsVerification());
-    putIfNonNull(options, "keyring", source.keyringPath());
-    putIfNonNull(options, "certFile", source.certificateFile());
-    putIfNonNull(options, "keyFile", source.keyFile());
-    putIfNonNull(options, "caFile", source.certificateAuthorityFile());
-    options.put("passCredentialsAll", source.passCredentialsToAllHosts());
-    options.put("verify", source.verifySignatures());
-    options.put("devel", source.includePreReleaseVersions());
-
-    putIfNonNull(options, "namespace", request.namespace());
-    putIfNonNull(options, "description", request.description());
-    options.put("skipCrds", request.skipCrds());
-    options.put("disableHooks", request.disableHooks());
-    options.put("disableOpenApiValidation", request.disableOpenApiValidation());
-    options.put("generateName", request.generateName());
-    putIfNonNull(options, "nameTemplate", request.nameTemplate());
-    options.put("subNotes", request.subNotes());
-    options.put("enableDns", request.enableDns());
-    options.put("includeCrds", request.includeCrds());
-
-    if (request.apiVersions() != null && !request.apiVersions().isEmpty()) {
-      options.put("apiVersions", request.apiVersions());
-    }
-    if (!request.values().isEmpty()) {
-      options.put("values", request.values());
-    }
-    if (!request.labels().isEmpty()) {
-      options.put("labels", request.labels());
-    }
-
-    return options;
-  }
-
-  private static Map<String, Object> lintOptions(LintRequest request) {
-    var options = new LinkedHashMap<String, Object>();
-    options.put("strict", request.strict());
-    options.put("quiet", request.quiet());
-    options.put("withSubcharts", request.withSubcharts());
-    if (!request.values().isEmpty()) {
-      options.put("values", request.values());
-    }
-    return options;
-  }
-
-  private static Map<String, Object> pullOptions(PullRequest request) {
-    var source = request.source();
-    var options = new LinkedHashMap<String, Object>();
-
-    putIfNonNull(options, "version", source.version());
-    putIfNonNull(options, "repo", source.repositoryUrl());
-    putIfNonNull(options, "username", source.username());
-    putIfNonNull(options, "password", source.password());
-    options.put("plainHttp", source.plainHttp());
-    options.put("insecureSkipTlsVerify", source.insecureSkipTlsVerification());
-    putIfNonNull(options, "keyring", source.keyringPath());
-    putIfNonNull(options, "certFile", source.certificateFile());
-    putIfNonNull(options, "keyFile", source.keyFile());
-    putIfNonNull(options, "caFile", source.certificateAuthorityFile());
-    options.put("passCredentialsAll", source.passCredentialsToAllHosts());
-    options.put("verify", source.verifySignatures());
-    options.put("devel", source.includePreReleaseVersions());
-
-    options.put("untar", request.untar());
-    putIfNonNull(
-        options,
-        "untarDir",
-        request.untarDirectory() == null ? null : request.untarDirectory().toString());
-    putIfNonNull(
-        options,
-        "destDir",
-        request.destinationDirectory() == null ? null : request.destinationDirectory().toString());
-
-    return options;
-  }
-
-  private static Map<String, Object> pushOptions(PushRequest request) {
-    var options = new LinkedHashMap<String, Object>();
-    options.put("plainHttp", request.plainHttp());
-    options.put("insecureSkipTlsVerify", request.insecureSkipTlsVerification());
-    putIfNonNull(options, "certFile", request.certificateFile());
-    putIfNonNull(options, "keyFile", request.keyFile());
-    putIfNonNull(options, "caFile", request.certificateAuthorityFile());
-    return options;
-  }
-
-  private static Map<String, Object> packageOptions(PackageChartRequest request) {
-    var options = new LinkedHashMap<String, Object>();
-    putIfNonNull(options, "version", request.version());
-    putIfNonNull(options, "appVersion", request.appVersion());
-    putIfNonNull(
-        options,
-        "destination",
-        request.destination() == null ? null : request.destination().toString());
-    options.put("dependencyUpdate", request.dependencyUpdate());
-    options.put("sign", request.sign());
-    putIfNonNull(options, "key", request.key());
-    putIfNonNull(options, "keyring", request.keyring());
-    putIfNonNull(options, "passphraseFile", request.passphraseFile());
-    options.put("plainHttp", request.plainHttp());
-    options.put("insecureSkipTlsVerify", request.insecureSkipTlsVerification());
-    putIfNonNull(options, "certFile", request.certificateFile());
-    putIfNonNull(options, "keyFile", request.keyFile());
-    putIfNonNull(options, "caFile", request.certificateAuthorityFile());
-    return options;
-  }
-
-  private static Map<String, Object> dependencyOptions(DependencyRequest request) {
-    var options = new LinkedHashMap<String, Object>();
-    options.put("skipRefresh", request.skipRefresh());
-    options.put("verify", request.verify());
-    putIfNonNull(options, "keyring", request.keyring());
-    options.put("plainHttp", request.plainHttp());
-    options.put("insecureSkipTlsVerify", request.insecureSkipTlsVerification());
-    putIfNonNull(options, "certFile", request.certificateFile());
-    putIfNonNull(options, "keyFile", request.keyFile());
-    putIfNonNull(options, "caFile", request.certificateAuthorityFile());
-    return options;
-  }
-
-  private static Map<String, Object> listOptions(ReleaseListRequest request) {
-    var options = new LinkedHashMap<String, Object>();
-    putIfNonNull(options, "namespace", request.namespace());
-    options.put("allNamespaces", request.allNamespaces());
-    putIfNonNull(options, "filter", request.filter());
-    if (!request.states().isEmpty()) {
-      options.put("states", request.states());
-    }
-    options.put("limit", request.limit());
-    options.put("offset", request.offset());
-    options.put("sortByDate", request.sortByDate());
-    options.put("sortReverse", request.sortReverse());
-    putIfNonNull(options, "selector", request.selector());
-    return options;
-  }
-
-  private static Map<String, Object> testOptions(TestRequest request) {
-    var options = new LinkedHashMap<String, Object>();
-    putIfNonNull(options, "namespace", request.namespace());
-    putIfNonNull(options, "timeout", durationString(request.timeout()));
-    if (!request.filter().isEmpty()) {
-      options.put("filter", request.filter());
-    }
-    return options;
-  }
-
-  private static Map<String, Object> registryLoginOptions(RegistryLoginRequest request) {
-    var options = new LinkedHashMap<String, Object>();
-    putIfNonNull(options, "username", request.username());
-    putIfNonNull(options, "password", request.password());
-    putIfNonNull(options, "certFile", request.certificateFile());
-    putIfNonNull(options, "keyFile", request.keyFile());
-    putIfNonNull(options, "caFile", request.certificateAuthorityFile());
-    options.put("insecure", request.insecure());
-    options.put("plainHttp", request.plainHttp());
-    return options;
-  }
-
   private JsonNode runGetRoot(GetMode mode, GetRequest request) {
     var operation = "get " + mode.wireValue();
     log.debug("Get operation: mode={}, release={}", mode.wireValue(), request.releaseName());
@@ -1317,18 +879,18 @@ public final class NativeStructGateway implements HelmGateway {
             bridge.get(
                 utf8(mode.wireValue()),
                 utf8(request.releaseName()),
-                toJsonBytes(getOptions(request), operation)));
+                toJsonBytes(NativeOptions.get(request), operation)));
   }
 
-  private static ReleaseInfo mapReleasePayload(NativeReleasePayload r) {
+  private static ReleaseInfo mapReleasePayload(NativeReleasePayload r, String operation) {
     return new ReleaseInfo(
         r.name(),
         r.namespace(),
         r.revision(),
-        r.status(),
+        ReleaseStatus.fromWireValue(r.status()),
         r.description(),
-        r.firstDeployed(),
-        r.lastDeployed(),
+        parseTimestamp(r.firstDeployed(), operation, "firstDeployed"),
+        parseTimestamp(r.lastDeployed(), operation, "lastDeployed"),
         r.chartName(),
         r.chartVersion(),
         r.appVersion(),
@@ -1345,19 +907,6 @@ public final class NativeStructGateway implements HelmGateway {
     return value == null ? Map.of() : value;
   }
 
-  private static void putIfNonNull(Map<String, Object> target, String key, Object value) {
-    if (value != null) {
-      target.put(key, value);
-    }
-  }
-
-  private static String durationString(Duration value) {
-    if (value == null) {
-      return null;
-    }
-    return value.toMillis() + "ms";
-  }
-
   private static String fallbackOperation(String operation, String fallback) {
     return operation == null || operation.isBlank() ? fallback : operation;
   }
@@ -1369,12 +918,16 @@ public final class NativeStructGateway implements HelmGateway {
     return message;
   }
 
-  private static boolean isPendingStatus(String status) {
-    if (status == null) {
-      return false;
+  private static Instant parseTimestamp(String value, String operation, String field) {
+    if (value == null || value.isBlank()) {
+      return null;
     }
-    var normalized = status.trim().toLowerCase(Locale.ROOT);
-    return normalized.startsWith("pending");
+    try {
+      return Instant.parse(value);
+    } catch (DateTimeParseException error) {
+      throw new HelmException(
+          "Invalid timestamp for " + field + ": " + value, "decodeResponse", operation, error);
+    }
   }
 
   private static <T> List<T> listOrEmpty(List<T> value) {

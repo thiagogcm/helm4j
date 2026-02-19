@@ -1,15 +1,23 @@
 package dev.nthings.helm4j.release;
 
+import java.time.Instant;
+import java.util.Objects;
+
 /** Core Helm release metadata returned by install operations. */
 public record ReleaseInfo(
     String name,
     String namespace,
     int revision,
-    String status,
+    ReleaseStatus status,
     String description,
-    String firstDeployed,
-    String lastDeployed,
+    Instant firstDeployed,
+    Instant lastDeployed,
     String chartName,
     String chartVersion,
     String appVersion,
-    String notes) {}
+    String notes) {
+
+  public ReleaseInfo {
+    status = Objects.requireNonNullElse(status, ReleaseStatus.UNKNOWN);
+  }
+}

@@ -5,9 +5,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 
+import dev.nthings.helm4j.chart.ChartRef;
+import dev.nthings.helm4j.chart.ChartSource;
 import dev.nthings.helm4j.internal.model.ModelSupport;
-import dev.nthings.helm4j.types.ChartRef;
-import dev.nthings.helm4j.types.ChartSource;
 
 /** Request parameters for upgrading an existing release. */
 public record UpgradeRequest(

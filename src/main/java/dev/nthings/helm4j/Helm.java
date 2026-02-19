@@ -6,6 +6,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import dev.nthings.helm4j.chart.ChartRef;
 import dev.nthings.helm4j.internal.api.ClientSupport;
 import dev.nthings.helm4j.release.ApplyStrategy;
 import dev.nthings.helm4j.release.DryRunMode;
@@ -14,7 +15,6 @@ import dev.nthings.helm4j.release.InstallResult;
 import dev.nthings.helm4j.release.UpgradeRequest;
 import dev.nthings.helm4j.release.UpgradeResult;
 import dev.nthings.helm4j.release.WaitMode;
-import dev.nthings.helm4j.types.ChartRef;
 
 /** Standard static SDK entrypoint for Helm operations. */
 public final class Helm {

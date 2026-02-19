@@ -5,7 +5,6 @@ import java.util.function.Consumer;
 
 import dev.nthings.helm4j.internal.api.ClientSupport;
 import dev.nthings.helm4j.internal.sdk.HelmGateway;
-import dev.nthings.helm4j.types.ChartRef;
 
 /** Chart namespace for search and chart-content operations. */
 public final class ChartClient {
@@ -36,79 +35,22 @@ public final class ChartClient {
     return gateway.searchHub(request);
   }
 
-  public ShowChartResult chart(ChartRef chartReference, Consumer<ShowRequest.Builder> spec) {
+  public ShowResult show(
+      ShowMode mode, ChartRef chartReference, Consumer<ShowRequest.Builder> spec) {
+    Objects.requireNonNull(mode, "mode");
     Objects.requireNonNull(chartReference, "chartReference");
     return ClientSupport.buildAndCall(
         ShowRequest::builder,
         spec,
         ShowRequest.Builder::build,
-        request -> chart(chartReference, request));
+        request -> show(mode, chartReference, request));
   }
 
-  public ShowChartResult chart(ChartRef chartReference, ShowRequest request) {
+  public ShowResult show(ShowMode mode, ChartRef chartReference, ShowRequest request) {
+    Objects.requireNonNull(mode, "mode");
     Objects.requireNonNull(chartReference, "chartReference");
     Objects.requireNonNull(request, "request");
-    return gateway.showChart(chartReference, request);
-  }
-
-  public ShowValuesResult values(ChartRef chartReference, Consumer<ShowRequest.Builder> spec) {
-    Objects.requireNonNull(chartReference, "chartReference");
-    return ClientSupport.buildAndCall(
-        ShowRequest::builder,
-        spec,
-        ShowRequest.Builder::build,
-        request -> values(chartReference, request));
-  }
-
-  public ShowValuesResult values(ChartRef chartReference, ShowRequest request) {
-    Objects.requireNonNull(chartReference, "chartReference");
-    Objects.requireNonNull(request, "request");
-    return gateway.showValues(chartReference, request);
-  }
-
-  public ShowReadmeResult readme(ChartRef chartReference, Consumer<ShowRequest.Builder> spec) {
-    Objects.requireNonNull(chartReference, "chartReference");
-    return ClientSupport.buildAndCall(
-        ShowRequest::builder,
-        spec,
-        ShowRequest.Builder::build,
-        request -> readme(chartReference, request));
-  }
-
-  public ShowReadmeResult readme(ChartRef chartReference, ShowRequest request) {
-    Objects.requireNonNull(chartReference, "chartReference");
-    Objects.requireNonNull(request, "request");
-    return gateway.showReadme(chartReference, request);
-  }
-
-  public ShowCrdsResult crds(ChartRef chartReference, Consumer<ShowRequest.Builder> spec) {
-    Objects.requireNonNull(chartReference, "chartReference");
-    return ClientSupport.buildAndCall(
-        ShowRequest::builder,
-        spec,
-        ShowRequest.Builder::build,
-        request -> crds(chartReference, request));
-  }
-
-  public ShowCrdsResult crds(ChartRef chartReference, ShowRequest request) {
-    Objects.requireNonNull(chartReference, "chartReference");
-    Objects.requireNonNull(request, "request");
-    return gateway.showCrds(chartReference, request);
-  }
-
-  public ShowAllResult all(ChartRef chartReference, Consumer<ShowRequest.Builder> spec) {
-    Objects.requireNonNull(chartReference, "chartReference");
-    return ClientSupport.buildAndCall(
-        ShowRequest::builder,
-        spec,
-        ShowRequest.Builder::build,
-        request -> all(chartReference, request));
-  }
-
-  public ShowAllResult all(ChartRef chartReference, ShowRequest request) {
-    Objects.requireNonNull(chartReference, "chartReference");
-    Objects.requireNonNull(request, "request");
-    return gateway.showAll(chartReference, request);
+    return gateway.show(mode, chartReference, request);
   }
 
   public TemplateResult template(Consumer<TemplateRequest.Builder> spec) {
