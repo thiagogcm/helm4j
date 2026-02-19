@@ -3,13 +3,13 @@ package dev.nthings.helm4j.release;
 import java.util.function.Consumer;
 
 import dev.nthings.helm4j.internal.api.NamespaceClient;
-import dev.nthings.helm4j.internal.sdk.HelmGateway;
+import dev.nthings.helm4j.internal.sdk.ReleaseGateway;
 import dev.nthings.helm4j.model.ListResult;
 
 /** Release namespace for lifecycle operations. */
-public final class ReleaseClient extends NamespaceClient {
+public final class ReleaseClient extends NamespaceClient<ReleaseGateway> {
 
-  public ReleaseClient(HelmGateway gateway) {
+  public ReleaseClient(ReleaseGateway gateway) {
     super(gateway);
   }
 

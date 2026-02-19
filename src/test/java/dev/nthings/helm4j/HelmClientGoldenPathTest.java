@@ -15,6 +15,7 @@ import dev.nthings.helm4j.chart.RepoChartSummary;
 import dev.nthings.helm4j.chart.ShowMode;
 import dev.nthings.helm4j.errors.HelmException;
 import dev.nthings.helm4j.internal.sdk.HelmBridge;
+import dev.nthings.helm4j.internal.sdk.NativeStructGateway;
 import dev.nthings.helm4j.release.ApplyStrategy;
 import dev.nthings.helm4j.release.DryRunMode;
 import dev.nthings.helm4j.release.ReleaseFailure;
@@ -619,6 +620,19 @@ class HelmClientGoldenPathTest {
       var info = helm.version();
       assertEquals("0.2.0", info.version());
       assertEquals("v4.1.2", info.helmVersion());
+    }
+  }
+
+  @Test
+  void clientBuilderAcceptsPrebuiltGateway() {
+    var bridge = new StubHelmBridge();
+    bridge.setVersionSuccess("0.3.0", "go1.26", "v4.1.3");
+
+    var gateway = new NativeStructGateway(bridge, JsonMapper.builder().build());
+    try (var helm = Helm.client(spec -> spec.withGateway(gateway))) {
+      var info = helm.version();
+      assertEquals("0.3.0", info.version());
+      assertEquals("v4.1.3", info.helmVersion());
     }
   }
 

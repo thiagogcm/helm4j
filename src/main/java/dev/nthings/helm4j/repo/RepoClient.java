@@ -3,13 +3,13 @@ package dev.nthings.helm4j.repo;
 import java.util.function.Consumer;
 
 import dev.nthings.helm4j.internal.api.NamespaceClient;
-import dev.nthings.helm4j.internal.sdk.HelmGateway;
+import dev.nthings.helm4j.internal.sdk.RepoGateway;
 import dev.nthings.helm4j.model.ListResult;
 
 /** Repository and registry namespace for Helm SDK operations. */
-public final class RepoClient extends NamespaceClient {
+public final class RepoClient extends NamespaceClient<RepoGateway> {
 
-  public RepoClient(HelmGateway gateway) {
+  public RepoClient(RepoGateway gateway) {
     super(gateway);
   }
 

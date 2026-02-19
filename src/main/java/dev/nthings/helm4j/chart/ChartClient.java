@@ -4,13 +4,13 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 import dev.nthings.helm4j.internal.api.NamespaceClient;
-import dev.nthings.helm4j.internal.sdk.HelmGateway;
+import dev.nthings.helm4j.internal.sdk.ChartGateway;
 import dev.nthings.helm4j.model.ListResult;
 
 /** Chart namespace for search and chart-content operations. */
-public final class ChartClient extends NamespaceClient {
+public final class ChartClient extends NamespaceClient<ChartGateway> {
 
-  public ChartClient(HelmGateway gateway) {
+  public ChartClient(ChartGateway gateway) {
     super(gateway);
   }
 

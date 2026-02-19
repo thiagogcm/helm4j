@@ -5,14 +5,12 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import dev.nthings.helm4j.internal.sdk.HelmGateway;
+/** Shared behavior for public namespace clients backed by a bounded gateway context. */
+public abstract class NamespaceClient<GatewayT> {
 
-/** Shared behavior for public namespace clients backed by {@link HelmGateway}. */
-public abstract class NamespaceClient {
+  protected final GatewayT gateway;
 
-  protected final HelmGateway gateway;
-
-  protected NamespaceClient(HelmGateway gateway) {
+  protected NamespaceClient(GatewayT gateway) {
     this.gateway = Objects.requireNonNull(gateway, "gateway");
   }
 
