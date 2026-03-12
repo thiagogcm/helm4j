@@ -99,24 +99,28 @@ Native strings are released with:
 
 ## Build
 
+Development tasks are exposed through the root `Justfile`.
+
+```bash
+just --list
+```
+
 ### Build Native Library
 
 ```bash
-cd libhelm4j
-GO111MODULE=on go build -buildmode=c-shared -o libhelm4j.so .
+just go-build
 ```
 
 ### Build Java SDK
 
 ```bash
-./gradlew build
+just build
 ```
 
 ### Run Checks
 
 ```bash
-./gradlew check
-cd libhelm4j && go test ./...
+just check
 ```
 
 ## Documentation
