@@ -85,15 +85,20 @@ public final class HelmClient implements AutoCloseable {
     }
 
     public HelmClient build() {
-      var resolvedMapper = mapper == null ? defaultMapper() : mapper;
+      var resolvedMapper = mapper == null ? DefaultMapperHolder.INSTANCE : mapper;
       var resolvedGateway = gateway == null ? nativeGateway(resolvedMapper) : gateway;
       return new HelmClient(resolvedGateway, resolvedGateway, resolvedGateway, resolvedGateway);
     }
 
-    private static ObjectMapper defaultMapper() {
-      return JsonMapper.builder()
-          .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-          .build();
+    /**
+     * Lazy-initialization holder for the shared default {@link ObjectMapper}. The mapper is
+     * stateless w.r.t. configuration, so a single instance is safe to share across all {@link
+     * Helm#client()} calls. Holder pattern keeps initialization cost off the class load path of
+     * {@link HelmClient}.
+     */
+    private static final class DefaultMapperHolder {
+      static final ObjectMapper INSTANCE =
+          JsonMapper.builder().disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES).build();
     }
 
     private HelmGateway nativeGateway(ObjectMapper resolvedMapper) {

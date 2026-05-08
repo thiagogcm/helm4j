@@ -19,8 +19,9 @@ import java.util.Map;
 import dev.nthings.helm4j.Helm;
 import dev.nthings.helm4j.chart.ChartRef;
 import dev.nthings.helm4j.chart.ShowMode;
-import dev.nthings.helm4j.repo.RepoAddSuccess;
 import dev.nthings.helm4j.release.ReleaseSuccess;
+import dev.nthings.helm4j.release.WaitMode;
+import dev.nthings.helm4j.repo.RepoAddSuccess;
 
 try (var helm = Helm.client()) {
   var add =
@@ -53,6 +54,7 @@ try (var helm = Helm.client()) {
                       .chart(ChartRef.repo("bitnami/nginx"))
                       .namespace("apps")
                       .createNamespace(true)
+                      .waitMode(WaitMode.HOOK_ONLY)
                       .timeout(Duration.ofMinutes(5))
                       .values(Map.of("service", Map.of("type", "ClusterIP"))));
 
@@ -61,6 +63,29 @@ try (var helm = Helm.client()) {
   }
 }
 ```
+
+### Working with sealed result types
+
+Lifecycle operations return `ReleaseOutcome`, a sealed interface that permits exactly five
+result types: `ReleaseSuccess`, `ReleasePending`, `ReleaseFailure`, `UninstallSuccess`, and
+`RollbackSuccess`. When you forward a `ReleaseOutcome` through a generic helper that needs
+to handle every variant, prefer a `switch` expression with type patterns over `instanceof`
+chains — the compiler enforces exhaustiveness, so adding a new permit later forces every
+call site to be updated:
+
+```java
+String describe(ReleaseOutcome outcome) {
+  return switch (outcome) {
+    case ReleaseSuccess s -> "ok " + s.release().status();
+    case ReleasePending p -> "pending " + p.release().status();
+    case ReleaseFailure f -> "failed " + f.message();
+    case UninstallSuccess u -> "uninstalled " + u.releaseName();
+    case RollbackSuccess r -> "rolled back to revision " + r.release().version();
+  };
+}
+```
+
+`RepoAddResult` and `LintResult` follow the same pattern.
 
 ## Public API
 

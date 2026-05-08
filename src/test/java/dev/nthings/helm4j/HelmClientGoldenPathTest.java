@@ -30,6 +30,7 @@ import dev.nthings.helm4j.repo.RepoAddSuccess;
 import dev.nthings.helm4j.repo.RepoSummary;
 import dev.nthings.helm4j.repo.RepoUpdateEntry;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import tools.jackson.core.JacksonException;
@@ -43,9 +44,11 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@DisplayName("HelmClient golden path: fluent namespaces, sealed result types, native parity")
 class HelmClientGoldenPathTest {
 
   @Test
+  @DisplayName("Golden path: install + repo + chart returns typed sealed results")
   void goldenPathUsesFluentNamespacesAndReturnsTypedResults() {
     var bridge = new StubHelmBridge();
     bridge.setRepoAddSuccess("bitnami", "https://charts.bitnami.com/bitnami");
@@ -215,6 +218,7 @@ class HelmClientGoldenPathTest {
   }
 
   @Test
+  @DisplayName("Install: pending and failure outcomes map to sealed permits")
   void pendingAndFailureInstallOutcomesMapToSealedResults() {
     var pendingBridge = new StubHelmBridge();
     pendingBridge.setInstallSuccess("nginx", "apps", 1, "pending-install");
@@ -240,6 +244,7 @@ class HelmClientGoldenPathTest {
   }
 
   @Test
+  @DisplayName("Errors: domain failures vs transport failures are distinguishable")
   void domainFailureAndTransportFailureAreHandledSeparately() {
     var domainFailureBridge = new StubHelmBridge();
     domainFailureBridge.setRepoAddFailure("repository already exists", "runOperation", "repo add");
@@ -519,6 +524,7 @@ class HelmClientGoldenPathTest {
   }
 
   @Test
+  @DisplayName("Lifecycle: upgrade/uninstall/rollback all expose typed failures")
   void upgradeUninstallAndRollbackFailuresMapToTypedFailures() {
     var bridge = new StubHelmBridge();
     bridge.setUpgradeFailure("cannot upgrade", "runOperation", "upgrade");
@@ -610,6 +616,7 @@ class HelmClientGoldenPathTest {
   }
 
   @Test
+  @DisplayName("Client builder: caller-provided ObjectMapper takes precedence over default")
   void clientBuilderAcceptsCustomObjectMapper() {
     var bridge = new StubHelmBridge();
     bridge.setVersionSuccess("0.2.0", "go1.26", "v4.1.2");
@@ -624,6 +631,7 @@ class HelmClientGoldenPathTest {
   }
 
   @Test
+  @DisplayName("Client builder: caller-provided HelmGateway short-circuits native bridging")
   void clientBuilderAcceptsPrebuiltGateway() {
     var bridge = new StubHelmBridge();
     bridge.setVersionSuccess("0.3.0", "go1.26", "v4.1.3");
