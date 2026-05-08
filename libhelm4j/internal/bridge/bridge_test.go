@@ -86,6 +86,32 @@ func TestParseOptionsInvalidJSON(t *testing.T) {
 	}
 }
 
+func TestValidateWaitStrategy(t *testing.T) {
+	cases := []struct {
+		input   string
+		wantErr bool
+	}{
+		{"", false},
+		{"watcher", false},
+		{"legacy", false},
+		{"hookOnly", false},
+		{"WATCHER", true},
+		{"hook-only", true},
+		{"unknown", true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.input, func(t *testing.T) {
+			err := ValidateWaitStrategy(tc.input)
+			if tc.wantErr && err == nil {
+				t.Fatalf("expected error for input %q, got nil", tc.input)
+			}
+			if !tc.wantErr && err != nil {
+				t.Fatalf("unexpected error for input %q: %v", tc.input, err)
+			}
+		})
+	}
+}
+
 func TestMarshalJSONRoundTrip(t *testing.T) {
 	type payload struct {
 		Value string `json:"value"`

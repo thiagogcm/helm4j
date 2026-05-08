@@ -85,6 +85,10 @@ func Run(releaseName, chartRef string, opts Options) (string, error) {
 		}
 	}
 
+	if err := bridge.ValidateWaitStrategy(opts.Wait); err != nil {
+		return "", err
+	}
+
 	log.Debug("running helm upgrade")
 
 	env, err := helmenv.NewWithNamespace(opts.Namespace)

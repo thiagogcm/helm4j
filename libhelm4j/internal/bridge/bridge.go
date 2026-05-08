@@ -13,6 +13,8 @@ import (
 	"maps"
 	"strings"
 
+	"helm.sh/helm/v4/pkg/kube"
+
 	"github.com/thiagogcm/libhelm4j/internal/helmlog"
 )
 
@@ -79,6 +81,20 @@ func EncodeError(stage string, err error, kvPairs ...string) string {
 		return `{"error":"failed to encode error payload","stage":"` + StageMarshalError + `"}`
 	}
 	return payload
+}
+
+// ValidateWaitStrategy returns an error when the supplied wire value is not
+// one of the accepted Helm v4 kube wait strategies. Empty input is valid
+// (Helm picks the default). Strategy names are sourced from kube.WaitStrategy
+// constants so an upstream rename is caught at compile time.
+func ValidateWaitStrategy(value string) error {
+	switch kube.WaitStrategy(value) {
+	case "", kube.StatusWatcherStrategy, kube.LegacyStrategy, kube.HookOnlyStrategy:
+		return nil
+	default:
+		return fmt.Errorf("invalid wait strategy %q: must be one of %q, %q, %q",
+			value, kube.StatusWatcherStrategy, kube.LegacyStrategy, kube.HookOnlyStrategy)
+	}
 }
 
 // ParseOptions unmarshals a JSON string into the target options type T.

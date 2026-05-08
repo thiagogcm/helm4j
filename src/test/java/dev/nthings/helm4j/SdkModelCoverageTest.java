@@ -46,7 +46,10 @@ import dev.nthings.helm4j.repo.RegistryLoginRequest;
 import dev.nthings.helm4j.repo.RepoAddRequest;
 import dev.nthings.helm4j.repo.RepoUpdateRequest;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -484,17 +487,49 @@ class SdkModelCoverageTest {
     assertEquals(3, lint.values().get("replicaCount"));
   }
 
+  @ParameterizedTest(name = "WaitMode.{0} → \"{1}\"")
+  @CsvSource({
+    "WATCHER, watcher",
+    "LEGACY, legacy",
+    "HOOK_ONLY, hookOnly",
+  })
+  @DisplayName("WaitMode enum exposes the helm.sh kube wire value for every strategy")
+  void waitModeWireValuesAreCompleteAndCorrect(WaitMode mode, String expected) {
+    assertEquals(expected, mode.wireValue());
+  }
+
+  @ParameterizedTest(name = "DryRunMode.{0} → \"{1}\"")
+  @CsvSource({
+    "NONE, none",
+    "CLIENT, client",
+    "SERVER, server",
+  })
+  @DisplayName("DryRunMode enum exposes the helm.sh action wire value for every strategy")
+  void dryRunModeWireValuesAreCorrect(DryRunMode mode, String expected) {
+    assertEquals(expected, mode.wireValue());
+  }
+
+  @ParameterizedTest(name = "LintSeverity.fromWireValue(\"{0}\") = {1}")
+  @CsvSource(
+      nullValues = "null",
+      value = {
+        "null, UNKNOWN",
+        "'', UNKNOWN",
+        "info, INFO",
+        "INFO, INFO",
+        "warning, WARNING",
+        "WARNING, WARNING",
+        "error, ERROR",
+        "Error, ERROR",
+        "other, UNKNOWN",
+      })
+  void lintSeverityWireParsing(String input, LintSeverity expected) {
+    assertEquals(expected, LintSeverity.fromWireValue(input));
+  }
+
   @Test
-  void enumsAndErrorsExposeWireValues() {
-    assertEquals("none", DryRunMode.NONE.wireValue());
-    assertEquals("client", DryRunMode.CLIENT.wireValue());
-    assertEquals("hookOnly", WaitMode.HOOK_ONLY.wireValue());
+  void miscellaneousModelInvariants() {
     assertFalse(ApplyStrategy.CLIENT_SIDE_APPLY.serverSideApply());
-    assertEquals(LintSeverity.UNKNOWN, LintSeverity.fromWireValue(null));
-    assertEquals(LintSeverity.INFO, LintSeverity.fromWireValue("info"));
-    assertEquals(LintSeverity.WARNING, LintSeverity.fromWireValue("WARNING"));
-    assertEquals(LintSeverity.ERROR, LintSeverity.fromWireValue("Error"));
-    assertEquals(LintSeverity.UNKNOWN, LintSeverity.fromWireValue("other"));
     assertEquals("message", new LintMessage(LintSeverity.INFO, "message").message());
 
     var cause = new IllegalStateException("boom");

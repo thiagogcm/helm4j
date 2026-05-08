@@ -51,6 +51,10 @@ func Run(releaseName string, opts Options) (string, error) {
 		return "", errors.New("release name is required")
 	}
 
+	if err := bridge.ValidateWaitStrategy(opts.Wait); err != nil {
+		return "", err
+	}
+
 	log.Debug("running helm rollback")
 
 	env, err := helmenv.NewWithNamespace(opts.Namespace)

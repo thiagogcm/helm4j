@@ -54,6 +54,10 @@ func Run(releaseName string, opts Options) (string, error) {
 		}
 	}
 
+	if err := bridge.ValidateWaitStrategy(opts.Wait); err != nil {
+		return "", err
+	}
+
 	log.Debug("running helm uninstall")
 
 	env, err := helmenv.NewWithNamespace(opts.Namespace)
