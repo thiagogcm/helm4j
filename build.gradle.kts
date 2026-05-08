@@ -39,11 +39,8 @@ dependencies {
     // JUnit
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
+    testImplementation(libs.junit.jupiter.params)
     testRuntimeOnly(libs.junit.platform.launcher)
-
-    // Mockito
-    testImplementation(libs.mockito.core)
-    testImplementation(libs.mockito.junit.jupiter)
 
     // Test logging backend
     testRuntimeOnly(platform(libs.log4j.bom))
@@ -107,7 +104,7 @@ spotless {
         removeUnusedImports()
         forbidWildcardImports()
 
-        googleJavaFormat("1.34.1")
+        googleJavaFormat("1.35.0")
             .reflowLongStrings()
             .formatJavadoc(true)
             .reorderImports(false)

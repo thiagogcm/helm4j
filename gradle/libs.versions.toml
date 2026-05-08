@@ -1,11 +1,10 @@
 [versions]
-jackson = "3.0.3"
-junit = "6.0.2"
-log4j2 = "2.25.3"
-mockito = "5.21.0"
+jackson = "3.1.0"
+junit = "6.0.3"
+log4j2 = "2.26.0"
 slf4j = "2.0.17"
-spotless = "8.2.1"
-versions-plugin = "0.53.0"
+spotless = "8.4.0"
+versions-plugin = "0.54.0"
 
 [libraries]
 jackson-bom = { module = "tools.jackson:jackson-bom", version.ref = "jackson" }
@@ -13,13 +12,12 @@ jackson-databind = { module = "tools.jackson.core:jackson-databind" }
 jackson-dataformat-yaml = { module = "tools.jackson.dataformat:jackson-dataformat-yaml" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+junit-jupiter-params = { module = "org.junit.jupiter:junit-jupiter-params" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 log4j-bom = { module = "org.apache.logging.log4j:log4j-bom", version.ref = "log4j2" }
 log4j-api = { module = "org.apache.logging.log4j:log4j-api" }
 log4j-core = { module = "org.apache.logging.log4j:log4j-core" }
 log4j-slf4j2-impl = { module = "org.apache.logging.log4j:log4j-slf4j2-impl" }
-mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
-mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter", version.ref = "mockito" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 
 [plugins]
