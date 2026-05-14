@@ -76,7 +76,8 @@ public record PullRequest(
     }
 
     public PullRequest build() {
-      var resolvedSource = source != null ? source.merge(sourceBuilder.build()) : sourceBuilder.build();
+      var resolvedSource =
+          source != null ? source.merge(sourceBuilder.build()) : sourceBuilder.build();
       return new PullRequest(
           Objects.requireNonNull(chart, "chart"),
           resolvedSource,

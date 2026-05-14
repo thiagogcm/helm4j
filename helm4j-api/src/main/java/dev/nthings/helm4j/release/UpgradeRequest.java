@@ -238,7 +238,8 @@ public record UpgradeRequest(
     }
 
     public UpgradeRequest build() {
-      var resolvedSource = source != null ? source.merge(sourceBuilder.build()) : sourceBuilder.build();
+      var resolvedSource =
+          source != null ? source.merge(sourceBuilder.build()) : sourceBuilder.build();
       return new UpgradeRequest(
           releaseName,
           Objects.requireNonNull(chart, "chart"),

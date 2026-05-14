@@ -37,8 +37,7 @@ import org.jspecify.annotations.Nullable;
 /** Canonical native option-map builders for Helm bridge operations. */
 final class NativeOptions {
 
-  private NativeOptions() {
-  }
+  private NativeOptions() {}
 
   static Map<String, Object> repoAdd(RepoAddRequest request) {
     var options = options();

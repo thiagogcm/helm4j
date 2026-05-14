@@ -160,7 +160,8 @@ public record TemplateRequest(
     }
 
     public TemplateRequest build() {
-      var resolvedSource = source != null ? source.merge(sourceBuilder.build()) : sourceBuilder.build();
+      var resolvedSource =
+          source != null ? source.merge(sourceBuilder.build()) : sourceBuilder.build();
       return new TemplateRequest(
           releaseName,
           Objects.requireNonNull(chart, "chart"),

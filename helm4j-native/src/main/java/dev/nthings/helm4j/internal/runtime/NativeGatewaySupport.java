@@ -20,14 +20,10 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * Shared plumbing for the native gateway implementations: the
- * {@link HelmBridge} handle, the JSON
- * {@link ObjectMapper}, and the encode/decode/error-mapping helpers each domain
- * gateway needs.
+ * Shared plumbing for the native gateway implementations: the {@link HelmBridge} handle, the JSON
+ * {@link ObjectMapper}, and the encode/decode/error-mapping helpers each domain gateway needs.
  *
- * <p>
- * One instance is created per {@link NativeStructGateway} and handed to every
- * sub-gateway, so
+ * <p>One instance is created per {@link NativeStructGateway} and handed to every sub-gateway, so
  * the bridge and mapper are configured once and reused.
  */
 final class NativeGatewaySupport {
@@ -40,18 +36,12 @@ final class NativeGatewaySupport {
     this.mapper = Objects.requireNonNull(mapper, "mapper");
   }
 
-  /**
-   * Invokes the bridge, parses the JSON envelope, and returns it without
-   * inspecting for errors.
-   */
+  /** Invokes the bridge, parses the JSON envelope, and returns it without inspecting for errors. */
   JsonNode invokeRoot(String operation, BridgeCall call) {
     return parse(invoke(call, operation, "invokeNative"), operation);
   }
 
-  /**
-   * Invokes the bridge and throws {@link HelmException} if the envelope carries
-   * an error.
-   */
+  /** Invokes the bridge and throws {@link HelmException} if the envelope carries an error. */
   JsonNode invokeRootOrThrow(String operation, BridgeCall call) {
     var root = invokeRoot(operation, call);
     var failure = operationError(root, operation);
@@ -194,15 +184,11 @@ final class NativeGatewaySupport {
     return value == null ? List.of() : value;
   }
 
-  /**
-   * A single native bridge call; receives the bridge so callers need not hold a
-   * reference.
-   */
+  /** A single native bridge call; receives the bridge so callers need not hold a reference. */
   @FunctionalInterface
   interface BridgeCall {
     byte @Nullable [] invoke(HelmBridge bridge);
   }
 
-  record OperationError(String message, @Nullable String stage, String operation) {
-  }
+  record OperationError(String message, @Nullable String stage, String operation) {}
 }

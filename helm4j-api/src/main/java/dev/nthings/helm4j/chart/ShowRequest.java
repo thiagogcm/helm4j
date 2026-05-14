@@ -56,7 +56,8 @@ public record ShowRequest(ChartSource source, @Nullable String valuesJsonPath) {
     }
 
     public ShowRequest build() {
-      var resolvedSource = source != null ? source.merge(sourceBuilder.build()) : sourceBuilder.build();
+      var resolvedSource =
+          source != null ? source.merge(sourceBuilder.build()) : sourceBuilder.build();
       return new ShowRequest(resolvedSource, valuesJsonPath);
     }
 

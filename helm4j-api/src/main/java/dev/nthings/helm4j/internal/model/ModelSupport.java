@@ -9,8 +9,7 @@ import org.jspecify.annotations.Nullable;
 /** Shared value normalization and immutable copy helpers for SDK records. */
 public final class ModelSupport {
 
-  private ModelSupport() {
-  }
+  private ModelSupport() {}
 
   public static @Nullable String normalizeBlankToNull(@Nullable String value) {
     if (value == null || value.isBlank()) {

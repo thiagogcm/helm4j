@@ -225,7 +225,8 @@ public record InstallRequest(
     }
 
     public InstallRequest build() {
-      var resolvedSource = source != null ? source.merge(sourceBuilder.build()) : sourceBuilder.build();
+      var resolvedSource =
+          source != null ? source.merge(sourceBuilder.build()) : sourceBuilder.build();
       return new InstallRequest(
           releaseName,
           Objects.requireNonNull(chart, "chart"),

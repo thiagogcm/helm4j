@@ -10,16 +10,13 @@ import dev.nthings.helm4j.internal.model.ModelSupport;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Reusable immutable list response shared by chart, release, and repository
- * operations.
+ * Reusable immutable list response shared by chart, release, and repository operations.
  *
- * <p>
- * It is {@link Iterable} and exposes {@link #stream()}, so it can be consumed
- * directly in a
+ * <p>It is {@link Iterable} and exposes {@link #stream()}, so it can be consumed directly in a
  * for-each loop or a stream pipeline without unwrapping {@link #items()}.
  *
  * @param items immutable list items returned by an operation
- * @param <T>   item type
+ * @param <T> item type
  */
 public record ListResult<T>(List<T> items) implements Iterable<T> {
 

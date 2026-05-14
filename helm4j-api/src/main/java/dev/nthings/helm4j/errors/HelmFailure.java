@@ -8,21 +8,15 @@ import org.jspecify.annotations.Nullable;
 /**
  * Uniform description of a Helm operation failure.
  *
- * <p>
- * This is the single failure vocabulary shared by both failure channels: the
- * sealed domain
- * results ({@code ReleaseFailure}, {@code UninstallFailure},
- * {@code RollbackFailure}, {@code
- * RepoAddFailure}) carry one as a value, and {@link HelmException} carries one
- * when failure is
+ * <p>This is the single failure vocabulary shared by both failure channels: the sealed domain
+ * results ({@code ReleaseFailure}, {@code UninstallFailure}, {@code RollbackFailure}, {@code
+ * RepoAddFailure}) carry one as a value, and {@link HelmException} carries one when failure is
  * raised as an exception.
  *
- * @param message   human-readable failure description; never {@code null} or
- *                  blank
- * @param stage     the internal stage at which the failure occurred, if known
- * @param operation the Helm operation that failed (e.g. {@code "install"}), if
- *                  known
- * @param hint      an optional actionable hint for resolving the failure
+ * @param message human-readable failure description; never {@code null} or blank
+ * @param stage the internal stage at which the failure occurred, if known
+ * @param operation the Helm operation that failed (e.g. {@code "install"}), if known
+ * @param hint an optional actionable hint for resolving the failure
  */
 public record HelmFailure(
     String message, @Nullable String stage, @Nullable String operation, Optional<String> hint) {
