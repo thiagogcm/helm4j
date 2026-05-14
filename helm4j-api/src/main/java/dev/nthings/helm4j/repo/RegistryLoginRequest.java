@@ -35,17 +35,17 @@ public record RegistryLoginRequest(
   }
 
   public static final class Builder {
-    private final RepoGateway gateway;
-    private String hostname;
-    private String username;
-    private String password;
-    private String certificateFile;
-    private String keyFile;
-    private String certificateAuthorityFile;
+    private final @Nullable RepoGateway gateway;
+    private @Nullable String hostname;
+    private @Nullable String username;
+    private @Nullable String password;
+    private @Nullable String certificateFile;
+    private @Nullable String keyFile;
+    private @Nullable String certificateAuthorityFile;
     private boolean insecure;
     private boolean plainHttp;
 
-    private Builder(RepoGateway gateway) {
+    private Builder(@Nullable RepoGateway gateway) {
       this.gateway = gateway;
     }
 

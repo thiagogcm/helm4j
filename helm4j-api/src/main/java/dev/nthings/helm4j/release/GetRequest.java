@@ -28,13 +28,13 @@ public record GetRequest(
    * so the variant is chosen by the terminal method ({@link #all()}, {@link #values()}, ...).
    */
   public static final class Builder {
-    private final ReleaseGateway gateway;
-    private String releaseName;
-    private String namespace;
+    private final @Nullable ReleaseGateway gateway;
+    private @Nullable String releaseName;
+    private @Nullable String namespace;
     private int revision;
     private boolean allValues;
 
-    private Builder(ReleaseGateway gateway) {
+    private Builder(@Nullable ReleaseGateway gateway) {
       this.gateway = gateway;
     }
 

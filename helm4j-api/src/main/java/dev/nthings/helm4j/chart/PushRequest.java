@@ -33,16 +33,16 @@ public record PushRequest(
   }
 
   public static final class Builder {
-    private final ChartGateway gateway;
-    private String chartReference;
-    private String remote;
+    private final @Nullable ChartGateway gateway;
+    private @Nullable String chartReference;
+    private @Nullable String remote;
     private boolean plainHttp;
     private boolean insecureSkipTlsVerification;
-    private String certificateFile;
-    private String keyFile;
-    private String certificateAuthorityFile;
+    private @Nullable String certificateFile;
+    private @Nullable String keyFile;
+    private @Nullable String certificateAuthorityFile;
 
-    private Builder(ChartGateway gateway) {
+    private Builder(@Nullable ChartGateway gateway) {
       this.gateway = gateway;
     }
 

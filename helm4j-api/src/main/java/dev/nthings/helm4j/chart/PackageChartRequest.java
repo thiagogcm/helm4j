@@ -47,23 +47,23 @@ public record PackageChartRequest(
   }
 
   public static final class Builder {
-    private final ChartGateway gateway;
-    private Path chartPath;
-    private String version;
-    private String appVersion;
-    private Path destination;
+    private final @Nullable ChartGateway gateway;
+    private @Nullable Path chartPath;
+    private @Nullable String version;
+    private @Nullable String appVersion;
+    private @Nullable Path destination;
     private boolean dependencyUpdate;
     private boolean sign;
-    private String key;
-    private String keyring;
-    private String passphraseFile;
+    private @Nullable String key;
+    private @Nullable String keyring;
+    private @Nullable String passphraseFile;
     private boolean plainHttp;
     private boolean insecureSkipTlsVerification;
-    private String certificateFile;
-    private String keyFile;
-    private String certificateAuthorityFile;
+    private @Nullable String certificateFile;
+    private @Nullable String keyFile;
+    private @Nullable String certificateAuthorityFile;
 
-    private Builder(ChartGateway gateway) {
+    private Builder(@Nullable ChartGateway gateway) {
       this.gateway = gateway;
     }
 

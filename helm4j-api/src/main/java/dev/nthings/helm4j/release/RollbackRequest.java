@@ -39,13 +39,13 @@ public record RollbackRequest(
   }
 
   public static final class Builder {
-    private final ReleaseGateway gateway;
-    private String releaseName;
-    private String namespace;
+    private final @Nullable ReleaseGateway gateway;
+    private @Nullable String releaseName;
+    private @Nullable String namespace;
     private int revision;
-    private DryRunMode dryRun;
-    private Duration timeout;
-    private WaitMode waitMode;
+    private @Nullable DryRunMode dryRun;
+    private @Nullable Duration timeout;
+    private @Nullable WaitMode waitMode;
     private boolean waitForJobs;
     private boolean disableHooks;
     private boolean forceReplace;
@@ -53,7 +53,7 @@ public record RollbackRequest(
     private int maxHistory;
     private ApplyStrategy applyStrategy = ApplyStrategy.SERVER_SIDE_APPLY;
 
-    private Builder(ReleaseGateway gateway) {
+    private Builder(@Nullable ReleaseGateway gateway) {
       this.gateway = gateway;
     }
 

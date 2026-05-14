@@ -37,19 +37,19 @@ public record UninstallRequest(
   }
 
   public static final class Builder {
-    private final ReleaseGateway gateway;
-    private String releaseName;
-    private String namespace;
+    private final @Nullable ReleaseGateway gateway;
+    private @Nullable String releaseName;
+    private @Nullable String namespace;
     private boolean dryRun;
     private boolean disableHooks;
     private boolean keepHistory;
     private boolean ignoreNotFound;
-    private Duration timeout;
-    private String description;
-    private WaitMode waitMode;
-    private String deletionPropagation;
+    private @Nullable Duration timeout;
+    private @Nullable String description;
+    private @Nullable WaitMode waitMode;
+    private @Nullable String deletionPropagation;
 
-    private Builder(ReleaseGateway gateway) {
+    private Builder(@Nullable ReleaseGateway gateway) {
       this.gateway = gateway;
     }
 

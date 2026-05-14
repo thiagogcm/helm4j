@@ -31,16 +31,16 @@ public record RepoSearchRequest(
   }
 
   public static final class Builder {
-    private final ChartGateway gateway;
-    private String keyword;
+    private final @Nullable ChartGateway gateway;
+    private @Nullable String keyword;
     private boolean regularExpression;
     private boolean includeAllVersions;
     private boolean includePreReleaseVersions;
-    private String versionConstraint;
+    private @Nullable String versionConstraint;
     private boolean failIfNoResults;
     private int maxColumnWidth;
 
-    private Builder(ChartGateway gateway) {
+    private Builder(@Nullable ChartGateway gateway) {
       this.gateway = gateway;
     }
 

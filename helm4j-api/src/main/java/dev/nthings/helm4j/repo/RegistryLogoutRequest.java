@@ -22,10 +22,10 @@ public record RegistryLogoutRequest(@Nullable String hostname) {
   }
 
   public static final class Builder {
-    private final RepoGateway gateway;
-    private String hostname;
+    private final @Nullable RepoGateway gateway;
+    private @Nullable String hostname;
 
-    private Builder(RepoGateway gateway) {
+    private Builder(@Nullable RepoGateway gateway) {
       this.gateway = gateway;
     }
 

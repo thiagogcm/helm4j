@@ -24,12 +24,12 @@ public record StatusRequest(
   }
 
   public static final class Builder {
-    private final ReleaseGateway gateway;
-    private String releaseName;
-    private String namespace;
+    private final @Nullable ReleaseGateway gateway;
+    private @Nullable String releaseName;
+    private @Nullable String namespace;
     private int revision;
 
-    private Builder(ReleaseGateway gateway) {
+    private Builder(@Nullable ReleaseGateway gateway) {
       this.gateway = gateway;
     }
 

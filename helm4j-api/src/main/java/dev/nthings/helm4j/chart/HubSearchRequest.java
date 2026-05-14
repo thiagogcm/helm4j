@@ -29,14 +29,14 @@ public record HubSearchRequest(
   }
 
   public static final class Builder {
-    private final ChartGateway gateway;
-    private String keyword;
-    private String endpoint;
+    private final @Nullable ChartGateway gateway;
+    private @Nullable String keyword;
+    private @Nullable String endpoint;
     private boolean failIfNoResults;
     private boolean listRepositoryUrl;
     private int maxColumnWidth;
 
-    private Builder(ChartGateway gateway) {
+    private Builder(@Nullable ChartGateway gateway) {
       this.gateway = gateway;
     }
 

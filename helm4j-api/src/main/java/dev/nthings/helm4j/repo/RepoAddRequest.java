@@ -42,21 +42,21 @@ public record RepoAddRequest(
   }
 
   public static final class Builder {
-    private final RepoGateway gateway;
-    private String name;
-    private String url;
-    private String username;
-    private String password;
-    private String certificateFile;
-    private String keyFile;
-    private String certificateAuthorityFile;
+    private final @Nullable RepoGateway gateway;
+    private @Nullable String name;
+    private @Nullable String url;
+    private @Nullable String username;
+    private @Nullable String password;
+    private @Nullable String certificateFile;
+    private @Nullable String keyFile;
+    private @Nullable String certificateAuthorityFile;
     private boolean insecureSkipTlsVerification;
     private boolean passCredentialsToAllHosts;
     private boolean forceUpdate;
     private boolean allowDeprecatedRepositories;
-    private Duration timeout;
+    private @Nullable Duration timeout;
 
-    private Builder(RepoGateway gateway) {
+    private Builder(@Nullable RepoGateway gateway) {
       this.gateway = gateway;
     }
 

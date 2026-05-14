@@ -1,5 +1,7 @@
 package dev.nthings.helm4j.internal.runtime;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * Transport contract for the native Helm runtime: a thin, byte-array-only bridge over libhelm4j.
  *
@@ -16,43 +18,47 @@ package dev.nthings.helm4j.internal.runtime;
  */
 public interface HelmBridge {
 
-  byte[] repo(byte[] mode, byte[] optionsJson);
+  byte[] repo(byte @Nullable [] mode, byte @Nullable [] optionsJson);
 
-  byte[] search(byte[] mode, byte[] optionsJson);
+  byte[] search(byte @Nullable [] mode, byte @Nullable [] optionsJson);
 
-  byte[] show(byte[] mode, byte[] chartRef, byte[] optionsJson);
+  byte[] show(byte @Nullable [] mode, byte @Nullable [] chartRef, byte @Nullable [] optionsJson);
 
-  byte[] install(byte[] releaseName, byte[] chartRef, byte[] optionsJson);
+  byte[] install(
+      byte @Nullable [] releaseName, byte @Nullable [] chartRef, byte @Nullable [] optionsJson);
 
-  byte[] upgrade(byte[] releaseName, byte[] chartRef, byte[] optionsJson);
+  byte[] upgrade(
+      byte @Nullable [] releaseName, byte @Nullable [] chartRef, byte @Nullable [] optionsJson);
 
-  byte[] uninstall(byte[] releaseName, byte[] optionsJson);
+  byte[] uninstall(byte @Nullable [] releaseName, byte @Nullable [] optionsJson);
 
-  byte[] status(byte[] releaseName, byte[] optionsJson);
+  byte[] status(byte @Nullable [] releaseName, byte @Nullable [] optionsJson);
 
-  byte[] rollback(byte[] releaseName, byte[] optionsJson);
+  byte[] rollback(byte @Nullable [] releaseName, byte @Nullable [] optionsJson);
 
-  byte[] history(byte[] releaseName, byte[] optionsJson);
+  byte[] history(byte @Nullable [] releaseName, byte @Nullable [] optionsJson);
 
-  byte[] get(byte[] mode, byte[] releaseName, byte[] optionsJson);
+  byte[] get(byte @Nullable [] mode, byte @Nullable [] releaseName, byte @Nullable [] optionsJson);
 
-  byte[] list(byte[] optionsJson);
+  byte[] list(byte @Nullable [] optionsJson);
 
-  byte[] pull(byte[] chartRef, byte[] optionsJson);
+  byte[] pull(byte @Nullable [] chartRef, byte @Nullable [] optionsJson);
 
-  byte[] push(byte[] chartRef, byte[] remote, byte[] optionsJson);
+  byte[] push(byte @Nullable [] chartRef, byte @Nullable [] remote, byte @Nullable [] optionsJson);
 
-  byte[] packageChart(byte[] chartPath, byte[] optionsJson);
+  byte[] packageChart(byte @Nullable [] chartPath, byte @Nullable [] optionsJson);
 
-  byte[] dependency(byte[] chartPath, byte[] optionsJson);
+  byte[] dependency(byte @Nullable [] chartPath, byte @Nullable [] optionsJson);
 
-  byte[] registry(byte[] mode, byte[] hostname, byte[] optionsJson);
+  byte[] registry(
+      byte @Nullable [] mode, byte @Nullable [] hostname, byte @Nullable [] optionsJson);
 
-  byte[] test(byte[] releaseName, byte[] optionsJson);
+  byte[] test(byte @Nullable [] releaseName, byte @Nullable [] optionsJson);
 
-  byte[] template(byte[] releaseName, byte[] chartRef, byte[] optionsJson);
+  byte[] template(
+      byte @Nullable [] releaseName, byte @Nullable [] chartRef, byte @Nullable [] optionsJson);
 
-  byte[] lint(byte[] chartPath, byte[] optionsJson);
+  byte[] lint(byte @Nullable [] chartPath, byte @Nullable [] optionsJson);
 
   byte[] version();
 }
