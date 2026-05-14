@@ -111,17 +111,14 @@ final class NativeChartGateway implements ChartGateway {
   @Override
   public PullResult pull(PullRequest request) {
     Objects.requireNonNull(request, "request");
-    if (request.chartReference() == null) {
-      throw new IllegalArgumentException("Pull requires chart reference");
-    }
 
-    log.debug("Pulling chart: chartRef={}", request.chartReference());
+    log.debug("Pulling chart: chartRef={}", request.chart().asReference());
     var root =
         support.invokeRootOrThrow(
             "pull",
             bridge ->
                 bridge.pull(
-                    utf8(request.chartReference()),
+                    utf8(request.chart().asReference()),
                     support.toJsonBytes(NativeOptions.pull(request), "pull")));
 
     var response = support.convert(root, PullPayload.class, "pull");
@@ -273,7 +270,7 @@ final class NativeChartGateway implements ChartGateway {
                 bridge.show(
                     utf8(mode.wireValue()),
                     utf8(chartReference.asReference()),
-                    support.toJsonBytes(NativeOptions.show(request), operation)));
+                    support.toJsonBytes(NativeOptions.show(chartReference, request), operation)));
 
     var response = support.convert(root, ShowPayload.class, operation);
     if (response == null || response.sections() == null) {

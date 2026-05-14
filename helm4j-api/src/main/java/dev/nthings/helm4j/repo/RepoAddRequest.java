@@ -6,20 +6,22 @@ import dev.nthings.helm4j.internal.api.Invocations;
 import dev.nthings.helm4j.internal.gateway.RepoGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
+import org.jspecify.annotations.Nullable;
+
 /** Request parameters for adding a chart repository. */
 public record RepoAddRequest(
-    String name,
-    String url,
-    String username,
-    String password,
-    String certificateFile,
-    String keyFile,
-    String certificateAuthorityFile,
+    @Nullable String name,
+    @Nullable String url,
+    @Nullable String username,
+    @Nullable String password,
+    @Nullable String certificateFile,
+    @Nullable String keyFile,
+    @Nullable String certificateAuthorityFile,
     boolean insecureSkipTlsVerification,
     boolean passCredentialsToAllHosts,
     boolean forceUpdate,
     boolean allowDeprecatedRepositories,
-    Duration timeout) {
+    @Nullable Duration timeout) {
 
   public RepoAddRequest {
     name = ModelSupport.normalizeBlankToNull(name);

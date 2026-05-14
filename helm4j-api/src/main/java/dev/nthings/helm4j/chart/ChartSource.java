@@ -4,24 +4,30 @@ import java.util.Objects;
 
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
-/** Shared chart resolution, TLS, and auth options across chart-consuming operations. */
+import org.jspecify.annotations.Nullable;
+
+/**
+ * How to fetch a chart: the repository URL, credentials, TLS, and signing options shared across
+ * chart-consuming operations.
+ *
+ * <p>The chart identity and version live on {@link ChartRef}; this type carries only the transport
+ * and resolution concerns layered on top of it.
+ */
 public record ChartSource(
-    String version,
-    String repositoryUrl,
-    String username,
-    String password,
+    @Nullable String repositoryUrl,
+    @Nullable String username,
+    @Nullable String password,
     boolean plainHttp,
     boolean insecureSkipTlsVerification,
-    String keyringPath,
-    String certificateFile,
-    String keyFile,
-    String certificateAuthorityFile,
+    @Nullable String keyringPath,
+    @Nullable String certificateFile,
+    @Nullable String keyFile,
+    @Nullable String certificateAuthorityFile,
     boolean passCredentialsToAllHosts,
     boolean verifySignatures,
     boolean includePreReleaseVersions) {
 
   public ChartSource {
-    version = ModelSupport.normalizeBlankToNull(version);
     repositoryUrl = ModelSupport.normalizeBlankToNull(repositoryUrl);
     username = ModelSupport.normalizeBlankToNull(username);
     password = ModelSupport.normalizeBlankToNull(password);
@@ -40,7 +46,6 @@ public record ChartSource(
   }
 
   public static final class Builder {
-    private String version;
     private String repositoryUrl;
     private String username;
     private String password;
@@ -55,11 +60,6 @@ public record ChartSource(
     private boolean includePreReleaseVersions;
 
     private Builder() {}
-
-    public Builder version(String value) {
-      this.version = value;
-      return this;
-    }
 
     public Builder repositoryUrl(String value) {
       this.repositoryUrl = value;
@@ -123,7 +123,6 @@ public record ChartSource(
 
     public ChartSource build() {
       return new ChartSource(
-          version,
           repositoryUrl,
           username,
           password,
@@ -142,7 +141,6 @@ public record ChartSource(
   public ChartSource merge(ChartSource overrides) {
     Objects.requireNonNull(overrides, "overrides");
     return new ChartSource(
-        coalesce(overrides.version, version),
         coalesce(overrides.repositoryUrl, repositoryUrl),
         coalesce(overrides.username, username),
         coalesce(overrides.password, password),

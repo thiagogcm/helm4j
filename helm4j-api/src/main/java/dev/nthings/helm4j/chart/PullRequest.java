@@ -6,18 +6,19 @@ import java.util.function.Consumer;
 
 import dev.nthings.helm4j.internal.api.Invocations;
 import dev.nthings.helm4j.internal.gateway.ChartGateway;
-import dev.nthings.helm4j.internal.model.ModelSupport;
+
+import org.jspecify.annotations.Nullable;
 
 /** Request parameters for pulling a chart archive. */
 public record PullRequest(
-    String chartReference,
+    ChartRef chart,
     ChartSource source,
     boolean untar,
-    Path untarDirectory,
-    Path destinationDirectory) {
+    @Nullable Path untarDirectory,
+    @Nullable Path destinationDirectory) {
 
   public PullRequest {
-    chartReference = ModelSupport.normalizeBlankToNull(chartReference);
+    chart = Objects.requireNonNull(chart, "chart");
     source = Objects.requireNonNullElseGet(source, ChartSource::defaults);
     untarDirectory = absoluteOrNull(untarDirectory);
     destinationDirectory = absoluteOrNull(destinationDirectory);
@@ -34,7 +35,7 @@ public record PullRequest(
   public static final class Builder {
     private final ChartGateway gateway;
     private final ChartSource.Builder sourceBuilder = ChartSource.builder();
-    private String chartReference;
+    private ChartRef chart;
     private ChartSource source;
     private boolean untar;
     private Path untarDirectory;
@@ -44,8 +45,8 @@ public record PullRequest(
       this.gateway = gateway;
     }
 
-    public Builder chartReference(String value) {
-      this.chartReference = value;
+    public Builder chart(ChartRef value) {
+      this.chart = value;
       return this;
     }
 
@@ -77,8 +78,7 @@ public record PullRequest(
     public PullRequest build() {
       var resolvedSource =
           source != null ? source.merge(sourceBuilder.build()) : sourceBuilder.build();
-      return new PullRequest(
-          chartReference, resolvedSource, untar, untarDirectory, destinationDirectory);
+      return new PullRequest(chart, resolvedSource, untar, untarDirectory, destinationDirectory);
     }
 
     /** Builds the request and pulls the chart through the bound client. */

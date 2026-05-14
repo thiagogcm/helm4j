@@ -5,13 +5,15 @@ import dev.nthings.helm4j.internal.gateway.ChartGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 import dev.nthings.helm4j.model.ListResult;
 
+import org.jspecify.annotations.Nullable;
+
 /** Request parameters for searching configured chart repositories. */
 public record RepoSearchRequest(
-    String keyword,
+    @Nullable String keyword,
     boolean regularExpression,
     boolean includeAllVersions,
     boolean includePreReleaseVersions,
-    String versionConstraint,
+    @Nullable String versionConstraint,
     boolean failIfNoResults,
     int maxColumnWidth) {
 

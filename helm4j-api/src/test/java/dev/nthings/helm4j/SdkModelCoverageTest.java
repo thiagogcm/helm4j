@@ -65,7 +65,6 @@ class SdkModelCoverageTest {
   void chartSourceBuilderAndMergeExposeNormalizedValues() {
     var base =
         ChartSource.builder()
-            .version("1.2.3")
             .repositoryUrl("https://charts.example.com")
             .username("user")
             .password("pass")
@@ -83,16 +82,26 @@ class SdkModelCoverageTest {
     var merged =
         base.merge(
             ChartSource.builder()
-                .version("2.0.0")
                 .repositoryUrl("https://mirror.example.com")
                 .username("other")
                 .build());
 
-    assertEquals("2.0.0", merged.version());
     assertEquals("https://mirror.example.com", merged.repositoryUrl());
     assertEquals("other", merged.username());
     assertTrue(merged.verifySignatures());
     assertTrue(merged.passCredentialsToAllHosts());
+  }
+
+  @Test
+  void chartRefCarriesVersionForRemoteSources() {
+    var repo = ChartRef.repo("bitnami/nginx", "19.0.0");
+    var oci = ChartRef.oci("oci://registry-1.docker.io/bitnamicharts/nginx", "19.0.0");
+    var local = ChartRef.local(java.nio.file.Path.of("charts", "nginx"));
+
+    assertEquals("19.0.0", repo.version());
+    assertEquals("19.0.0", oci.version());
+    assertNull(local.version());
+    assertNull(ChartRef.repo("bitnami/nginx").version());
   }
 
   @Test
@@ -143,12 +152,9 @@ class SdkModelCoverageTest {
     var request =
         InstallRequest.builder()
             .releaseName("demo")
-            .chart(ChartRef.repo("bitnami/nginx"))
+            .chart(ChartRef.repo("bitnami/nginx", "19.0.0"))
             .source(
-                ChartSource.builder()
-                    .repositoryUrl("https://charts.bitnami.com/bitnami")
-                    .version("19.0.0")
-                    .build())
+                ChartSource.builder().repositoryUrl("https://charts.bitnami.com/bitnami").build())
             .source(s -> s.username("user").password("pass").includePreReleaseVersions(true))
             .namespace("apps")
             .createNamespace(true)
@@ -175,6 +181,7 @@ class SdkModelCoverageTest {
 
     assertEquals("demo", request.releaseName());
     assertEquals("bitnami/nginx", request.chart().asReference());
+    assertEquals("19.0.0", request.chart().version());
     assertEquals("https://charts.bitnami.com/bitnami", request.source().repositoryUrl());
     assertEquals("user", request.source().username());
     assertTrue(request.applyStrategy().serverSideApply());
@@ -190,12 +197,9 @@ class SdkModelCoverageTest {
     var upgrade =
         UpgradeRequest.builder()
             .releaseName("nginx")
-            .chart(ChartRef.repo("bitnami/nginx"))
+            .chart(ChartRef.repo("bitnami/nginx", "19.0.0"))
             .source(
-                ChartSource.builder()
-                    .repositoryUrl("https://charts.bitnami.com/bitnami")
-                    .version("19.0.0")
-                    .build())
+                ChartSource.builder().repositoryUrl("https://charts.bitnami.com/bitnami").build())
             .source(s -> s.username("user").password("pass"))
             .namespace("apps")
             .install(true)
@@ -380,7 +384,7 @@ class SdkModelCoverageTest {
     var show =
         ShowRequest.builder()
             .source(ChartSource.builder().repositoryUrl("https://charts.example.com").build())
-            .source(s -> s.version("1.0.0").username("user"))
+            .source(s -> s.username("user"))
             .valuesJsonPath("{.service.type}")
             .build();
     assertEquals("{.service.type}", show.valuesJsonPath());
@@ -389,12 +393,9 @@ class SdkModelCoverageTest {
     var template =
         TemplateRequest.builder()
             .releaseName("nginx")
-            .chart(ChartRef.repo("bitnami/nginx"))
+            .chart(ChartRef.repo("bitnami/nginx", "19.0.0"))
             .source(
-                ChartSource.builder()
-                    .repositoryUrl("https://charts.bitnami.com/bitnami")
-                    .version("19.0.0")
-                    .build())
+                ChartSource.builder().repositoryUrl("https://charts.bitnami.com/bitnami").build())
             .source(s -> s.username("template-user"))
             .namespace("apps")
             .description("render")
@@ -416,15 +417,14 @@ class SdkModelCoverageTest {
 
     var pull =
         PullRequest.builder()
-            .chartReference("bitnami/nginx")
+            .chart(ChartRef.repo("bitnami/nginx", "19.0.0"))
             .source(
                 ChartSource.builder().repositoryUrl("https://charts.bitnami.com/bitnami").build())
-            .source(s -> s.version("19.0.0"))
             .untar(true)
             .untarDirectory(Path.of("tmp/untar"))
             .destinationDirectory(Path.of("tmp/dest"))
             .build();
-    var pullDefaults = PullRequest.builder().chartReference("bitnami/nginx").build();
+    var pullDefaults = PullRequest.builder().chart(ChartRef.repo("bitnami/nginx")).build();
     assertTrue(pull.untar());
     assertTrue(pull.untarDirectory().isAbsolute());
     assertTrue(pull.destinationDirectory().isAbsolute());

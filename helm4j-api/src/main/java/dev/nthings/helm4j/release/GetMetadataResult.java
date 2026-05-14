@@ -3,6 +3,8 @@ package dev.nthings.helm4j.release;
 import java.time.Instant;
 import java.util.Objects;
 
+import org.jspecify.annotations.Nullable;
+
 /** Result of `helm get metadata`. */
 public record GetMetadataResult(
     String name,
@@ -12,7 +14,7 @@ public record GetMetadataResult(
     String chart,
     String chartVersion,
     String appVersion,
-    Instant deployedAt) {
+    @Nullable Instant deployedAt) {
 
   public GetMetadataResult {
     status = Objects.requireNonNullElse(status, ReleaseStatus.UNKNOWN);

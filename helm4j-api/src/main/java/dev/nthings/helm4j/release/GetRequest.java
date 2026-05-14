@@ -4,8 +4,11 @@ import dev.nthings.helm4j.internal.api.Invocations;
 import dev.nthings.helm4j.internal.gateway.ReleaseGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
+import org.jspecify.annotations.Nullable;
+
 /** Request parameters for getting release information. */
-public record GetRequest(String releaseName, String namespace, int revision, boolean allValues) {
+public record GetRequest(
+    @Nullable String releaseName, @Nullable String namespace, int revision, boolean allValues) {
 
   public GetRequest {
     releaseName = ModelSupport.normalizeBlankToNull(releaseName);

@@ -296,8 +296,7 @@ class HelmClientGoldenPathTest {
           helm.release()
               .install()
               .releaseName("nginx")
-              .chart(ChartRef.repo("bitnami/nginx"))
-              .source(s -> s.version("19.0.0"))
+              .chart(ChartRef.repo("bitnami/nginx", "19.0.0"))
               .namespace("apps")
               .createNamespace(true)
               .dryRun(DryRunMode.NONE)
@@ -692,7 +691,7 @@ class HelmClientGoldenPathTest {
       assertEquals(1, listed.size());
       assertEquals("nginx", listed.first().orElseThrow().name());
 
-      var pull = helm.chart().pull().chartReference("bitnami/nginx").execute();
+      var pull = helm.chart().pull().chart(ChartRef.repo("bitnami/nginx")).execute();
       assertTrue(pull.output().contains("Pulled"));
 
       var push =

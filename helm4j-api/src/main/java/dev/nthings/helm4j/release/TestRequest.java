@@ -7,9 +7,14 @@ import dev.nthings.helm4j.internal.api.Invocations;
 import dev.nthings.helm4j.internal.gateway.ReleaseGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
+import org.jspecify.annotations.Nullable;
+
 /** Request parameters for running release tests. */
 public record TestRequest(
-    String releaseName, String namespace, Duration timeout, List<String> filter) {
+    @Nullable String releaseName,
+    @Nullable String namespace,
+    @Nullable Duration timeout,
+    List<String> filter) {
 
   public TestRequest {
     releaseName = ModelSupport.normalizeBlankToNull(releaseName);

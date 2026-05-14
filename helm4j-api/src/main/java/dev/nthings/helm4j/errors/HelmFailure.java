@@ -3,6 +3,8 @@ package dev.nthings.helm4j.errors;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * Uniform description of a Helm operation failure.
  *
@@ -16,14 +18,15 @@ import java.util.Optional;
  * @param operation the Helm operation that failed (e.g. {@code "install"}), if known
  * @param hint an optional actionable hint for resolving the failure
  */
-public record HelmFailure(String message, String stage, String operation, Optional<String> hint) {
+public record HelmFailure(
+    String message, @Nullable String stage, @Nullable String operation, Optional<String> hint) {
 
   public HelmFailure {
     message = Objects.requireNonNull(message, "message");
     hint = hint == null ? Optional.empty() : hint;
   }
 
-  public HelmFailure(String message, String stage, String operation) {
+  public HelmFailure(String message, @Nullable String stage, @Nullable String operation) {
     this(message, stage, operation, Optional.empty());
   }
 }

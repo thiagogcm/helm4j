@@ -80,7 +80,7 @@ class HelmClientApiTest {
 
     chart.template().releaseName("nginx").chart(chartRef).execute();
     chart.lint().chartPath(Path.of("/tmp/chart")).execute();
-    chart.pull().chartReference("bitnami/nginx").execute();
+    chart.pull().chart(ChartRef.repo("bitnami/nginx")).execute();
     chart.push().chartReference("/tmp/nginx.tgz").remote("oci://registry.example").execute();
     chart.packageChart().chartPath(Path.of("/tmp/chart")).execute();
     chart.dependency().chartPath(Path.of("/tmp/chart")).execute();

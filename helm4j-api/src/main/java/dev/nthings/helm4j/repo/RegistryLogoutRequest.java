@@ -4,8 +4,10 @@ import dev.nthings.helm4j.internal.api.Invocations;
 import dev.nthings.helm4j.internal.gateway.RepoGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
+import org.jspecify.annotations.Nullable;
+
 /** Request parameters for registry logout. */
-public record RegistryLogoutRequest(String hostname) {
+public record RegistryLogoutRequest(@Nullable String hostname) {
 
   public RegistryLogoutRequest {
     hostname = ModelSupport.normalizeBlankToNull(hostname);

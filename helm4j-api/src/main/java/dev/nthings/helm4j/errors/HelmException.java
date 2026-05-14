@@ -2,6 +2,8 @@ package dev.nthings.helm4j.errors;
 
 import java.util.Objects;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * Exception surfaced when a Helm operation fails through the exception channel.
  *
@@ -22,16 +24,17 @@ public final class HelmException extends RuntimeException {
     this(failure, null);
   }
 
-  public HelmException(HelmFailure failure, Throwable cause) {
+  public HelmException(HelmFailure failure, @Nullable Throwable cause) {
     super(Objects.requireNonNull(failure, "failure").message(), cause);
     this.failure = failure;
   }
 
-  public HelmException(String message, String stage, String operation) {
+  public HelmException(String message, @Nullable String stage, @Nullable String operation) {
     this(new HelmFailure(message, stage, operation), null);
   }
 
-  public HelmException(String message, String stage, String operation, Throwable cause) {
+  public HelmException(
+      String message, @Nullable String stage, @Nullable String operation, Throwable cause) {
     this(new HelmFailure(message, stage, operation), cause);
   }
 
@@ -40,11 +43,11 @@ public final class HelmException extends RuntimeException {
     return failure;
   }
 
-  public String stage() {
+  public @Nullable String stage() {
     return failure.stage();
   }
 
-  public String operation() {
+  public @Nullable String operation() {
     return failure.operation();
   }
 }

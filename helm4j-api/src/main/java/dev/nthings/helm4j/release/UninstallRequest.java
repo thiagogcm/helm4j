@@ -6,18 +6,20 @@ import dev.nthings.helm4j.internal.api.Invocations;
 import dev.nthings.helm4j.internal.gateway.ReleaseGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
+import org.jspecify.annotations.Nullable;
+
 /** Request parameters for uninstalling a release. */
 public record UninstallRequest(
-    String releaseName,
-    String namespace,
+    @Nullable String releaseName,
+    @Nullable String namespace,
     boolean dryRun,
     boolean disableHooks,
     boolean keepHistory,
     boolean ignoreNotFound,
-    Duration timeout,
-    String description,
-    WaitMode waitMode,
-    String deletionPropagation) {
+    @Nullable Duration timeout,
+    @Nullable String description,
+    @Nullable WaitMode waitMode,
+    @Nullable String deletionPropagation) {
 
   public UninstallRequest {
     releaseName = ModelSupport.normalizeBlankToNull(releaseName);

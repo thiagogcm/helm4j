@@ -6,22 +6,24 @@ import dev.nthings.helm4j.internal.api.Invocations;
 import dev.nthings.helm4j.internal.gateway.ChartGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
+import org.jspecify.annotations.Nullable;
+
 /** Request parameters for packaging a chart directory. */
 public record PackageChartRequest(
-    Path chartPath,
-    String version,
-    String appVersion,
-    Path destination,
+    @Nullable Path chartPath,
+    @Nullable String version,
+    @Nullable String appVersion,
+    @Nullable Path destination,
     boolean dependencyUpdate,
     boolean sign,
-    String key,
-    String keyring,
-    String passphraseFile,
+    @Nullable String key,
+    @Nullable String keyring,
+    @Nullable String passphraseFile,
     boolean plainHttp,
     boolean insecureSkipTlsVerification,
-    String certificateFile,
-    String keyFile,
-    String certificateAuthorityFile) {
+    @Nullable String certificateFile,
+    @Nullable String keyFile,
+    @Nullable String certificateAuthorityFile) {
 
   public PackageChartRequest {
     chartPath = chartPath == null ? null : chartPath.toAbsolutePath();

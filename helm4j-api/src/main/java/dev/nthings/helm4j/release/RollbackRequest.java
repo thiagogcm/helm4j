@@ -7,14 +7,16 @@ import dev.nthings.helm4j.internal.api.Invocations;
 import dev.nthings.helm4j.internal.gateway.ReleaseGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
+import org.jspecify.annotations.Nullable;
+
 /** Request parameters for rolling back a release. */
 public record RollbackRequest(
-    String releaseName,
-    String namespace,
+    @Nullable String releaseName,
+    @Nullable String namespace,
     int revision,
-    DryRunMode dryRun,
-    Duration timeout,
-    WaitMode waitMode,
+    @Nullable DryRunMode dryRun,
+    @Nullable Duration timeout,
+    @Nullable WaitMode waitMode,
     boolean waitForJobs,
     boolean disableHooks,
     boolean forceReplace,

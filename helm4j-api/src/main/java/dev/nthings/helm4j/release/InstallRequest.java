@@ -11,18 +11,20 @@ import dev.nthings.helm4j.internal.api.Invocations;
 import dev.nthings.helm4j.internal.gateway.ReleaseGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
+import org.jspecify.annotations.Nullable;
+
 /** Request parameters for installing a release from a chart reference. */
 public record InstallRequest(
-    String releaseName,
+    @Nullable String releaseName,
     ChartRef chart,
     ChartSource source,
-    String namespace,
+    @Nullable String namespace,
     boolean createNamespace,
-    DryRunMode dryRun,
-    WaitMode waitMode,
+    @Nullable DryRunMode dryRun,
+    @Nullable WaitMode waitMode,
     boolean waitForJobs,
-    Duration timeout,
-    String description,
+    @Nullable Duration timeout,
+    @Nullable String description,
     boolean rollbackOnFailure,
     boolean skipCrds,
     boolean disableHooks,
@@ -30,7 +32,7 @@ public record InstallRequest(
     boolean forceReplace,
     boolean replace,
     boolean generateName,
-    String nameTemplate,
+    @Nullable String nameTemplate,
     boolean subNotes,
     boolean enableDns,
     boolean takeOwnership,

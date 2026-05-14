@@ -11,18 +11,20 @@ import dev.nthings.helm4j.internal.api.Invocations;
 import dev.nthings.helm4j.internal.gateway.ReleaseGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
+import org.jspecify.annotations.Nullable;
+
 /** Request parameters for upgrading an existing release. */
 public record UpgradeRequest(
-    String releaseName,
+    @Nullable String releaseName,
     ChartRef chart,
     ChartSource source,
-    String namespace,
+    @Nullable String namespace,
     boolean install,
-    DryRunMode dryRun,
-    WaitMode waitMode,
+    @Nullable DryRunMode dryRun,
+    @Nullable WaitMode waitMode,
     boolean waitForJobs,
-    Duration timeout,
-    String description,
+    @Nullable Duration timeout,
+    @Nullable String description,
     boolean rollbackOnFailure,
     boolean skipCrds,
     boolean disableHooks,

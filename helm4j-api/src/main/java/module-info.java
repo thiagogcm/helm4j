@@ -1,13 +1,21 @@
+import org.jspecify.annotations.NullMarked;
+
 /**
  * Public, user-facing Helm SDK API. Native plumbing — including the JSON bridge layer — is supplied
  * by the helm4j-native module, discovered at runtime via {@link java.util.ServiceLoader}.
+ *
+ * <p>The module is {@link NullMarked}: every type usage is non-null unless explicitly annotated
+ * {@code @Nullable}.
  *
  * <p>{@code @SuppressWarnings("module")}: the qualified {@code exports ... to
  * dev.nthings.helm4j.runtime} names the native module, which cannot be a compile dependency of this
  * module without a cycle, so javac cannot see it at compile time.
  */
 @SuppressWarnings("module")
+@NullMarked
 module dev.nthings.helm4j {
+  requires transitive org.jspecify;
+
   exports dev.nthings.helm4j;
   exports dev.nthings.helm4j.chart;
   exports dev.nthings.helm4j.release;

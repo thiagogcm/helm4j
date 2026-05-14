@@ -5,8 +5,10 @@ import dev.nthings.helm4j.internal.gateway.ReleaseGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 import dev.nthings.helm4j.model.ListResult;
 
+import org.jspecify.annotations.Nullable;
+
 /** Request parameters for viewing release history. */
-public record HistoryRequest(String releaseName, String namespace, int max) {
+public record HistoryRequest(@Nullable String releaseName, @Nullable String namespace, int max) {
 
   public HistoryRequest {
     releaseName = ModelSupport.normalizeBlankToNull(releaseName);

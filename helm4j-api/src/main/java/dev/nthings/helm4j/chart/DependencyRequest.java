@@ -6,17 +6,19 @@ import dev.nthings.helm4j.internal.api.Invocations;
 import dev.nthings.helm4j.internal.gateway.ChartGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
+import org.jspecify.annotations.Nullable;
+
 /** Request parameters for listing chart dependencies. */
 public record DependencyRequest(
-    Path chartPath,
+    @Nullable Path chartPath,
     boolean skipRefresh,
     boolean verify,
-    String keyring,
+    @Nullable String keyring,
     boolean plainHttp,
     boolean insecureSkipTlsVerification,
-    String certificateFile,
-    String keyFile,
-    String certificateAuthorityFile) {
+    @Nullable String certificateFile,
+    @Nullable String keyFile,
+    @Nullable String certificateAuthorityFile) {
 
   public DependencyRequest {
     chartPath = chartPath == null ? null : chartPath.toAbsolutePath();

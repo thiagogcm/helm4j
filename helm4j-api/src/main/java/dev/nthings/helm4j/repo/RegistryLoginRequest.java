@@ -4,14 +4,16 @@ import dev.nthings.helm4j.internal.api.Invocations;
 import dev.nthings.helm4j.internal.gateway.RepoGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
+import org.jspecify.annotations.Nullable;
+
 /** Request parameters for registry login. */
 public record RegistryLoginRequest(
-    String hostname,
-    String username,
-    String password,
-    String certificateFile,
-    String keyFile,
-    String certificateAuthorityFile,
+    @Nullable String hostname,
+    @Nullable String username,
+    @Nullable String password,
+    @Nullable String certificateFile,
+    @Nullable String keyFile,
+    @Nullable String certificateAuthorityFile,
     boolean insecure,
     boolean plainHttp) {
 

@@ -1,5 +1,7 @@
 package dev.nthings.helm4j.errors;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * A domain result that carries a structured {@link HelmFailure}.
  *
@@ -14,11 +16,11 @@ public interface HelmFailureCarrier {
     return failure().message();
   }
 
-  default String stage() {
+  default @Nullable String stage() {
     return failure().stage();
   }
 
-  default String operation() {
+  default @Nullable String operation() {
     return failure().operation();
   }
 }

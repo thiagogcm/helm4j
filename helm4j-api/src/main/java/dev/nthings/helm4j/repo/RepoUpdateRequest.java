@@ -9,8 +9,10 @@ import dev.nthings.helm4j.internal.gateway.RepoGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 import dev.nthings.helm4j.model.ListResult;
 
+import org.jspecify.annotations.Nullable;
+
 /** Request options for repository update operations. */
-public record RepoUpdateRequest(List<String> names, Duration timeout) {
+public record RepoUpdateRequest(List<String> names, @Nullable Duration timeout) {
 
   public RepoUpdateRequest {
     names = normalizeNames(names);

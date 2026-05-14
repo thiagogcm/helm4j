@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import dev.nthings.helm4j.chart.ChartRef;
 import dev.nthings.helm4j.chart.ChartSource;
 import dev.nthings.helm4j.chart.DependencyRequest;
 import dev.nthings.helm4j.chart.HubSearchRequest;
@@ -88,8 +89,9 @@ final class NativeOptions {
     return options;
   }
 
-  static Map<String, Object> show(ShowRequest request) {
+  static Map<String, Object> show(ChartRef chart, ShowRequest request) {
     var options = options();
+    putChartRef(options, chart);
     putChartSource(options, request.source());
     putIfNonNull(options, "jsonpath", request.valuesJsonPath());
     return options;
@@ -97,6 +99,7 @@ final class NativeOptions {
 
   static Map<String, Object> install(InstallRequest request) {
     var options = options();
+    putChartRef(options, request.chart());
     putChartSource(options, request.source());
 
     putIfNonNull(options, "namespace", request.namespace());
@@ -132,6 +135,7 @@ final class NativeOptions {
 
   static Map<String, Object> upgrade(UpgradeRequest request) {
     var options = options();
+    putChartRef(options, request.chart());
     putChartSource(options, request.source());
 
     putIfNonNull(options, "namespace", request.namespace());
@@ -221,6 +225,7 @@ final class NativeOptions {
 
   static Map<String, Object> template(TemplateRequest request) {
     var options = options();
+    putChartRef(options, request.chart());
     putChartSource(options, request.source());
 
     putIfNonNull(options, "namespace", request.namespace());
@@ -260,6 +265,7 @@ final class NativeOptions {
 
   static Map<String, Object> pull(PullRequest request) {
     var options = options();
+    putChartRef(options, request.chart());
     putChartSource(options, request.source());
 
     options.put("untar", request.untar());
@@ -357,8 +363,11 @@ final class NativeOptions {
     return options;
   }
 
+  private static void putChartRef(Map<String, Object> options, ChartRef chart) {
+    putIfNonNull(options, "version", chart.version());
+  }
+
   private static void putChartSource(Map<String, Object> options, ChartSource source) {
-    putIfNonNull(options, "version", source.version());
     putIfNonNull(options, "repo", source.repositoryUrl());
     putIfNonNull(options, "username", source.username());
     putIfNonNull(options, "password", source.password());

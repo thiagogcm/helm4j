@@ -5,10 +5,12 @@ import dev.nthings.helm4j.internal.gateway.ChartGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 import dev.nthings.helm4j.model.ListResult;
 
+import org.jspecify.annotations.Nullable;
+
 /** Request parameters for searching the Helm hub endpoint. */
 public record HubSearchRequest(
-    String keyword,
-    String endpoint,
+    @Nullable String keyword,
+    @Nullable String endpoint,
     boolean failIfNoResults,
     boolean listRepositoryUrl,
     int maxColumnWidth) {

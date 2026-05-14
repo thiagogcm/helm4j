@@ -7,8 +7,10 @@ import dev.nthings.helm4j.internal.api.Invocations;
 import dev.nthings.helm4j.internal.gateway.ChartGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
+import org.jspecify.annotations.Nullable;
+
 /** Shared request options for Helm show operations. */
-public record ShowRequest(ChartSource source, String valuesJsonPath) {
+public record ShowRequest(ChartSource source, @Nullable String valuesJsonPath) {
 
   public ShowRequest {
     source = Objects.requireNonNullElseGet(source, ChartSource::defaults);

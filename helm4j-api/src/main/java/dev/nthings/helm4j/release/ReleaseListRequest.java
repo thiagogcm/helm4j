@@ -7,17 +7,19 @@ import dev.nthings.helm4j.internal.gateway.ReleaseGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 import dev.nthings.helm4j.model.ListResult;
 
+import org.jspecify.annotations.Nullable;
+
 /** Request parameters for listing releases. */
 public record ReleaseListRequest(
-    String namespace,
+    @Nullable String namespace,
     boolean allNamespaces,
-    String filter,
+    @Nullable String filter,
     List<String> states,
     int limit,
     int offset,
     boolean sortByDate,
     boolean sortReverse,
-    String selector) {
+    @Nullable String selector) {
 
   public ReleaseListRequest {
     namespace = ModelSupport.normalizeBlankToNull(namespace);

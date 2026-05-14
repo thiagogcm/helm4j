@@ -9,18 +9,20 @@ import dev.nthings.helm4j.internal.api.Invocations;
 import dev.nthings.helm4j.internal.gateway.ChartGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
+import org.jspecify.annotations.Nullable;
+
 /** Request parameters for rendering chart templates. */
 public record TemplateRequest(
-    String releaseName,
+    @Nullable String releaseName,
     ChartRef chart,
     ChartSource source,
-    String namespace,
-    String description,
+    @Nullable String namespace,
+    @Nullable String description,
     boolean skipCrds,
     boolean disableHooks,
     boolean disableOpenApiValidation,
     boolean generateName,
-    String nameTemplate,
+    @Nullable String nameTemplate,
     boolean subNotes,
     boolean enableDns,
     boolean includeCrds,
