@@ -22,7 +22,7 @@ import dev.nthings.helm4j.chart.ShowRequest;
 import dev.nthings.helm4j.chart.ShowResult;
 import dev.nthings.helm4j.chart.TemplateRequest;
 import dev.nthings.helm4j.chart.TemplateResult;
-import dev.nthings.helm4j.internal.spi.HelmGateway;
+import dev.nthings.helm4j.internal.gateway.HelmGateway;
 import dev.nthings.helm4j.model.ListResult;
 import dev.nthings.helm4j.release.GetAllResult;
 import dev.nthings.helm4j.release.GetHooksResult;

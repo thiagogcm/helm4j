@@ -1,4 +1,4 @@
-package dev.nthings.helm4j.internal.spi;
+package dev.nthings.helm4j.internal.gateway;
 
 import dev.nthings.helm4j.chart.ChartRef;
 import dev.nthings.helm4j.chart.DependencyRequest;

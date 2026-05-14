@@ -16,7 +16,6 @@ import dev.nthings.helm4j.chart.LintSeverity;
 import dev.nthings.helm4j.chart.RepoChartSummary;
 import dev.nthings.helm4j.chart.ShowMode;
 import dev.nthings.helm4j.errors.HelmException;
-import dev.nthings.helm4j.internal.spi.HelmBridge;
 import dev.nthings.helm4j.release.ApplyStrategy;
 import dev.nthings.helm4j.release.DryRunMode;
 import dev.nthings.helm4j.release.ReleaseFailure;

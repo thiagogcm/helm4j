@@ -4,7 +4,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 import dev.nthings.helm4j.internal.api.NamespaceClient;
-import dev.nthings.helm4j.internal.spi.ChartGateway;
+import dev.nthings.helm4j.internal.gateway.ChartGateway;
 import dev.nthings.helm4j.model.ListResult;
 
 /** Chart namespace for search and chart-content operations. */

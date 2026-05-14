@@ -3,7 +3,7 @@ package dev.nthings.helm4j.repo;
 import java.util.function.Consumer;
 
 import dev.nthings.helm4j.internal.api.NamespaceClient;
-import dev.nthings.helm4j.internal.spi.RepoGateway;
+import dev.nthings.helm4j.internal.gateway.RepoGateway;
 import dev.nthings.helm4j.model.ListResult;
 
 /** Repository and registry namespace for Helm SDK operations. */

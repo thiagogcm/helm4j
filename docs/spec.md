@@ -122,18 +122,24 @@ Normalization rule:
 
 ```mermaid
 flowchart TB
-    subgraph Public
+    subgraph helm4j-api
       H[Helm]
       HC[HelmClient]
       RC[RepoClient]
       CC[ChartClient]
       RLC[ReleaseClient]
+      SPI["internal.gateway<br/>(RepoGateway, ChartGateway,<br/>ReleaseGateway, SystemGateway,<br/>HelmGateway, HelmGatewayProvider)"]
     end
 
-    subgraph InternalSDK
+    subgraph helm4j-native
       GW[NativeStructGateway]
-      BR[NativeStructBridge]
-      FFM[FfmNativeStructBridge]
+      RG[NativeRepoGateway]
+      CG[NativeChartGateway]
+      RLG[NativeReleaseGateway]
+      SG[NativeSystemGateway]
+      SUP[NativeGatewaySupport]
+      BR[HelmBridge]
+      FFM[FfmHelmBridge]
     end
 
     subgraph Native
@@ -146,15 +152,46 @@ flowchart TB
     HC --> CC
     HC --> RLC
 
-    RC --> GW
-    CC --> GW
-    RLC --> GW
+    RC --> SPI
+    CC --> SPI
+    RLC --> SPI
+    SPI -. ServiceLoader .-> GW
 
-    GW --> BR
+    GW --> RG
+    GW --> CG
+    GW --> RLG
+    GW --> SG
+    RG --> SUP
+    CG --> SUP
+    RLG --> SUP
+    SG --> SUP
+    SUP --> BR
     BR --> FFM
     FFM --> LIB
     LIB --> HELM
 ```
+
+### 3.1 Module Boundaries
+
+The project is split into two published modules plus `buildSrc`:
+
+- **`helm4j-api`** — the public SDK and the entire domain model (records, sealed
+  outcomes). It owns the gateway SPI in `internal.gateway`, qualified-exported
+  *only* to `helm4j-native`.
+- **`helm4j-native`** — the FFM runtime: the `HelmBridge` transport contract, its
+  `FfmHelmBridge` implementation, the per-domain gateways, and the
+  `HelmGatewayProvider` service.
+
+`helm4j-native` depends on `helm4j-api` at compile time; `helm4j-api` has **no**
+compile-time reference to the native module. The dependency cycle that would
+otherwise exist (the API needs a gateway, the gateway needs the API's model) is
+broken at runtime with `ServiceLoader<HelmGatewayProvider>` — hence the
+`@SuppressWarnings("module")` on the qualified export, which names a module
+`javac` cannot see at compile time.
+
+A third `helm4j-spi` module is **deliberately not** introduced: the gateway
+interfaces traffic in the full domain model, so extracting them would duplicate
+nearly all of `helm4j-api`. The two-module shape is the clean cut.
 
 ## 4. Native C Bridge
 
@@ -187,8 +224,10 @@ Each response is a UTF-8 JSON string released with:
 
 ## 5. Data Marshalling
 
-`NativeStructGateway` maps Java request records to JSON option payloads and
-maps JSON responses back to typed Java results using Jackson.
+The per-domain native gateways (`NativeRepoGateway`, `NativeChartGateway`,
+`NativeReleaseGateway`, `NativeSystemGateway`) map Java request records to JSON
+option payloads and map JSON responses back to typed Java results using Jackson,
+sharing the encode/decode plumbing in `NativeGatewaySupport`.
 
 Principles:
 

@@ -1,4 +1,4 @@
-package dev.nthings.helm4j.internal.spi;
+package dev.nthings.helm4j.internal.gateway;
 
 /**
  * Service provider that constructs a fully wired {@link HelmGateway}.

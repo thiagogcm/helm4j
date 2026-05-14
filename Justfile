@@ -103,6 +103,6 @@ check-native-parity:
       echo "$name" | awk '{print tolower(substr($0,1,1)) substr($0,2)}'
     fi
   done < "$go_exports" | sort -u > "$expected_bridge_methods"
-  rg '^[[:space:]]*byte\[]\s+[a-zA-Z][a-zA-Z0-9]*\(' helm4j-api/src/main/java/dev/nthings/helm4j/internal/spi/HelmBridge.java | sed -E 's#^[[:space:]]*byte\[]\s+([a-zA-Z][a-zA-Z0-9]*)\(.*#\1#' | sort -u > "$bridge_methods"
+  rg '^[[:space:]]*byte\[]\s+[a-zA-Z][a-zA-Z0-9]*\(' helm4j-native/src/main/java/dev/nthings/helm4j/internal/runtime/HelmBridge.java | sed -E 's#^[[:space:]]*byte\[]\s+([a-zA-Z][a-zA-Z0-9]*)\(.*#\1#' | sort -u > "$bridge_methods"
   diff -u "$expected_bridge_methods" "$bridge_methods"
   echo "✓ Native API parity checks passed"

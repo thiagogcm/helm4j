@@ -3,7 +3,7 @@ package dev.nthings.helm4j.release;
 import java.util.function.Consumer;
 
 import dev.nthings.helm4j.internal.api.NamespaceClient;
-import dev.nthings.helm4j.internal.spi.ReleaseGateway;
+import dev.nthings.helm4j.internal.gateway.ReleaseGateway;
 import dev.nthings.helm4j.model.ListResult;
 
 /** Release namespace for lifecycle operations. */

@@ -1,7 +1,11 @@
-package dev.nthings.helm4j.internal.spi;
+package dev.nthings.helm4j.internal.runtime;
 
 /**
- * Service Provider Interface for native Helm operations.
+ * Transport contract for the native Helm runtime: a thin, byte-array-only bridge over libhelm4j.
+ *
+ * <p>This is a runtime-internal seam, not a public extension point — it lives in the native module
+ * because it carries no domain types and is meaningful only to the FFM implementation. Swapping the
+ * transport (e.g. FFM for a process-exec backend) means providing another {@code HelmBridge}.
  *
  * <p>All parameters and return values are raw UTF-8 encoded byte arrays. The bridge implementation
  * is responsible for converting these to the native format required by the underlying library

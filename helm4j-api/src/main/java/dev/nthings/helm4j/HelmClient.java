@@ -4,12 +4,12 @@ import java.util.Objects;
 import java.util.ServiceLoader;
 
 import dev.nthings.helm4j.chart.ChartClient;
-import dev.nthings.helm4j.internal.spi.ChartGateway;
-import dev.nthings.helm4j.internal.spi.HelmGateway;
-import dev.nthings.helm4j.internal.spi.HelmGatewayProvider;
-import dev.nthings.helm4j.internal.spi.ReleaseGateway;
-import dev.nthings.helm4j.internal.spi.RepoGateway;
-import dev.nthings.helm4j.internal.spi.SystemGateway;
+import dev.nthings.helm4j.internal.gateway.ChartGateway;
+import dev.nthings.helm4j.internal.gateway.HelmGateway;
+import dev.nthings.helm4j.internal.gateway.HelmGatewayProvider;
+import dev.nthings.helm4j.internal.gateway.ReleaseGateway;
+import dev.nthings.helm4j.internal.gateway.RepoGateway;
+import dev.nthings.helm4j.internal.gateway.SystemGateway;
 import dev.nthings.helm4j.release.ReleaseClient;
 import dev.nthings.helm4j.repo.RepoClient;
 

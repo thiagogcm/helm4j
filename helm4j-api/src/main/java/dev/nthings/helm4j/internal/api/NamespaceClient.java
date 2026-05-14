@@ -19,7 +19,13 @@ public abstract class NamespaceClient<GatewayT> {
       Consumer<BuilderT> spec,
       Function<BuilderT, RequestT> build,
       Function<RequestT, ResultT> operation) {
-    return ClientSupport.buildAndCall(builderFactory, spec, build, operation);
+    Objects.requireNonNull(builderFactory, "builderFactory");
+    Objects.requireNonNull(spec, "spec");
+    Objects.requireNonNull(build, "build");
+    Objects.requireNonNull(operation, "operation");
+    var builder = builderFactory.get();
+    spec.accept(builder);
+    return operation.apply(build.apply(builder));
   }
 
   protected final <RequestT, ResultT> ResultT invoke(

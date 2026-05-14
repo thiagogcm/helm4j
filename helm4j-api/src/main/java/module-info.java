@@ -8,10 +8,6 @@
  */
 @SuppressWarnings("module")
 module dev.nthings.helm4j {
-  // Jackson is referenced only by the `opens` directives below (for reflective DTO
-  // (de)serialization performed by the native module); no API code imports it.
-  requires static tools.jackson.databind;
-
   exports dev.nthings.helm4j;
   exports dev.nthings.helm4j.chart;
   exports dev.nthings.helm4j.release;
@@ -19,11 +15,11 @@ module dev.nthings.helm4j {
   exports dev.nthings.helm4j.model;
   exports dev.nthings.helm4j.errors;
 
-  // Gateway interfaces and the native SPI are visible only to the runtime module.
-  exports dev.nthings.helm4j.internal.spi to
+  // The gateway SPI is the internal seam consumed by the native runtime module only.
+  exports dev.nthings.helm4j.internal.gateway to
       dev.nthings.helm4j.runtime;
 
-  uses dev.nthings.helm4j.internal.spi.HelmGatewayProvider;
+  uses dev.nthings.helm4j.internal.gateway.HelmGatewayProvider;
 
   // Jackson reflectively (de)serializes the DTO records.
   opens dev.nthings.helm4j to

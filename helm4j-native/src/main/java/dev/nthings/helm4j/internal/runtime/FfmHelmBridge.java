@@ -4,7 +4,6 @@ import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
 
-import dev.nthings.helm4j.internal.spi.HelmBridge;
 import dev.nthings.helm4j.jextract.libhelm4j_h;
 
 import org.slf4j.Logger;
