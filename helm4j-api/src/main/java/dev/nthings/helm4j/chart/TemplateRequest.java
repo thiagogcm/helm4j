@@ -51,26 +51,26 @@ public record TemplateRequest(
   }
 
   public static final class Builder {
-    private final ChartGateway gateway;
+    private final @Nullable ChartGateway gateway;
     private final ChartSource.Builder sourceBuilder = ChartSource.builder();
-    private String releaseName;
-    private ChartRef chart;
-    private ChartSource source;
-    private String namespace;
-    private String description;
+    private @Nullable String releaseName;
+    private @Nullable ChartRef chart;
+    private @Nullable ChartSource source;
+    private @Nullable String namespace;
+    private @Nullable String description;
     private boolean skipCrds;
     private boolean disableHooks;
     private boolean disableOpenApiValidation;
     private boolean generateName;
-    private String nameTemplate;
+    private @Nullable String nameTemplate;
     private boolean subNotes;
     private boolean enableDns;
     private boolean includeCrds;
-    private List<String> apiVersions;
-    private Map<String, Object> values;
-    private Map<String, String> labels;
+    private @Nullable List<String> apiVersions;
+    private @Nullable Map<String, Object> values;
+    private @Nullable Map<String, String> labels;
 
-    private Builder(ChartGateway gateway) {
+    private Builder(@Nullable ChartGateway gateway) {
       this.gateway = gateway;
     }
 
@@ -160,11 +160,10 @@ public record TemplateRequest(
     }
 
     public TemplateRequest build() {
-      var resolvedSource =
-          source != null ? source.merge(sourceBuilder.build()) : sourceBuilder.build();
+      var resolvedSource = source != null ? source.merge(sourceBuilder.build()) : sourceBuilder.build();
       return new TemplateRequest(
           releaseName,
-          chart,
+          Objects.requireNonNull(chart, "chart"),
           resolvedSource,
           namespace,
           description,
@@ -176,9 +175,9 @@ public record TemplateRequest(
           subNotes,
           enableDns,
           includeCrds,
-          apiVersions,
-          values,
-          labels);
+          ModelSupport.immutableListOrEmpty(apiVersions),
+          ModelSupport.immutableMapOrEmpty(values),
+          ModelSupport.immutableMapOrEmpty(labels));
     }
 
     /** Builds the request and renders the chart through the bound client. */

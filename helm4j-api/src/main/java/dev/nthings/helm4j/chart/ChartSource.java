@@ -7,10 +7,13 @@ import dev.nthings.helm4j.internal.model.ModelSupport;
 import org.jspecify.annotations.Nullable;
 
 /**
- * How to fetch a chart: the repository URL, credentials, TLS, and signing options shared across
+ * How to fetch a chart: the repository URL, credentials, TLS, and signing
+ * options shared across
  * chart-consuming operations.
  *
- * <p>The chart identity and version live on {@link ChartRef}; this type carries only the transport
+ * <p>
+ * The chart identity and version live on {@link ChartRef}; this type carries
+ * only the transport
  * and resolution concerns layered on top of it.
  */
 public record ChartSource(
@@ -46,20 +49,21 @@ public record ChartSource(
   }
 
   public static final class Builder {
-    private String repositoryUrl;
-    private String username;
-    private String password;
+    private @Nullable String repositoryUrl;
+    private @Nullable String username;
+    private @Nullable String password;
     private boolean plainHttp;
     private boolean insecureSkipTlsVerification;
-    private String keyringPath;
-    private String certificateFile;
-    private String keyFile;
-    private String certificateAuthorityFile;
+    private @Nullable String keyringPath;
+    private @Nullable String certificateFile;
+    private @Nullable String keyFile;
+    private @Nullable String certificateAuthorityFile;
     private boolean passCredentialsToAllHosts;
     private boolean verifySignatures;
     private boolean includePreReleaseVersions;
 
-    private Builder() {}
+    private Builder() {
+    }
 
     public Builder repositoryUrl(String value) {
       this.repositoryUrl = value;
@@ -155,7 +159,7 @@ public record ChartSource(
         overrides.includePreReleaseVersions || includePreReleaseVersions);
   }
 
-  private static String coalesce(String first, String second) {
+  private static @Nullable String coalesce(@Nullable String first, @Nullable String second) {
     return first == null ? second : first;
   }
 }

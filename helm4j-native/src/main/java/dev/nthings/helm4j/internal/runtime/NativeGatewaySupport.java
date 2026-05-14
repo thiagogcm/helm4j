@@ -13,15 +13,21 @@ import dev.nthings.helm4j.release.HookInfo;
 import dev.nthings.helm4j.release.ReleaseInfo;
 import dev.nthings.helm4j.release.ReleaseStatus;
 
+import org.jspecify.annotations.Nullable;
+
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * Shared plumbing for the native gateway implementations: the {@link HelmBridge} handle, the JSON
- * {@link ObjectMapper}, and the encode/decode/error-mapping helpers each domain gateway needs.
+ * Shared plumbing for the native gateway implementations: the
+ * {@link HelmBridge} handle, the JSON
+ * {@link ObjectMapper}, and the encode/decode/error-mapping helpers each domain
+ * gateway needs.
  *
- * <p>One instance is created per {@link NativeStructGateway} and handed to every sub-gateway, so
+ * <p>
+ * One instance is created per {@link NativeStructGateway} and handed to every
+ * sub-gateway, so
  * the bridge and mapper are configured once and reused.
  */
 final class NativeGatewaySupport {
@@ -34,12 +40,18 @@ final class NativeGatewaySupport {
     this.mapper = Objects.requireNonNull(mapper, "mapper");
   }
 
-  /** Invokes the bridge, parses the JSON envelope, and returns it without inspecting for errors. */
+  /**
+   * Invokes the bridge, parses the JSON envelope, and returns it without
+   * inspecting for errors.
+   */
   JsonNode invokeRoot(String operation, BridgeCall call) {
     return parse(invoke(call, operation, "invokeNative"), operation);
   }
 
-  /** Invokes the bridge and throws {@link HelmException} if the envelope carries an error. */
+  /**
+   * Invokes the bridge and throws {@link HelmException} if the envelope carries
+   * an error.
+   */
   JsonNode invokeRootOrThrow(String operation, BridgeCall call) {
     var root = invokeRoot(operation, call);
     var failure = operationError(root, operation);
@@ -76,7 +88,7 @@ final class NativeGatewaySupport {
   }
 
   private byte[] invoke(BridgeCall call, String operation, String stage) {
-    final byte[] payload;
+    final byte @Nullable [] payload;
     try {
       payload = call.invoke(bridge);
     } catch (RuntimeException error) {
@@ -89,7 +101,8 @@ final class NativeGatewaySupport {
     return payload;
   }
 
-  static OperationError operationError(JsonNode node, String fallbackOperation) {
+  static @Nullable OperationError operationError(
+      @Nullable JsonNode node, String fallbackOperation) {
     if (node == null || !node.has("error")) {
       return null;
     }
@@ -114,7 +127,7 @@ final class NativeGatewaySupport {
     return new HelmFailure(messageOrUnknown(error.message()), error.stage(), error.operation());
   }
 
-  private static String text(JsonNode node, String field) {
+  private static @Nullable String text(JsonNode node, String field) {
     var value = node.get(field);
     if (value == null || value.isNull()) {
       return null;
@@ -122,7 +135,7 @@ final class NativeGatewaySupport {
     return value.asString();
   }
 
-  static byte[] utf8(String value) {
+  static byte @Nullable [] utf8(@Nullable String value) {
     if (value == null) {
       return null;
     }
@@ -144,28 +157,28 @@ final class NativeGatewaySupport {
         r.notes());
   }
 
-  static List<HookInfo> mapHooks(List<HookPayload> hooks) {
+  static List<HookInfo> mapHooks(@Nullable List<HookPayload> hooks) {
     return listOrEmpty(hooks).stream()
         .map(h -> new HookInfo(h.name(), h.kind(), h.path(), listOrEmpty(h.events()), h.weight()))
         .toList();
   }
 
-  static Map<String, Object> mapOrEmpty(Map<String, Object> value) {
+  static Map<String, Object> mapOrEmpty(@Nullable Map<String, Object> value) {
     return value == null ? Map.of() : value;
   }
 
-  private static String fallbackOperation(String operation, String fallback) {
+  private static String fallbackOperation(@Nullable String operation, String fallback) {
     return operation == null || operation.isBlank() ? fallback : operation;
   }
 
-  static String messageOrUnknown(String message) {
+  static String messageOrUnknown(@Nullable String message) {
     if (message == null || message.isBlank()) {
       return "Unknown native operation error";
     }
     return message;
   }
 
-  static Instant parseTimestamp(String value, String operation, String field) {
+  static @Nullable Instant parseTimestamp(@Nullable String value, String operation, String field) {
     if (value == null || value.isBlank()) {
       return null;
     }
@@ -177,15 +190,19 @@ final class NativeGatewaySupport {
     }
   }
 
-  static <T> List<T> listOrEmpty(List<T> value) {
+  static <T> List<T> listOrEmpty(@Nullable List<T> value) {
     return value == null ? List.of() : value;
   }
 
-  /** A single native bridge call; receives the bridge so callers need not hold a reference. */
+  /**
+   * A single native bridge call; receives the bridge so callers need not hold a
+   * reference.
+   */
   @FunctionalInterface
   interface BridgeCall {
-    byte[] invoke(HelmBridge bridge);
+    byte @Nullable [] invoke(HelmBridge bridge);
   }
 
-  record OperationError(String message, String stage, String operation) {}
+  record OperationError(String message, @Nullable String stage, String operation) {
+  }
 }

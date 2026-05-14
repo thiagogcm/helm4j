@@ -1,5 +1,6 @@
 package dev.nthings.helm4j.repo;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -7,6 +8,8 @@ import dev.nthings.helm4j.internal.api.Invocations;
 import dev.nthings.helm4j.internal.gateway.RepoGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 import dev.nthings.helm4j.model.ListResult;
+
+import org.jspecify.annotations.Nullable;
 
 /** Request options for repository remove operations. */
 public record RepoRemoveRequest(List<String> names) {
@@ -24,10 +27,10 @@ public record RepoRemoveRequest(List<String> names) {
   }
 
   public static final class Builder {
-    private final RepoGateway gateway;
-    private List<String> names;
+    private final @Nullable RepoGateway gateway;
+    private @Nullable List<String> names;
 
-    private Builder(RepoGateway gateway) {
+    private Builder(@Nullable RepoGateway gateway) {
       this.gateway = gateway;
     }
 
@@ -42,7 +45,7 @@ public record RepoRemoveRequest(List<String> names) {
     }
 
     public RepoRemoveRequest build() {
-      return new RepoRemoveRequest(names);
+      return new RepoRemoveRequest(normalizeNames(names));
     }
 
     /** Builds the request and removes the repositories through the bound client. */
@@ -51,10 +54,17 @@ public record RepoRemoveRequest(List<String> names) {
     }
   }
 
-  private static List<String> normalizeNames(List<String> value) {
+  private static List<String> normalizeNames(@Nullable List<String> value) {
     if (value == null || value.isEmpty()) {
       return List.of();
     }
-    return value.stream().map(ModelSupport::normalizeBlankToNull).filter(v -> v != null).toList();
+    var normalized = new ArrayList<String>();
+    for (var name : value) {
+      var trimmed = ModelSupport.normalizeBlankToNull(name);
+      if (trimmed != null) {
+        normalized.add(trimmed);
+      }
+    }
+    return List.copyOf(normalized);
   }
 }

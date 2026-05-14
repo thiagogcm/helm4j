@@ -8,6 +8,8 @@ import dev.nthings.helm4j.internal.api.Invocations;
 import dev.nthings.helm4j.internal.gateway.ChartGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
+import org.jspecify.annotations.Nullable;
+
 /** Request parameters for linting a chart. */
 public record LintRequest(
     Path chartPath,
@@ -30,14 +32,14 @@ public record LintRequest(
   }
 
   public static final class Builder {
-    private final ChartGateway gateway;
-    private Path chartPath;
+    private final @Nullable ChartGateway gateway;
+    private @Nullable Path chartPath;
     private boolean strict;
     private boolean quiet;
     private boolean withSubcharts;
-    private Map<String, Object> values;
+    private @Nullable Map<String, Object> values;
 
-    private Builder(ChartGateway gateway) {
+    private Builder(@Nullable ChartGateway gateway) {
       this.gateway = gateway;
     }
 
@@ -67,7 +69,12 @@ public record LintRequest(
     }
 
     public LintRequest build() {
-      return new LintRequest(chartPath, strict, quiet, withSubcharts, values);
+      return new LintRequest(
+          Objects.requireNonNull(chartPath, "chartPath"),
+          strict,
+          quiet,
+          withSubcharts,
+          ModelSupport.immutableMapOrEmpty(values));
     }
 
     /** Builds the request and lints the chart through the bound client. */

@@ -32,10 +32,13 @@ import dev.nthings.helm4j.repo.RepoAddRequest;
 import dev.nthings.helm4j.repo.RepoRemoveRequest;
 import dev.nthings.helm4j.repo.RepoUpdateRequest;
 
+import org.jspecify.annotations.Nullable;
+
 /** Canonical native option-map builders for Helm bridge operations. */
 final class NativeOptions {
 
-  private NativeOptions() {}
+  private NativeOptions() {
+  }
 
   static Map<String, Object> repoAdd(RepoAddRequest request) {
     var options = options();
@@ -89,8 +92,10 @@ final class NativeOptions {
     return options;
   }
 
-  // ShowRequest carries no ChartRef — the show gateway holds it alongside the mode — so the
-  // chart is passed in separately here rather than read from the request like the others.
+  // ShowRequest carries no ChartRef — the show gateway holds it alongside the
+  // mode — so the
+  // chart is passed in separately here rather than read from the request like the
+  // others.
   static Map<String, Object> show(ChartRef chart, ShowRequest request) {
     var options = options();
     putChartRef(options, chart);
@@ -241,7 +246,7 @@ final class NativeOptions {
     options.put("enableDns", request.enableDns());
     options.put("includeCrds", request.includeCrds());
 
-    if (request.apiVersions() != null && !request.apiVersions().isEmpty()) {
+    if (!request.apiVersions().isEmpty()) {
       options.put("apiVersions", request.apiVersions());
     }
     if (!request.values().isEmpty()) {
@@ -389,11 +394,11 @@ final class NativeOptions {
     options.put("serverSideApply", applyStrategy.serverSideApply());
   }
 
-  private static String dryRunModeValue(DryRunMode dryRunMode) {
+  private static @Nullable String dryRunModeValue(@Nullable DryRunMode dryRunMode) {
     return dryRunMode == null ? null : dryRunMode.wireValue();
   }
 
-  private static String waitModeValue(WaitMode waitMode) {
+  private static @Nullable String waitModeValue(@Nullable WaitMode waitMode) {
     return waitMode == null ? null : waitMode.wireValue();
   }
 
@@ -401,13 +406,13 @@ final class NativeOptions {
     return new LinkedHashMap<>();
   }
 
-  private static void putIfNonNull(Map<String, Object> target, String key, Object value) {
+  private static void putIfNonNull(Map<String, Object> target, String key, @Nullable Object value) {
     if (value != null) {
       target.put(key, value);
     }
   }
 
-  private static String durationString(Duration value) {
+  private static @Nullable String durationString(@Nullable Duration value) {
     if (value == null) {
       return null;
     }

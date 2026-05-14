@@ -37,18 +37,18 @@ public record ReleaseListRequest(
   }
 
   public static final class Builder {
-    private final ReleaseGateway gateway;
-    private String namespace;
+    private final @Nullable ReleaseGateway gateway;
+    private @Nullable String namespace;
     private boolean allNamespaces;
-    private String filter;
-    private List<String> states;
+    private @Nullable String filter;
+    private @Nullable List<String> states;
     private int limit;
     private int offset;
     private boolean sortByDate;
     private boolean sortReverse;
-    private String selector;
+    private @Nullable String selector;
 
-    private Builder(ReleaseGateway gateway) {
+    private Builder(@Nullable ReleaseGateway gateway) {
       this.gateway = gateway;
     }
 
@@ -102,7 +102,7 @@ public record ReleaseListRequest(
           namespace,
           allNamespaces,
           filter,
-          states,
+          ModelSupport.immutableListOrEmpty(states),
           limit,
           offset,
           sortByDate,

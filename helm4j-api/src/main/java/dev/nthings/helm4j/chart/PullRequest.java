@@ -33,15 +33,15 @@ public record PullRequest(
   }
 
   public static final class Builder {
-    private final ChartGateway gateway;
+    private final @Nullable ChartGateway gateway;
     private final ChartSource.Builder sourceBuilder = ChartSource.builder();
-    private ChartRef chart;
-    private ChartSource source;
+    private @Nullable ChartRef chart;
+    private @Nullable ChartSource source;
     private boolean untar;
-    private Path untarDirectory;
-    private Path destinationDirectory;
+    private @Nullable Path untarDirectory;
+    private @Nullable Path destinationDirectory;
 
-    private Builder(ChartGateway gateway) {
+    private Builder(@Nullable ChartGateway gateway) {
       this.gateway = gateway;
     }
 
@@ -76,9 +76,13 @@ public record PullRequest(
     }
 
     public PullRequest build() {
-      var resolvedSource =
-          source != null ? source.merge(sourceBuilder.build()) : sourceBuilder.build();
-      return new PullRequest(chart, resolvedSource, untar, untarDirectory, destinationDirectory);
+      var resolvedSource = source != null ? source.merge(sourceBuilder.build()) : sourceBuilder.build();
+      return new PullRequest(
+          Objects.requireNonNull(chart, "chart"),
+          resolvedSource,
+          untar,
+          untarDirectory,
+          destinationDirectory);
     }
 
     /** Builds the request and pulls the chart through the bound client. */
@@ -87,7 +91,7 @@ public record PullRequest(
     }
   }
 
-  private static Path absoluteOrNull(Path value) {
+  private static @Nullable Path absoluteOrNull(@Nullable Path value) {
     if (value == null) {
       return null;
     }

@@ -62,18 +62,18 @@ public record InstallRequest(
   }
 
   public static final class Builder {
-    private final ReleaseGateway gateway;
+    private final @Nullable ReleaseGateway gateway;
     private final ChartSource.Builder sourceBuilder = ChartSource.builder();
-    private String releaseName;
-    private ChartRef chart;
-    private ChartSource source;
-    private String namespace;
+    private @Nullable String releaseName;
+    private @Nullable ChartRef chart;
+    private @Nullable ChartSource source;
+    private @Nullable String namespace;
     private boolean createNamespace;
-    private DryRunMode dryRun;
-    private WaitMode waitMode;
+    private @Nullable DryRunMode dryRun;
+    private @Nullable WaitMode waitMode;
     private boolean waitForJobs;
-    private Duration timeout;
-    private String description;
+    private @Nullable Duration timeout;
+    private @Nullable String description;
     private boolean rollbackOnFailure;
     private boolean skipCrds;
     private boolean disableHooks;
@@ -81,16 +81,16 @@ public record InstallRequest(
     private boolean forceReplace;
     private boolean replace;
     private boolean generateName;
-    private String nameTemplate;
+    private @Nullable String nameTemplate;
     private boolean subNotes;
     private boolean enableDns;
     private boolean takeOwnership;
     private boolean dependencyUpdate;
     private ApplyStrategy applyStrategy = ApplyStrategy.SERVER_SIDE_APPLY;
-    private Map<String, Object> values;
-    private Map<String, String> labels;
+    private @Nullable Map<String, Object> values;
+    private @Nullable Map<String, String> labels;
 
-    private Builder(ReleaseGateway gateway) {
+    private Builder(@Nullable ReleaseGateway gateway) {
       this.gateway = gateway;
     }
 
@@ -225,11 +225,10 @@ public record InstallRequest(
     }
 
     public InstallRequest build() {
-      var resolvedSource =
-          source != null ? source.merge(sourceBuilder.build()) : sourceBuilder.build();
+      var resolvedSource = source != null ? source.merge(sourceBuilder.build()) : sourceBuilder.build();
       return new InstallRequest(
           releaseName,
-          chart,
+          Objects.requireNonNull(chart, "chart"),
           resolvedSource,
           namespace,
           createNamespace,
@@ -251,8 +250,8 @@ public record InstallRequest(
           takeOwnership,
           dependencyUpdate,
           applyStrategy,
-          values,
-          labels);
+          ModelSupport.immutableMapOrEmpty(values),
+          ModelSupport.immutableMapOrEmpty(labels));
     }
 
     /** Builds the request and installs it through the bound client. */

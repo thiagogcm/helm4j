@@ -31,13 +31,13 @@ public record TestRequest(
   }
 
   public static final class Builder {
-    private final ReleaseGateway gateway;
-    private String releaseName;
-    private String namespace;
-    private Duration timeout;
-    private List<String> filter;
+    private final @Nullable ReleaseGateway gateway;
+    private @Nullable String releaseName;
+    private @Nullable String namespace;
+    private @Nullable Duration timeout;
+    private @Nullable List<String> filter;
 
-    private Builder(ReleaseGateway gateway) {
+    private Builder(@Nullable ReleaseGateway gateway) {
       this.gateway = gateway;
     }
 
@@ -62,7 +62,8 @@ public record TestRequest(
     }
 
     public TestRequest build() {
-      return new TestRequest(releaseName, namespace, timeout, filter);
+      return new TestRequest(
+          releaseName, namespace, timeout, ModelSupport.immutableListOrEmpty(filter));
     }
 
     /** Builds the request and runs release tests through the bound client. */

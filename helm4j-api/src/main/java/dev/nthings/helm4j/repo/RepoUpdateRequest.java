@@ -1,6 +1,7 @@
 package dev.nthings.helm4j.repo;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -27,11 +28,11 @@ public record RepoUpdateRequest(List<String> names, @Nullable Duration timeout) 
   }
 
   public static final class Builder {
-    private final RepoGateway gateway;
-    private List<String> names;
-    private Duration timeout;
+    private final @Nullable RepoGateway gateway;
+    private @Nullable List<String> names;
+    private @Nullable Duration timeout;
 
-    private Builder(RepoGateway gateway) {
+    private Builder(@Nullable RepoGateway gateway) {
       this.gateway = gateway;
     }
 
@@ -51,7 +52,7 @@ public record RepoUpdateRequest(List<String> names, @Nullable Duration timeout) 
     }
 
     public RepoUpdateRequest build() {
-      return new RepoUpdateRequest(names, timeout);
+      return new RepoUpdateRequest(normalizeNames(names), timeout);
     }
 
     /** Builds the request and updates the repositories through the bound client. */
@@ -60,10 +61,17 @@ public record RepoUpdateRequest(List<String> names, @Nullable Duration timeout) 
     }
   }
 
-  private static List<String> normalizeNames(List<String> value) {
+  private static List<String> normalizeNames(@Nullable List<String> value) {
     if (value == null || value.isEmpty()) {
       return List.of();
     }
-    return value.stream().map(ModelSupport::normalizeBlankToNull).filter(v -> v != null).toList();
+    var normalized = new ArrayList<String>();
+    for (var name : value) {
+      var trimmed = ModelSupport.normalizeBlankToNull(name);
+      if (trimmed != null) {
+        normalized.add(trimmed);
+      }
+    }
+    return List.copyOf(normalized);
   }
 }

@@ -26,14 +26,15 @@ public record ShowRequest(ChartSource source, @Nullable String valuesJsonPath) {
   }
 
   public static final class Builder {
-    private final ChartGateway gateway;
-    private final ShowMode mode;
-    private final ChartRef chart;
+    private final @Nullable ChartGateway gateway;
+    private final @Nullable ShowMode mode;
+    private final @Nullable ChartRef chart;
     private final ChartSource.Builder sourceBuilder = ChartSource.builder();
-    private ChartSource source;
-    private String valuesJsonPath;
+    private @Nullable ChartSource source;
+    private @Nullable String valuesJsonPath;
 
-    private Builder(ChartGateway gateway, ShowMode mode, ChartRef chart) {
+    private Builder(
+        @Nullable ChartGateway gateway, @Nullable ShowMode mode, @Nullable ChartRef chart) {
       this.gateway = gateway;
       this.mode = mode;
       this.chart = chart;
@@ -55,14 +56,17 @@ public record ShowRequest(ChartSource source, @Nullable String valuesJsonPath) {
     }
 
     public ShowRequest build() {
-      var resolvedSource =
-          source != null ? source.merge(sourceBuilder.build()) : sourceBuilder.build();
+      var resolvedSource = source != null ? source.merge(sourceBuilder.build()) : sourceBuilder.build();
       return new ShowRequest(resolvedSource, valuesJsonPath);
     }
 
     /** Builds the request and runs the show operation through the bound client. */
     public ShowResult execute() {
-      return Invocations.requireBound(gateway).show(mode, chart, build());
+      return Invocations.requireBound(gateway)
+          .show(
+              Objects.requireNonNull(mode, "mode"),
+              Objects.requireNonNull(chart, "chart"),
+              build());
     }
   }
 }
