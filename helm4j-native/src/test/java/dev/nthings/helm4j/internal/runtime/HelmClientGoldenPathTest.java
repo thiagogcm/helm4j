@@ -8,7 +8,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import dev.nthings.helm4j.Helm;
 import dev.nthings.helm4j.HelmClient;
 import dev.nthings.helm4j.chart.ChartRef;
 import dev.nthings.helm4j.chart.HubChartSummary;
@@ -22,7 +21,9 @@ import dev.nthings.helm4j.release.ReleaseFailure;
 import dev.nthings.helm4j.release.ReleasePending;
 import dev.nthings.helm4j.release.ReleaseStatus;
 import dev.nthings.helm4j.release.ReleaseSuccess;
+import dev.nthings.helm4j.release.RollbackFailure;
 import dev.nthings.helm4j.release.RollbackSuccess;
+import dev.nthings.helm4j.release.UninstallFailure;
 import dev.nthings.helm4j.release.UninstallSuccess;
 import dev.nthings.helm4j.release.WaitMode;
 import dev.nthings.helm4j.repo.RepoAddFailure;
@@ -77,12 +78,12 @@ class HelmClientGoldenPathTest {
     try (var helm = client(bridge)) {
       var add =
           helm.repo()
-              .add(
-                  spec ->
-                      spec.name("bitnami")
-                          .url("https://charts.bitnami.com/bitnami")
-                          .timeout(Duration.ofSeconds(5))
-                          .forceUpdate(true));
+              .add()
+              .name("bitnami")
+              .url("https://charts.bitnami.com/bitnami")
+              .timeout(Duration.ofSeconds(5))
+              .forceUpdate(true)
+              .execute();
 
       var addSuccess = assertInstanceOf(RepoAddSuccess.class, add);
       assertEquals("bitnami", addSuccess.name());
@@ -90,26 +91,26 @@ class HelmClientGoldenPathTest {
 
       var search =
           helm.chart()
-              .searchRepo(
-                  spec ->
-                      spec.keyword("nginx")
-                          .includeAllVersions(true)
-                          .includePreReleaseVersions(true)
-                          .maxColumnWidth(120));
+              .searchRepo()
+              .keyword("nginx")
+              .includeAllVersions(true)
+              .includePreReleaseVersions(true)
+              .maxColumnWidth(120)
+              .execute();
       assertEquals(1, search.size());
       assertEquals("bitnami/nginx", search.first().orElseThrow().name());
 
       var install =
           helm.release()
-              .install(
-                  spec ->
-                      spec.releaseName("nginx")
-                          .chart(ChartRef.repo("bitnami/nginx"))
-                          .source(s -> s.repositoryUrl("https://charts.bitnami.com/bitnami"))
-                          .namespace("apps")
-                          .createNamespace(true)
-                          .timeout(Duration.ofMinutes(3))
-                          .values(Map.of("service", Map.of("type", "ClusterIP"))));
+              .install()
+              .releaseName("nginx")
+              .chart(ChartRef.repo("bitnami/nginx"))
+              .source(s -> s.repositoryUrl("https://charts.bitnami.com/bitnami"))
+              .namespace("apps")
+              .createNamespace(true)
+              .timeout(Duration.ofMinutes(3))
+              .values(Map.of("service", Map.of("type", "ClusterIP")))
+              .execute();
 
       var success = assertInstanceOf(ReleaseSuccess.class, install);
       assertEquals("nginx", success.release().name());
@@ -187,8 +188,7 @@ class HelmClientGoldenPathTest {
         "show all output");
 
     try (var helm = client(bridge)) {
-      var update =
-          helm.repo().update(spec -> spec.names("bitnami").timeout(Duration.ofSeconds(20)));
+      var update = helm.repo().update().names("bitnami").timeout(Duration.ofSeconds(20)).execute();
       assertEquals(1, update.size());
       assertEquals("bitnami", update.first().orElseThrow().name());
 
@@ -196,28 +196,28 @@ class HelmClientGoldenPathTest {
       assertEquals(1, list.size());
       assertEquals("bitnami", list.first().orElseThrow().name());
 
-      var remove = helm.repo().remove(spec -> spec.names("bitnami"));
+      var remove = helm.repo().remove().names("bitnami").execute();
       assertEquals(1, remove.size());
       assertEquals("bitnami", remove.first().orElseThrow());
 
-      var hub = helm.chart().searchHub(spec -> spec.keyword("nginx").listRepositoryUrl(true));
+      var hub = helm.chart().searchHub().keyword("nginx").listRepositoryUrl(true).execute();
       assertEquals(1, hub.size());
       assertEquals("nginx", hub.first().orElseThrow().name());
 
       var chartRef = ChartRef.repo("bitnami/nginx");
-      var chart = helm.chart().show(ShowMode.CHART, chartRef, spec -> {});
+      var chart = helm.chart().show(ShowMode.CHART, chartRef).execute();
       assertEquals("apiVersion: v2", chart.metadataYaml());
 
-      var values = helm.chart().show(ShowMode.VALUES, chartRef, spec -> {});
+      var values = helm.chart().show(ShowMode.VALUES, chartRef).execute();
       assertEquals("service:\n  type: ClusterIP", values.valuesYaml());
 
-      var readme = helm.chart().show(ShowMode.README, chartRef, spec -> {});
+      var readme = helm.chart().show(ShowMode.README, chartRef).execute();
       assertEquals("# Nginx", readme.readmeText());
 
-      var crds = helm.chart().show(ShowMode.CRDS, chartRef, spec -> {});
+      var crds = helm.chart().show(ShowMode.CRDS, chartRef).execute();
       assertEquals(1, crds.customResourceDefinitions().size());
 
-      var all = helm.chart().show(ShowMode.ALL, chartRef, spec -> {});
+      var all = helm.chart().show(ShowMode.ALL, chartRef).execute();
       assertEquals("apiVersion: v2", all.metadataYaml());
       assertEquals("# Nginx", all.readmeText());
       assertEquals(1, all.customResourceDefinitions().size());
@@ -236,7 +236,10 @@ class HelmClientGoldenPathTest {
     try (var helm = client(pendingBridge)) {
       var pending =
           helm.release()
-              .install(spec -> spec.releaseName("nginx").chart(ChartRef.repo("bitnami/nginx")));
+              .install()
+              .releaseName("nginx")
+              .chart(ChartRef.repo("bitnami/nginx"))
+              .execute();
       assertInstanceOf(ReleasePending.class, pending);
     }
 
@@ -246,7 +249,10 @@ class HelmClientGoldenPathTest {
     try (var helm = client(failedBridge)) {
       var failure =
           helm.release()
-              .install(spec -> spec.releaseName("nginx").chart(ChartRef.repo("bitnami/nginx")));
+              .install()
+              .releaseName("nginx")
+              .chart(ChartRef.repo("bitnami/nginx"))
+              .execute();
       var typedFailure = assertInstanceOf(ReleaseFailure.class, failure);
       assertEquals("chart not found", typedFailure.message());
       assertEquals("runOperation", typedFailure.stage());
@@ -261,7 +267,7 @@ class HelmClientGoldenPathTest {
 
     try (var helm = client(domainFailureBridge)) {
       var result =
-          helm.repo().add(spec -> spec.name("bitnami").url("https://charts.bitnami.com/bitnami"));
+          helm.repo().add().name("bitnami").url("https://charts.bitnami.com/bitnami").execute();
       var failure = assertInstanceOf(RepoAddFailure.class, result);
       assertEquals("repository already exists", failure.message());
     }
@@ -274,7 +280,7 @@ class HelmClientGoldenPathTest {
       var error =
           assertThrows(
               HelmException.class,
-              () -> helm.chart().searchRepo(spec -> spec.keyword("nginx").failIfNoResults(true)));
+              () -> helm.chart().searchRepo().keyword("nginx").failIfNoResults(true).execute());
       assertEquals("runOperation", error.stage());
       assertEquals("search repo", error.operation());
     }
@@ -287,9 +293,11 @@ class HelmClientGoldenPathTest {
 
     try (var helm = client(bridge)) {
       var result =
-          Helm.install(ChartRef.repo("bitnami/nginx"))
+          helm.release()
+              .install()
               .releaseName("nginx")
-              .version("19.0.0")
+              .chart(ChartRef.repo("bitnami/nginx"))
+              .source(s -> s.version("19.0.0"))
               .namespace("apps")
               .createNamespace(true)
               .dryRun(DryRunMode.NONE)
@@ -298,7 +306,7 @@ class HelmClientGoldenPathTest {
               .applyStrategy(ApplyStrategy.SERVER_SIDE_APPLY_FORCE_CONFLICTS)
               .values(Map.of("service", Map.of("type", "ClusterIP")))
               .labels(Map.of("team", "platform"))
-              .run(helm);
+              .execute();
 
       var success = assertInstanceOf(ReleaseSuccess.class, result);
       assertEquals("nginx", success.release().name());
@@ -315,9 +323,11 @@ class HelmClientGoldenPathTest {
 
     try (var helm = client(bridge)) {
       var result =
-          Helm.install(ChartRef.oci("oci://registry-1.docker.io/bitnamicharts/nginx"))
+          helm.release()
+              .install()
+              .chart(ChartRef.oci("oci://registry-1.docker.io/bitnamicharts/nginx"))
               .releaseName("web")
-              .run(helm);
+              .execute();
 
       assertInstanceOf(ReleaseSuccess.class, result);
     }
@@ -333,14 +343,14 @@ class HelmClientGoldenPathTest {
     try (var helm = client(bridge)) {
       var result =
           helm.release()
-              .upgrade(
-                  spec ->
-                      spec.releaseName("nginx")
-                          .chart(ChartRef.repo("bitnami/nginx"))
-                          .namespace("apps")
-                          .install(true)
-                          .reuseValues(true)
-                          .values(Map.of("replicaCount", 3)));
+              .upgrade()
+              .releaseName("nginx")
+              .chart(ChartRef.repo("bitnami/nginx"))
+              .namespace("apps")
+              .install(true)
+              .reuseValues(true)
+              .values(Map.of("replicaCount", 3))
+              .execute();
 
       var success = assertInstanceOf(ReleaseSuccess.class, result);
       assertEquals("nginx", success.release().name());
@@ -359,7 +369,10 @@ class HelmClientGoldenPathTest {
     try (var helm = client(bridge)) {
       var result =
           helm.release()
-              .upgrade(spec -> spec.releaseName("nginx").chart(ChartRef.repo("bitnami/nginx")));
+              .upgrade()
+              .releaseName("nginx")
+              .chart(ChartRef.repo("bitnami/nginx"))
+              .execute();
       assertInstanceOf(ReleasePending.class, result);
     }
   }
@@ -371,12 +384,14 @@ class HelmClientGoldenPathTest {
 
     try (var helm = client(bridge)) {
       var result =
-          Helm.upgrade(ChartRef.repo("bitnami/nginx"))
+          helm.release()
+              .upgrade()
               .releaseName("nginx")
+              .chart(ChartRef.repo("bitnami/nginx"))
               .namespace("apps")
               .install(true)
               .values(Map.of("replicaCount", 3))
-              .run(helm);
+              .execute();
 
       var success = assertInstanceOf(ReleaseSuccess.class, result);
       assertEquals("nginx", success.release().name());
@@ -391,7 +406,7 @@ class HelmClientGoldenPathTest {
     bridge.setUninstallSuccess("release \"my-release\" uninstalled");
 
     try (var helm = client(bridge)) {
-      var result = helm.release().uninstall(spec -> spec.releaseName("my-release"));
+      var result = helm.release().uninstall().releaseName("my-release").execute();
 
       var success = assertInstanceOf(UninstallSuccess.class, result);
       assertEquals("release \"my-release\" uninstalled", success.info());
@@ -406,7 +421,7 @@ class HelmClientGoldenPathTest {
     bridge.setStatusSuccess("nginx", "apps", 2, "deployed");
 
     try (var helm = client(bridge)) {
-      var result = helm.release().status(spec -> spec.releaseName("nginx"));
+      var result = helm.release().status().releaseName("nginx").execute();
       assertEquals("nginx", result.release().name());
       assertEquals(ReleaseStatus.DEPLOYED, result.release().status());
     }
@@ -420,7 +435,7 @@ class HelmClientGoldenPathTest {
     bridge.setRollbackSuccess("nginx", 1);
 
     try (var helm = client(bridge)) {
-      var result = helm.release().rollback(spec -> spec.releaseName("nginx").revision(1));
+      var result = helm.release().rollback().releaseName("nginx").revision(1).execute();
 
       var success = assertInstanceOf(RollbackSuccess.class, result);
       assertEquals("nginx", success.releaseName());
@@ -452,7 +467,7 @@ class HelmClientGoldenPathTest {
                 "install")));
 
     try (var helm = client(bridge)) {
-      var result = helm.release().history(spec -> spec.releaseName("nginx"));
+      var result = helm.release().history().releaseName("nginx").execute();
       assertEquals(1, result.size());
       assertEquals(1, result.first().orElseThrow().revision());
       assertEquals(ReleaseStatus.DEPLOYED, result.first().orElseThrow().status());
@@ -467,7 +482,7 @@ class HelmClientGoldenPathTest {
     bridge.setGetValuesSuccess(Map.of("replicaCount", 3, "image", Map.of("tag", "latest")));
 
     try (var helm = client(bridge)) {
-      var result = helm.release().getValues(spec -> spec.releaseName("nginx"));
+      var result = helm.release().get().releaseName("nginx").values();
       assertEquals(3, result.values().get("replicaCount"));
     }
 
@@ -504,28 +519,28 @@ class HelmClientGoldenPathTest {
         "nginx", "apps", 2, "deployed", "nginx", "19.0.0", "1.27.0", "2026-01-01T00:00:00Z");
 
     try (var helm = client(bridge)) {
-      var all = helm.release().getAll(spec -> spec.releaseName("nginx"));
+      var all = helm.release().get().releaseName("nginx").all();
       assertEquals("nginx", all.release().name());
       assertEquals(1, all.hooks().size());
       assertEquals("all", bridge.lastGetMode);
 
-      var values = helm.release().getValues(spec -> spec.releaseName("nginx"));
+      var values = helm.release().get().releaseName("nginx").values();
       assertEquals(3, values.values().get("replicaCount"));
       assertEquals("values", bridge.lastGetMode);
 
-      var manifest = helm.release().getManifest(spec -> spec.releaseName("nginx"));
+      var manifest = helm.release().get().releaseName("nginx").manifest();
       assertTrue(manifest.manifest().contains("kind: Secret"));
       assertEquals("manifest", bridge.lastGetMode);
 
-      var hooks = helm.release().getHooks(spec -> spec.releaseName("nginx"));
+      var hooks = helm.release().get().releaseName("nginx").hooks();
       assertEquals("pre-install", hooks.hooks().getFirst().name());
       assertEquals("hooks", bridge.lastGetMode);
 
-      var notes = helm.release().getNotes(spec -> spec.releaseName("nginx"));
+      var notes = helm.release().get().releaseName("nginx").notes();
       assertEquals("note text", notes.notes());
       assertEquals("notes", bridge.lastGetMode);
 
-      var metadata = helm.release().getMetadata(spec -> spec.releaseName("nginx"));
+      var metadata = helm.release().get().releaseName("nginx").metadata();
       assertEquals("nginx", metadata.name());
       assertEquals("metadata", bridge.lastGetMode);
     }
@@ -544,16 +559,19 @@ class HelmClientGoldenPathTest {
     try (var helm = client(bridge)) {
       var upgrade =
           helm.release()
-              .upgrade(spec -> spec.releaseName("nginx").chart(ChartRef.repo("bitnami/nginx")));
+              .upgrade()
+              .releaseName("nginx")
+              .chart(ChartRef.repo("bitnami/nginx"))
+              .execute();
       var upgradeFailure = assertInstanceOf(ReleaseFailure.class, upgrade);
       assertEquals("cannot upgrade", upgradeFailure.message());
 
-      var uninstall = helm.release().uninstall(spec -> spec.releaseName("nginx"));
-      var uninstallFailure = assertInstanceOf(ReleaseFailure.class, uninstall);
+      var uninstall = helm.release().uninstall().releaseName("nginx").execute();
+      var uninstallFailure = assertInstanceOf(UninstallFailure.class, uninstall);
       assertEquals("cannot uninstall", uninstallFailure.message());
 
-      var rollback = helm.release().rollback(spec -> spec.releaseName("nginx"));
-      var rollbackFailure = assertInstanceOf(ReleaseFailure.class, rollback);
+      var rollback = helm.release().rollback().releaseName("nginx").execute();
+      var rollbackFailure = assertInstanceOf(RollbackFailure.class, rollback);
       assertEquals("cannot rollback", rollbackFailure.message());
     }
   }
@@ -566,7 +584,10 @@ class HelmClientGoldenPathTest {
     try (var helm = client(bridge)) {
       var result =
           helm.chart()
-              .template(spec -> spec.releaseName("nginx").chart(ChartRef.repo("bitnami/nginx")));
+              .template()
+              .releaseName("nginx")
+              .chart(ChartRef.repo("bitnami/nginx"))
+              .execute();
       assertEquals("nginx", result.release().name());
       assertTrue(result.manifest().contains("apiVersion: v1"));
     }
@@ -580,7 +601,7 @@ class HelmClientGoldenPathTest {
     bridge.setLintSuccess(1, 1, 0);
 
     try (var helm = client(bridge)) {
-      var result = helm.chart().lint(spec -> spec.chartPath(java.nio.file.Path.of("/tmp/chart")));
+      var result = helm.chart().lint().chartPath(Path.of("/tmp/chart")).execute();
       assertTrue(result.passed());
       assertEquals(1, result.totalCharts());
       assertEquals(0, result.chartsFailed());
@@ -603,7 +624,7 @@ class HelmClientGoldenPathTest {
         1);
 
     try (var helm = client(bridge)) {
-      var result = helm.chart().lint(spec -> spec.chartPath(java.nio.file.Path.of("/tmp/chart")));
+      var result = helm.chart().lint().chartPath(Path.of("/tmp/chart")).execute();
       assertFalse(result.passed());
       assertEquals(LintSeverity.INFO, result.messages().get(0).severity());
       assertEquals(LintSeverity.WARNING, result.messages().get(1).severity());
@@ -667,37 +688,40 @@ class HelmClientGoldenPathTest {
         List.of(Map.of("name", "nginx-test", "status", "succeeded")));
 
     try (var helm = client(bridge)) {
-      var listed = helm.release().list();
+      var listed = helm.release().list().execute();
       assertEquals(1, listed.size());
       assertEquals("nginx", listed.first().orElseThrow().name());
 
-      var pull = helm.chart().pull(spec -> spec.chartReference("bitnami/nginx"));
+      var pull = helm.chart().pull().chartReference("bitnami/nginx").execute();
       assertTrue(pull.output().contains("Pulled"));
 
       var push =
           helm.chart()
-              .push(
-                  spec ->
-                      spec.chartReference("/tmp/nginx-19.0.0.tgz")
-                          .remote("oci://registry.example/charts"));
+              .push()
+              .chartReference("/tmp/nginx-19.0.0.tgz")
+              .remote("oci://registry.example/charts")
+              .execute();
       assertTrue(push.output().contains("Pushed"));
 
-      var pkg = helm.chart().packageChart(spec -> spec.chartPath(Path.of("/tmp/chart")));
+      var pkg = helm.chart().packageChart().chartPath(Path.of("/tmp/chart")).execute();
       assertEquals("/tmp/nginx-19.0.0.tgz", pkg.path());
 
-      var deps = helm.chart().dependency(spec -> spec.chartPath(Path.of("/tmp/chart")));
+      var deps = helm.chart().dependency().chartPath(Path.of("/tmp/chart")).execute();
       assertTrue(deps.output().contains("common"));
 
       var login =
           helm.repo()
-              .registryLogin(
-                  spec -> spec.hostname("registry.example").username("user").password("secret"));
+              .registryLogin()
+              .hostname("registry.example")
+              .username("user")
+              .password("secret")
+              .execute();
       assertEquals("registry.example", login.hostname());
 
-      var logout = helm.repo().registryLogout(spec -> spec.hostname("registry.example"));
+      var logout = helm.repo().registryLogout().hostname("registry.example").execute();
       assertEquals("ok", logout.status());
 
-      var test = helm.release().test(spec -> spec.releaseName("nginx"));
+      var test = helm.release().test().releaseName("nginx").execute();
       assertEquals("nginx", test.release().name());
       assertEquals(1, test.results().size());
       assertEquals("nginx-test", test.results().getFirst().name());

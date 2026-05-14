@@ -1,5 +1,7 @@
 package dev.nthings.helm4j.repo;
 
+import dev.nthings.helm4j.internal.api.Invocations;
+import dev.nthings.helm4j.internal.gateway.RepoGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
 /** Request parameters for registry login. */
@@ -23,10 +25,15 @@ public record RegistryLoginRequest(
   }
 
   public static Builder builder() {
-    return new Builder();
+    return new Builder(null);
+  }
+
+  static Builder builder(RepoGateway gateway) {
+    return new Builder(gateway);
   }
 
   public static final class Builder {
+    private final RepoGateway gateway;
     private String hostname;
     private String username;
     private String password;
@@ -36,7 +43,9 @@ public record RegistryLoginRequest(
     private boolean insecure;
     private boolean plainHttp;
 
-    private Builder() {}
+    private Builder(RepoGateway gateway) {
+      this.gateway = gateway;
+    }
 
     public Builder hostname(String value) {
       this.hostname = value;
@@ -88,6 +97,11 @@ public record RegistryLoginRequest(
           certificateAuthorityFile,
           insecure,
           plainHttp);
+    }
+
+    /** Builds the request and logs in to the registry through the bound client. */
+    public RegistryResult execute() {
+      return Invocations.requireBound(gateway).registryLogin(build());
     }
   }
 }

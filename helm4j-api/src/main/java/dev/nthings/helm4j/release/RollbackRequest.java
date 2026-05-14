@@ -3,6 +3,8 @@ package dev.nthings.helm4j.release;
 import java.time.Duration;
 import java.util.Objects;
 
+import dev.nthings.helm4j.internal.api.Invocations;
+import dev.nthings.helm4j.internal.gateway.ReleaseGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
 /** Request parameters for rolling back a release. */
@@ -10,7 +12,7 @@ public record RollbackRequest(
     String releaseName,
     String namespace,
     int revision,
-    DryRunMode dryRunMode,
+    DryRunMode dryRun,
     Duration timeout,
     WaitMode waitMode,
     boolean waitForJobs,
@@ -27,14 +29,19 @@ public record RollbackRequest(
   }
 
   public static Builder builder() {
-    return new Builder();
+    return new Builder(null);
+  }
+
+  static Builder builder(ReleaseGateway gateway) {
+    return new Builder(gateway);
   }
 
   public static final class Builder {
+    private final ReleaseGateway gateway;
     private String releaseName;
     private String namespace;
     private int revision;
-    private DryRunMode dryRunMode;
+    private DryRunMode dryRun;
     private Duration timeout;
     private WaitMode waitMode;
     private boolean waitForJobs;
@@ -44,7 +51,9 @@ public record RollbackRequest(
     private int maxHistory;
     private ApplyStrategy applyStrategy = ApplyStrategy.SERVER_SIDE_APPLY;
 
-    private Builder() {}
+    private Builder(ReleaseGateway gateway) {
+      this.gateway = gateway;
+    }
 
     public Builder releaseName(String value) {
       this.releaseName = value;
@@ -61,8 +70,8 @@ public record RollbackRequest(
       return this;
     }
 
-    public Builder dryRunMode(DryRunMode value) {
-      this.dryRunMode = value;
+    public Builder dryRun(DryRunMode value) {
+      this.dryRun = value;
       return this;
     }
 
@@ -111,7 +120,7 @@ public record RollbackRequest(
           releaseName,
           namespace,
           revision,
-          dryRunMode,
+          dryRun,
           timeout,
           waitMode,
           waitForJobs,
@@ -120,6 +129,11 @@ public record RollbackRequest(
           cleanupOnFail,
           maxHistory,
           applyStrategy);
+    }
+
+    /** Builds the request and rolls back through the bound client. */
+    public RollbackResult execute() {
+      return Invocations.requireBound(gateway).rollback(build());
     }
   }
 }

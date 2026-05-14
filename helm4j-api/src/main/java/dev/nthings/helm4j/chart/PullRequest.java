@@ -4,6 +4,8 @@ import java.nio.file.Path;
 import java.util.Objects;
 import java.util.function.Consumer;
 
+import dev.nthings.helm4j.internal.api.Invocations;
+import dev.nthings.helm4j.internal.gateway.ChartGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
 /** Request parameters for pulling a chart archive. */
@@ -22,10 +24,15 @@ public record PullRequest(
   }
 
   public static Builder builder() {
-    return new Builder();
+    return new Builder(null);
+  }
+
+  static Builder builder(ChartGateway gateway) {
+    return new Builder(gateway);
   }
 
   public static final class Builder {
+    private final ChartGateway gateway;
     private final ChartSource.Builder sourceBuilder = ChartSource.builder();
     private String chartReference;
     private ChartSource source;
@@ -33,7 +40,9 @@ public record PullRequest(
     private Path untarDirectory;
     private Path destinationDirectory;
 
-    private Builder() {}
+    private Builder(ChartGateway gateway) {
+      this.gateway = gateway;
+    }
 
     public Builder chartReference(String value) {
       this.chartReference = value;
@@ -70,6 +79,11 @@ public record PullRequest(
           source != null ? source.merge(sourceBuilder.build()) : sourceBuilder.build();
       return new PullRequest(
           chartReference, resolvedSource, untar, untarDirectory, destinationDirectory);
+    }
+
+    /** Builds the request and pulls the chart through the bound client. */
+    public PullResult execute() {
+      return Invocations.requireBound(gateway).pull(build());
     }
   }
 

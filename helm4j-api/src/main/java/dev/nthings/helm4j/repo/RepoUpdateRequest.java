@@ -4,7 +4,10 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 
+import dev.nthings.helm4j.internal.api.Invocations;
+import dev.nthings.helm4j.internal.gateway.RepoGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
+import dev.nthings.helm4j.model.ListResult;
 
 /** Request options for repository update operations. */
 public record RepoUpdateRequest(List<String> names, Duration timeout) {
@@ -14,14 +17,21 @@ public record RepoUpdateRequest(List<String> names, Duration timeout) {
   }
 
   public static Builder builder() {
-    return new Builder();
+    return new Builder(null);
+  }
+
+  static Builder builder(RepoGateway gateway) {
+    return new Builder(gateway);
   }
 
   public static final class Builder {
+    private final RepoGateway gateway;
     private List<String> names;
     private Duration timeout;
 
-    private Builder() {}
+    private Builder(RepoGateway gateway) {
+      this.gateway = gateway;
+    }
 
     public Builder names(List<String> value) {
       this.names = value;
@@ -40,6 +50,11 @@ public record RepoUpdateRequest(List<String> names, Duration timeout) {
 
     public RepoUpdateRequest build() {
       return new RepoUpdateRequest(names, timeout);
+    }
+
+    /** Builds the request and updates the repositories through the bound client. */
+    public ListResult<RepoUpdateEntry> execute() {
+      return Invocations.requireBound(gateway).repoUpdate(build());
     }
   }
 

@@ -35,13 +35,15 @@ import dev.nthings.helm4j.release.HistoryRequest;
 import dev.nthings.helm4j.release.InstallRequest;
 import dev.nthings.helm4j.release.ReleaseInfo;
 import dev.nthings.helm4j.release.ReleaseListRequest;
-import dev.nthings.helm4j.release.ReleaseOutcome;
+import dev.nthings.helm4j.release.ReleaseResult;
 import dev.nthings.helm4j.release.RollbackRequest;
+import dev.nthings.helm4j.release.RollbackResult;
 import dev.nthings.helm4j.release.StatusRequest;
 import dev.nthings.helm4j.release.StatusResult;
 import dev.nthings.helm4j.release.TestRequest;
 import dev.nthings.helm4j.release.TestResult;
 import dev.nthings.helm4j.release.UninstallRequest;
+import dev.nthings.helm4j.release.UninstallResult;
 import dev.nthings.helm4j.release.UpgradeRequest;
 import dev.nthings.helm4j.repo.RegistryLoginRequest;
 import dev.nthings.helm4j.repo.RegistryLogoutRequest;
@@ -154,17 +156,17 @@ public final class NativeStructGateway implements HelmGateway {
   }
 
   @Override
-  public ReleaseOutcome install(InstallRequest request) {
+  public ReleaseResult install(InstallRequest request) {
     return release.install(request);
   }
 
   @Override
-  public ReleaseOutcome upgrade(UpgradeRequest request) {
+  public ReleaseResult upgrade(UpgradeRequest request) {
     return release.upgrade(request);
   }
 
   @Override
-  public ReleaseOutcome uninstall(UninstallRequest request) {
+  public UninstallResult uninstall(UninstallRequest request) {
     return release.uninstall(request);
   }
 
@@ -174,7 +176,7 @@ public final class NativeStructGateway implements HelmGateway {
   }
 
   @Override
-  public ReleaseOutcome rollback(RollbackRequest request) {
+  public RollbackResult rollback(RollbackRequest request) {
     return release.rollback(request);
   }
 

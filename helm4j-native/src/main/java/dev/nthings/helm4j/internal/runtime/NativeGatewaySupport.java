@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import dev.nthings.helm4j.errors.HelmException;
+import dev.nthings.helm4j.errors.HelmFailure;
 import dev.nthings.helm4j.release.HookInfo;
 import dev.nthings.helm4j.release.ReleaseInfo;
 import dev.nthings.helm4j.release.ReleaseStatus;
@@ -105,7 +106,12 @@ final class NativeGatewaySupport {
   }
 
   static HelmException asException(OperationError error) {
-    return new HelmException(messageOrUnknown(error.message()), error.stage(), error.operation());
+    return new HelmException(failure(error));
+  }
+
+  /** Maps a native operation error to the uniform {@link HelmFailure} carrier. */
+  static HelmFailure failure(OperationError error) {
+    return new HelmFailure(messageOrUnknown(error.message()), error.stage(), error.operation());
   }
 
   private static String text(JsonNode node, String field) {

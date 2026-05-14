@@ -7,6 +7,8 @@ import java.util.function.Consumer;
 
 import dev.nthings.helm4j.chart.ChartRef;
 import dev.nthings.helm4j.chart.ChartSource;
+import dev.nthings.helm4j.internal.api.Invocations;
+import dev.nthings.helm4j.internal.gateway.ReleaseGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
 /** Request parameters for installing a release from a chart reference. */
@@ -16,7 +18,7 @@ public record InstallRequest(
     ChartSource source,
     String namespace,
     boolean createNamespace,
-    DryRunMode dryRunMode,
+    DryRunMode dryRun,
     WaitMode waitMode,
     boolean waitForJobs,
     Duration timeout,
@@ -50,17 +52,22 @@ public record InstallRequest(
   }
 
   public static Builder builder() {
-    return new Builder();
+    return new Builder(null);
+  }
+
+  static Builder builder(ReleaseGateway gateway) {
+    return new Builder(gateway);
   }
 
   public static final class Builder {
+    private final ReleaseGateway gateway;
     private final ChartSource.Builder sourceBuilder = ChartSource.builder();
     private String releaseName;
     private ChartRef chart;
     private ChartSource source;
     private String namespace;
     private boolean createNamespace;
-    private DryRunMode dryRunMode;
+    private DryRunMode dryRun;
     private WaitMode waitMode;
     private boolean waitForJobs;
     private Duration timeout;
@@ -81,7 +88,9 @@ public record InstallRequest(
     private Map<String, Object> values;
     private Map<String, String> labels;
 
-    private Builder() {}
+    private Builder(ReleaseGateway gateway) {
+      this.gateway = gateway;
+    }
 
     public Builder releaseName(String value) {
       this.releaseName = value;
@@ -113,8 +122,8 @@ public record InstallRequest(
       return this;
     }
 
-    public Builder dryRunMode(DryRunMode value) {
-      this.dryRunMode = value;
+    public Builder dryRun(DryRunMode value) {
+      this.dryRun = value;
       return this;
     }
 
@@ -222,7 +231,7 @@ public record InstallRequest(
           resolvedSource,
           namespace,
           createNamespace,
-          dryRunMode,
+          dryRun,
           waitMode,
           waitForJobs,
           timeout,
@@ -242,6 +251,11 @@ public record InstallRequest(
           applyStrategy,
           values,
           labels);
+    }
+
+    /** Builds the request and installs it through the bound client. */
+    public ReleaseResult execute() {
+      return Invocations.requireBound(gateway).install(build());
     }
   }
 }

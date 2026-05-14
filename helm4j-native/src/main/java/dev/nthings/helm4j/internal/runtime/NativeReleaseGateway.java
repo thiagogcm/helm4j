@@ -21,18 +21,22 @@ import dev.nthings.helm4j.release.InstallRequest;
 import dev.nthings.helm4j.release.ReleaseFailure;
 import dev.nthings.helm4j.release.ReleaseInfo;
 import dev.nthings.helm4j.release.ReleaseListRequest;
-import dev.nthings.helm4j.release.ReleaseOutcome;
 import dev.nthings.helm4j.release.ReleasePending;
+import dev.nthings.helm4j.release.ReleaseResult;
 import dev.nthings.helm4j.release.ReleaseStatus;
 import dev.nthings.helm4j.release.ReleaseSuccess;
+import dev.nthings.helm4j.release.RollbackFailure;
 import dev.nthings.helm4j.release.RollbackRequest;
+import dev.nthings.helm4j.release.RollbackResult;
 import dev.nthings.helm4j.release.RollbackSuccess;
 import dev.nthings.helm4j.release.StatusRequest;
 import dev.nthings.helm4j.release.StatusResult;
 import dev.nthings.helm4j.release.TestHookResult;
 import dev.nthings.helm4j.release.TestRequest;
 import dev.nthings.helm4j.release.TestResult;
+import dev.nthings.helm4j.release.UninstallFailure;
 import dev.nthings.helm4j.release.UninstallRequest;
+import dev.nthings.helm4j.release.UninstallResult;
 import dev.nthings.helm4j.release.UninstallSuccess;
 import dev.nthings.helm4j.release.UpgradeRequest;
 
@@ -41,11 +45,11 @@ import org.slf4j.LoggerFactory;
 
 import tools.jackson.databind.JsonNode;
 
+import static dev.nthings.helm4j.internal.runtime.NativeGatewaySupport.failure;
 import static dev.nthings.helm4j.internal.runtime.NativeGatewaySupport.listOrEmpty;
 import static dev.nthings.helm4j.internal.runtime.NativeGatewaySupport.mapHooks;
 import static dev.nthings.helm4j.internal.runtime.NativeGatewaySupport.mapOrEmpty;
 import static dev.nthings.helm4j.internal.runtime.NativeGatewaySupport.mapReleasePayload;
-import static dev.nthings.helm4j.internal.runtime.NativeGatewaySupport.messageOrUnknown;
 import static dev.nthings.helm4j.internal.runtime.NativeGatewaySupport.operationError;
 import static dev.nthings.helm4j.internal.runtime.NativeGatewaySupport.parseTimestamp;
 import static dev.nthings.helm4j.internal.runtime.NativeGatewaySupport.utf8;
@@ -62,7 +66,7 @@ final class NativeReleaseGateway implements ReleaseGateway {
   }
 
   @Override
-  public ReleaseOutcome install(InstallRequest request) {
+  public ReleaseResult install(InstallRequest request) {
     Objects.requireNonNull(request, "request");
     if (request.chart() == null) {
       throw new IllegalArgumentException("Install requires chart reference");
@@ -81,10 +85,9 @@ final class NativeReleaseGateway implements ReleaseGateway {
                     utf8(request.chart().asReference()),
                     support.toJsonBytes(NativeOptions.install(request), "install")));
 
-    var failure = operationError(root, "install");
-    if (failure != null) {
-      return new ReleaseFailure(
-          messageOrUnknown(failure.message()), failure.stage(), failure.operation());
+    var error = operationError(root, "install");
+    if (error != null) {
+      return new ReleaseFailure(failure(error));
     }
 
     var response = support.convert(root, InstallPayload.class, "install");
@@ -102,7 +105,7 @@ final class NativeReleaseGateway implements ReleaseGateway {
   }
 
   @Override
-  public ReleaseOutcome upgrade(UpgradeRequest request) {
+  public ReleaseResult upgrade(UpgradeRequest request) {
     Objects.requireNonNull(request, "request");
     if (request.chart() == null) {
       throw new IllegalArgumentException("Upgrade requires chart reference");
@@ -121,10 +124,9 @@ final class NativeReleaseGateway implements ReleaseGateway {
                     utf8(request.chart().asReference()),
                     support.toJsonBytes(NativeOptions.upgrade(request), "upgrade")));
 
-    var failure = operationError(root, "upgrade");
-    if (failure != null) {
-      return new ReleaseFailure(
-          messageOrUnknown(failure.message()), failure.stage(), failure.operation());
+    var error = operationError(root, "upgrade");
+    if (error != null) {
+      return new ReleaseFailure(failure(error));
     }
 
     var response = support.convert(root, ReleasePayload.class, "upgrade");
@@ -141,7 +143,7 @@ final class NativeReleaseGateway implements ReleaseGateway {
   }
 
   @Override
-  public ReleaseOutcome uninstall(UninstallRequest request) {
+  public UninstallResult uninstall(UninstallRequest request) {
     Objects.requireNonNull(request, "request");
 
     log.debug("Uninstalling release: name={}", request.releaseName());
@@ -153,10 +155,9 @@ final class NativeReleaseGateway implements ReleaseGateway {
                     utf8(request.releaseName()),
                     support.toJsonBytes(NativeOptions.uninstall(request), "uninstall")));
 
-    var failure = operationError(root, "uninstall");
-    if (failure != null) {
-      return new ReleaseFailure(
-          messageOrUnknown(failure.message()), failure.stage(), failure.operation());
+    var error = operationError(root, "uninstall");
+    if (error != null) {
+      return new UninstallFailure(failure(error));
     }
 
     var response = support.convert(root, UninstallPayload.class, "uninstall");
@@ -192,7 +193,7 @@ final class NativeReleaseGateway implements ReleaseGateway {
   }
 
   @Override
-  public ReleaseOutcome rollback(RollbackRequest request) {
+  public RollbackResult rollback(RollbackRequest request) {
     Objects.requireNonNull(request, "request");
 
     log.debug("Rolling back release: name={}", request.releaseName());
@@ -204,10 +205,9 @@ final class NativeReleaseGateway implements ReleaseGateway {
                     utf8(request.releaseName()),
                     support.toJsonBytes(NativeOptions.rollback(request), "rollback")));
 
-    var failure = operationError(root, "rollback");
-    if (failure != null) {
-      return new ReleaseFailure(
-          messageOrUnknown(failure.message()), failure.stage(), failure.operation());
+    var error = operationError(root, "rollback");
+    if (error != null) {
+      return new RollbackFailure(failure(error));
     }
 
     var response = support.convert(root, RollbackPayload.class, "rollback");

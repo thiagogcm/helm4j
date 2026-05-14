@@ -1,5 +1,7 @@
 package dev.nthings.helm4j.release;
 
+import dev.nthings.helm4j.internal.api.Invocations;
+import dev.nthings.helm4j.internal.gateway.ReleaseGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
 /** Request parameters for checking release status. */
@@ -11,15 +13,22 @@ public record StatusRequest(String releaseName, String namespace, int revision) 
   }
 
   public static Builder builder() {
-    return new Builder();
+    return new Builder(null);
+  }
+
+  static Builder builder(ReleaseGateway gateway) {
+    return new Builder(gateway);
   }
 
   public static final class Builder {
+    private final ReleaseGateway gateway;
     private String releaseName;
     private String namespace;
     private int revision;
 
-    private Builder() {}
+    private Builder(ReleaseGateway gateway) {
+      this.gateway = gateway;
+    }
 
     public Builder releaseName(String value) {
       this.releaseName = value;
@@ -38,6 +47,11 @@ public record StatusRequest(String releaseName, String namespace, int revision) 
 
     public StatusRequest build() {
       return new StatusRequest(releaseName, namespace, revision);
+    }
+
+    /** Builds the request and queries status through the bound client. */
+    public StatusResult execute() {
+      return Invocations.requireBound(gateway).status(build());
     }
   }
 }

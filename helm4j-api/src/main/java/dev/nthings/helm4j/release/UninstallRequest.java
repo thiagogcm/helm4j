@@ -2,6 +2,8 @@ package dev.nthings.helm4j.release;
 
 import java.time.Duration;
 
+import dev.nthings.helm4j.internal.api.Invocations;
+import dev.nthings.helm4j.internal.gateway.ReleaseGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
 /** Request parameters for uninstalling a release. */
@@ -25,10 +27,15 @@ public record UninstallRequest(
   }
 
   public static Builder builder() {
-    return new Builder();
+    return new Builder(null);
+  }
+
+  static Builder builder(ReleaseGateway gateway) {
+    return new Builder(gateway);
   }
 
   public static final class Builder {
+    private final ReleaseGateway gateway;
     private String releaseName;
     private String namespace;
     private boolean dryRun;
@@ -40,7 +47,9 @@ public record UninstallRequest(
     private WaitMode waitMode;
     private String deletionPropagation;
 
-    private Builder() {}
+    private Builder(ReleaseGateway gateway) {
+      this.gateway = gateway;
+    }
 
     public Builder releaseName(String value) {
       this.releaseName = value;
@@ -104,6 +113,11 @@ public record UninstallRequest(
           description,
           waitMode,
           deletionPropagation);
+    }
+
+    /** Builds the request and uninstalls it through the bound client. */
+    public UninstallResult execute() {
+      return Invocations.requireBound(gateway).uninstall(build());
     }
   }
 }

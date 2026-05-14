@@ -101,7 +101,7 @@ final class NativeOptions {
 
     putIfNonNull(options, "namespace", request.namespace());
     options.put("createNamespace", request.createNamespace());
-    putIfNonNull(options, "dryRun", dryRunModeValue(request.dryRunMode()));
+    putIfNonNull(options, "dryRun", dryRunModeValue(request.dryRun()));
     putIfNonNull(options, "wait", waitModeValue(request.waitMode()));
     options.put("waitForJobs", request.waitForJobs());
     putIfNonNull(options, "timeout", durationString(request.timeout()));
@@ -136,7 +136,7 @@ final class NativeOptions {
 
     putIfNonNull(options, "namespace", request.namespace());
     options.put("install", request.install());
-    putIfNonNull(options, "dryRun", dryRunModeValue(request.dryRunMode()));
+    putIfNonNull(options, "dryRun", dryRunModeValue(request.dryRun()));
     putIfNonNull(options, "wait", waitModeValue(request.waitMode()));
     options.put("waitForJobs", request.waitForJobs());
     putIfNonNull(options, "timeout", durationString(request.timeout()));
@@ -192,7 +192,7 @@ final class NativeOptions {
     var options = options();
     putIfNonNull(options, "namespace", request.namespace());
     options.put("revision", request.revision());
-    putIfNonNull(options, "dryRun", dryRunModeValue(request.dryRunMode()));
+    putIfNonNull(options, "dryRun", dryRunModeValue(request.dryRun()));
     options.put("disableHooks", request.disableHooks());
     options.put("forceReplace", request.forceReplace());
     putIfNonNull(options, "timeout", durationString(request.timeout()));

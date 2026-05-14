@@ -2,6 +2,8 @@ package dev.nthings.helm4j.chart;
 
 import java.nio.file.Path;
 
+import dev.nthings.helm4j.internal.api.Invocations;
+import dev.nthings.helm4j.internal.gateway.ChartGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
 /** Request parameters for packaging a chart directory. */
@@ -35,10 +37,15 @@ public record PackageChartRequest(
   }
 
   public static Builder builder() {
-    return new Builder();
+    return new Builder(null);
+  }
+
+  static Builder builder(ChartGateway gateway) {
+    return new Builder(gateway);
   }
 
   public static final class Builder {
+    private final ChartGateway gateway;
     private Path chartPath;
     private String version;
     private String appVersion;
@@ -54,7 +61,9 @@ public record PackageChartRequest(
     private String keyFile;
     private String certificateAuthorityFile;
 
-    private Builder() {}
+    private Builder(ChartGateway gateway) {
+      this.gateway = gateway;
+    }
 
     public Builder chartPath(Path value) {
       this.chartPath = value;
@@ -142,6 +151,11 @@ public record PackageChartRequest(
           certificateFile,
           keyFile,
           certificateAuthorityFile);
+    }
+
+    /** Builds the request and packages the chart through the bound client. */
+    public PackageChartResult execute() {
+      return Invocations.requireBound(gateway).packageChart(build());
     }
   }
 }

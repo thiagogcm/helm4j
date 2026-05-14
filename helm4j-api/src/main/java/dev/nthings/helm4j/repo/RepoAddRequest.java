@@ -2,6 +2,8 @@ package dev.nthings.helm4j.repo;
 
 import java.time.Duration;
 
+import dev.nthings.helm4j.internal.api.Invocations;
+import dev.nthings.helm4j.internal.gateway.RepoGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
 /** Request parameters for adding a chart repository. */
@@ -30,10 +32,15 @@ public record RepoAddRequest(
   }
 
   public static Builder builder() {
-    return new Builder();
+    return new Builder(null);
+  }
+
+  static Builder builder(RepoGateway gateway) {
+    return new Builder(gateway);
   }
 
   public static final class Builder {
+    private final RepoGateway gateway;
     private String name;
     private String url;
     private String username;
@@ -47,7 +54,9 @@ public record RepoAddRequest(
     private boolean allowDeprecatedRepositories;
     private Duration timeout;
 
-    private Builder() {}
+    private Builder(RepoGateway gateway) {
+      this.gateway = gateway;
+    }
 
     public Builder name(String value) {
       this.name = value;
@@ -123,6 +132,11 @@ public record RepoAddRequest(
           forceUpdate,
           allowDeprecatedRepositories,
           timeout);
+    }
+
+    /** Builds the request and adds the repository through the bound client. */
+    public RepoAddResult execute() {
+      return Invocations.requireBound(gateway).repoAdd(build());
     }
   }
 }

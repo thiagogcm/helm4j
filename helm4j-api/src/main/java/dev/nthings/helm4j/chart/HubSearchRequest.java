@@ -1,6 +1,9 @@
 package dev.nthings.helm4j.chart;
 
+import dev.nthings.helm4j.internal.api.Invocations;
+import dev.nthings.helm4j.internal.gateway.ChartGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
+import dev.nthings.helm4j.model.ListResult;
 
 /** Request parameters for searching the Helm hub endpoint. */
 public record HubSearchRequest(
@@ -16,17 +19,24 @@ public record HubSearchRequest(
   }
 
   public static Builder builder() {
-    return new Builder();
+    return new Builder(null);
+  }
+
+  static Builder builder(ChartGateway gateway) {
+    return new Builder(gateway);
   }
 
   public static final class Builder {
+    private final ChartGateway gateway;
     private String keyword;
     private String endpoint;
     private boolean failIfNoResults;
     private boolean listRepositoryUrl;
     private int maxColumnWidth;
 
-    private Builder() {}
+    private Builder(ChartGateway gateway) {
+      this.gateway = gateway;
+    }
 
     public Builder keyword(String value) {
       this.keyword = value;
@@ -56,6 +66,11 @@ public record HubSearchRequest(
     public HubSearchRequest build() {
       return new HubSearchRequest(
           keyword, endpoint, failIfNoResults, listRepositoryUrl, maxColumnWidth);
+    }
+
+    /** Builds the request and runs the hub search through the bound client. */
+    public ListResult<HubChartSummary> execute() {
+      return Invocations.requireBound(gateway).searchHub(build());
     }
   }
 }

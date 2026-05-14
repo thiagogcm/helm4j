@@ -5,10 +5,10 @@ import java.util.Objects;
 import dev.nthings.helm4j.errors.HelmFailure;
 import dev.nthings.helm4j.errors.HelmFailureCarrier;
 
-/** Failed {@code install} or {@code upgrade} operation, carrying a structured failure. */
-public record ReleaseFailure(HelmFailure failure) implements ReleaseResult, HelmFailureCarrier {
+/** Failed {@code rollback} operation, carrying a structured failure. */
+public record RollbackFailure(HelmFailure failure) implements RollbackResult, HelmFailureCarrier {
 
-  public ReleaseFailure {
+  public RollbackFailure {
     failure = Objects.requireNonNull(failure, "failure");
   }
 }

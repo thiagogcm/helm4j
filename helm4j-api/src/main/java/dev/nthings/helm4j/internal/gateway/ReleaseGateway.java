@@ -13,27 +13,29 @@ import dev.nthings.helm4j.release.HistoryRequest;
 import dev.nthings.helm4j.release.InstallRequest;
 import dev.nthings.helm4j.release.ReleaseInfo;
 import dev.nthings.helm4j.release.ReleaseListRequest;
-import dev.nthings.helm4j.release.ReleaseOutcome;
+import dev.nthings.helm4j.release.ReleaseResult;
 import dev.nthings.helm4j.release.RollbackRequest;
+import dev.nthings.helm4j.release.RollbackResult;
 import dev.nthings.helm4j.release.StatusRequest;
 import dev.nthings.helm4j.release.StatusResult;
 import dev.nthings.helm4j.release.TestRequest;
 import dev.nthings.helm4j.release.TestResult;
 import dev.nthings.helm4j.release.UninstallRequest;
+import dev.nthings.helm4j.release.UninstallResult;
 import dev.nthings.helm4j.release.UpgradeRequest;
 
 /** Internal release lifecycle operations exposed to the release namespace client. */
 public interface ReleaseGateway {
 
-  ReleaseOutcome install(InstallRequest request);
+  ReleaseResult install(InstallRequest request);
 
-  ReleaseOutcome upgrade(UpgradeRequest request);
+  ReleaseResult upgrade(UpgradeRequest request);
 
-  ReleaseOutcome uninstall(UninstallRequest request);
+  UninstallResult uninstall(UninstallRequest request);
 
   StatusResult status(StatusRequest request);
 
-  ReleaseOutcome rollback(RollbackRequest request);
+  RollbackResult rollback(RollbackRequest request);
 
   ListResult<HistoryEntry> history(HistoryRequest request);
 

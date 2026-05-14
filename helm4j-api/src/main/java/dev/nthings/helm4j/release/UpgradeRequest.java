@@ -7,6 +7,8 @@ import java.util.function.Consumer;
 
 import dev.nthings.helm4j.chart.ChartRef;
 import dev.nthings.helm4j.chart.ChartSource;
+import dev.nthings.helm4j.internal.api.Invocations;
+import dev.nthings.helm4j.internal.gateway.ReleaseGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
 /** Request parameters for upgrading an existing release. */
@@ -16,7 +18,7 @@ public record UpgradeRequest(
     ChartSource source,
     String namespace,
     boolean install,
-    DryRunMode dryRunMode,
+    DryRunMode dryRun,
     WaitMode waitMode,
     boolean waitForJobs,
     Duration timeout,
@@ -51,17 +53,22 @@ public record UpgradeRequest(
   }
 
   public static Builder builder() {
-    return new Builder();
+    return new Builder(null);
+  }
+
+  static Builder builder(ReleaseGateway gateway) {
+    return new Builder(gateway);
   }
 
   public static final class Builder {
+    private final ReleaseGateway gateway;
     private final ChartSource.Builder sourceBuilder = ChartSource.builder();
     private String releaseName;
     private ChartRef chart;
     private ChartSource source;
     private String namespace;
     private boolean install;
-    private DryRunMode dryRunMode;
+    private DryRunMode dryRun;
     private WaitMode waitMode;
     private boolean waitForJobs;
     private Duration timeout;
@@ -84,7 +91,9 @@ public record UpgradeRequest(
     private Map<String, Object> values;
     private Map<String, String> labels;
 
-    private Builder() {}
+    private Builder(ReleaseGateway gateway) {
+      this.gateway = gateway;
+    }
 
     public Builder releaseName(String value) {
       this.releaseName = value;
@@ -116,8 +125,8 @@ public record UpgradeRequest(
       return this;
     }
 
-    public Builder dryRunMode(DryRunMode value) {
-      this.dryRunMode = value;
+    public Builder dryRun(DryRunMode value) {
+      this.dryRun = value;
       return this;
     }
 
@@ -235,7 +244,7 @@ public record UpgradeRequest(
           resolvedSource,
           namespace,
           install,
-          dryRunMode,
+          dryRun,
           waitMode,
           waitForJobs,
           timeout,
@@ -257,6 +266,11 @@ public record UpgradeRequest(
           applyStrategy,
           values,
           labels);
+    }
+
+    /** Builds the request and upgrades it through the bound client. */
+    public ReleaseResult execute() {
+      return Invocations.requireBound(gateway).upgrade(build());
     }
   }
 }

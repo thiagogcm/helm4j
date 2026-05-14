@@ -13,7 +13,16 @@ import dev.nthings.helm4j.internal.gateway.SystemGateway;
 import dev.nthings.helm4j.release.ReleaseClient;
 import dev.nthings.helm4j.repo.RepoClient;
 
-/** Root client for Helm SDK namespaces. */
+/**
+ * Root client for Helm SDK namespaces.
+ *
+ * <p>{@code HelmClient} and its namespace clients ({@code repo()}, {@code chart()}, {@code
+ * release()}) are immutable and stateless, so a single instance is safe to share across threads.
+ *
+ * <p>The class is {@link AutoCloseable} and should be used with try-with-resources for forward
+ * compatibility, but {@link #close()} is currently a no-op: native allocations are scoped to and
+ * released by each individual operation.
+ */
 public final class HelmClient implements AutoCloseable {
 
   private final SystemGateway system;
@@ -65,10 +74,12 @@ public final class HelmClient implements AutoCloseable {
     return system.version();
   }
 
+  /**
+   * Currently a no-op — native allocations are released per operation. Declared for forward
+   * compatibility; always use {@code HelmClient} with try-with-resources.
+   */
   @Override
-  public void close() {
-    // No-op for now. Native allocations are operation-scoped and released per call.
-  }
+  public void close() {}
 
   /**
    * Lazy-initialization holder for the {@link HelmGatewayProvider} resolved via {@link

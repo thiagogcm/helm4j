@@ -1,137 +1,124 @@
 package dev.nthings.helm4j.release;
 
-import java.util.function.Consumer;
-
 import dev.nthings.helm4j.internal.api.NamespaceClient;
 import dev.nthings.helm4j.internal.gateway.ReleaseGateway;
 import dev.nthings.helm4j.model.ListResult;
 
-/** Release namespace for lifecycle operations. */
+/**
+ * Release namespace for lifecycle and inspection operations.
+ *
+ * <p>Each operation has two entry points: a no-argument method that returns a runnable, fluent
+ * request builder (call {@code execute()} on it), and an overload that takes a pre-built request
+ * for reuse.
+ */
 public final class ReleaseClient extends NamespaceClient<ReleaseGateway> {
 
   public ReleaseClient(ReleaseGateway gateway) {
     super(gateway);
   }
 
-  public ReleaseOutcome install(Consumer<InstallRequest.Builder> spec) {
-    return buildAndInvoke(
-        InstallRequest::builder, spec, InstallRequest.Builder::build, this::install);
+  /** Begins a fluent install; call {@code execute()} to run it. */
+  public InstallRequest.Builder install() {
+    return InstallRequest.builder(gateway);
   }
 
-  public ReleaseOutcome install(InstallRequest request) {
-    return invoke(request, gateway::install);
+  public ReleaseResult install(InstallRequest request) {
+    return gateway.install(request);
   }
 
-  public ReleaseOutcome upgrade(Consumer<UpgradeRequest.Builder> spec) {
-    return buildAndInvoke(
-        UpgradeRequest::builder, spec, UpgradeRequest.Builder::build, this::upgrade);
+  /** Begins a fluent upgrade; call {@code execute()} to run it. */
+  public UpgradeRequest.Builder upgrade() {
+    return UpgradeRequest.builder(gateway);
   }
 
-  public ReleaseOutcome upgrade(UpgradeRequest request) {
-    return invoke(request, gateway::upgrade);
+  public ReleaseResult upgrade(UpgradeRequest request) {
+    return gateway.upgrade(request);
   }
 
-  public ReleaseOutcome uninstall(Consumer<UninstallRequest.Builder> spec) {
-    return buildAndInvoke(
-        UninstallRequest::builder, spec, UninstallRequest.Builder::build, this::uninstall);
+  /** Begins a fluent uninstall; call {@code execute()} to run it. */
+  public UninstallRequest.Builder uninstall() {
+    return UninstallRequest.builder(gateway);
   }
 
-  public ReleaseOutcome uninstall(UninstallRequest request) {
-    return invoke(request, gateway::uninstall);
+  public UninstallResult uninstall(UninstallRequest request) {
+    return gateway.uninstall(request);
   }
 
-  public StatusResult status(Consumer<StatusRequest.Builder> spec) {
-    return buildAndInvoke(StatusRequest::builder, spec, StatusRequest.Builder::build, this::status);
+  /** Begins a fluent status query; call {@code execute()} to run it. */
+  public StatusRequest.Builder status() {
+    return StatusRequest.builder(gateway);
   }
 
   public StatusResult status(StatusRequest request) {
-    return invoke(request, gateway::status);
+    return gateway.status(request);
   }
 
-  public ReleaseOutcome rollback(Consumer<RollbackRequest.Builder> spec) {
-    return buildAndInvoke(
-        RollbackRequest::builder, spec, RollbackRequest.Builder::build, this::rollback);
+  /** Begins a fluent rollback; call {@code execute()} to run it. */
+  public RollbackRequest.Builder rollback() {
+    return RollbackRequest.builder(gateway);
   }
 
-  public ReleaseOutcome rollback(RollbackRequest request) {
-    return invoke(request, gateway::rollback);
+  public RollbackResult rollback(RollbackRequest request) {
+    return gateway.rollback(request);
   }
 
-  public ListResult<HistoryEntry> history(Consumer<HistoryRequest.Builder> spec) {
-    return buildAndInvoke(
-        HistoryRequest::builder, spec, HistoryRequest.Builder::build, this::history);
+  /** Begins a fluent history query; call {@code execute()} to run it. */
+  public HistoryRequest.Builder history() {
+    return HistoryRequest.builder(gateway);
   }
 
   public ListResult<HistoryEntry> history(HistoryRequest request) {
-    return invoke(request, gateway::history);
+    return gateway.history(request);
   }
 
-  public ListResult<ReleaseInfo> list() {
-    return list(ReleaseListRequest.builder().build());
-  }
-
-  public ListResult<ReleaseInfo> list(Consumer<ReleaseListRequest.Builder> spec) {
-    return buildAndInvoke(
-        ReleaseListRequest::builder, spec, ReleaseListRequest.Builder::build, this::list);
+  /** Begins a fluent release listing; call {@code execute()} to run it. */
+  public ReleaseListRequest.Builder list() {
+    return ReleaseListRequest.builder(gateway);
   }
 
   public ListResult<ReleaseInfo> list(ReleaseListRequest request) {
-    return invoke(request, gateway::list);
+    return gateway.list(request);
   }
 
-  public TestResult test(Consumer<TestRequest.Builder> spec) {
-    return buildAndInvoke(TestRequest::builder, spec, TestRequest.Builder::build, this::test);
+  /** Begins a fluent test run; call {@code execute()} to run it. */
+  public TestRequest.Builder test() {
+    return TestRequest.builder(gateway);
   }
 
   public TestResult test(TestRequest request) {
-    return invoke(request, gateway::test);
+    return gateway.test(request);
   }
 
-  public GetAllResult getAll(Consumer<GetRequest.Builder> spec) {
-    return buildAndInvoke(GetRequest::builder, spec, GetRequest.Builder::build, this::getAll);
+  /**
+   * Begins a fluent {@code get} query. The variant is chosen by the terminal method on the builder:
+   * {@code all()}, {@code values()}, {@code manifest()}, {@code hooks()}, {@code notes()} or {@code
+   * metadata()}.
+   */
+  public GetRequest.Builder get() {
+    return GetRequest.builder(gateway);
   }
 
   public GetAllResult getAll(GetRequest request) {
-    return invoke(request, gateway::getAll);
-  }
-
-  public GetValuesResult getValues(Consumer<GetRequest.Builder> spec) {
-    return buildAndInvoke(GetRequest::builder, spec, GetRequest.Builder::build, this::getValues);
+    return gateway.getAll(request);
   }
 
   public GetValuesResult getValues(GetRequest request) {
-    return invoke(request, gateway::getValues);
-  }
-
-  public GetManifestResult getManifest(Consumer<GetRequest.Builder> spec) {
-    return buildAndInvoke(GetRequest::builder, spec, GetRequest.Builder::build, this::getManifest);
+    return gateway.getValues(request);
   }
 
   public GetManifestResult getManifest(GetRequest request) {
-    return invoke(request, gateway::getManifest);
-  }
-
-  public GetHooksResult getHooks(Consumer<GetRequest.Builder> spec) {
-    return buildAndInvoke(GetRequest::builder, spec, GetRequest.Builder::build, this::getHooks);
+    return gateway.getManifest(request);
   }
 
   public GetHooksResult getHooks(GetRequest request) {
-    return invoke(request, gateway::getHooks);
-  }
-
-  public GetNotesResult getNotes(Consumer<GetRequest.Builder> spec) {
-    return buildAndInvoke(GetRequest::builder, spec, GetRequest.Builder::build, this::getNotes);
+    return gateway.getHooks(request);
   }
 
   public GetNotesResult getNotes(GetRequest request) {
-    return invoke(request, gateway::getNotes);
-  }
-
-  public GetMetadataResult getMetadata(Consumer<GetRequest.Builder> spec) {
-    return buildAndInvoke(GetRequest::builder, spec, GetRequest.Builder::build, this::getMetadata);
+    return gateway.getNotes(request);
   }
 
   public GetMetadataResult getMetadata(GetRequest request) {
-    return invoke(request, gateway::getMetadata);
+    return gateway.getMetadata(request);
   }
 }

@@ -2,11 +2,13 @@ package dev.nthings.helm4j.repo;
 
 import java.util.Objects;
 
-/** Failed repository addition outcome mapped from native domain errors. */
-public record RepoAddFailure(String message, String stage, String operation)
-    implements RepoAddResult {
+import dev.nthings.helm4j.errors.HelmFailure;
+import dev.nthings.helm4j.errors.HelmFailureCarrier;
+
+/** Failed repository addition outcome, carrying a structured failure. */
+public record RepoAddFailure(HelmFailure failure) implements RepoAddResult, HelmFailureCarrier {
 
   public RepoAddFailure {
-    message = Objects.requireNonNull(message, "message");
+    failure = Objects.requireNonNull(failure, "failure");
   }
 }

@@ -20,6 +20,7 @@ import dev.nthings.helm4j.chart.RepoSearchRequest;
 import dev.nthings.helm4j.chart.ShowRequest;
 import dev.nthings.helm4j.chart.TemplateRequest;
 import dev.nthings.helm4j.errors.HelmException;
+import dev.nthings.helm4j.errors.HelmFailure;
 import dev.nthings.helm4j.release.ApplyStrategy;
 import dev.nthings.helm4j.release.DryRunMode;
 import dev.nthings.helm4j.release.GetAllResult;
@@ -34,11 +35,13 @@ import dev.nthings.helm4j.release.InstallRequest;
 import dev.nthings.helm4j.release.ReleaseFailure;
 import dev.nthings.helm4j.release.ReleaseInfo;
 import dev.nthings.helm4j.release.ReleaseListRequest;
-import dev.nthings.helm4j.release.ReleaseOutcome;
+import dev.nthings.helm4j.release.ReleaseResult;
 import dev.nthings.helm4j.release.ReleaseStatus;
+import dev.nthings.helm4j.release.RollbackFailure;
 import dev.nthings.helm4j.release.RollbackRequest;
 import dev.nthings.helm4j.release.StatusRequest;
 import dev.nthings.helm4j.release.TestRequest;
+import dev.nthings.helm4j.release.UninstallFailure;
 import dev.nthings.helm4j.release.UninstallRequest;
 import dev.nthings.helm4j.release.UpgradeRequest;
 import dev.nthings.helm4j.release.WaitMode;
@@ -149,7 +152,7 @@ class SdkModelCoverageTest {
             .source(s -> s.username("user").password("pass").includePreReleaseVersions(true))
             .namespace("apps")
             .createNamespace(true)
-            .dryRunMode(DryRunMode.SERVER)
+            .dryRun(DryRunMode.SERVER)
             .waitMode(WaitMode.WATCHER)
             .waitForJobs(true)
             .timeout(Duration.ofMinutes(5))
@@ -176,7 +179,7 @@ class SdkModelCoverageTest {
     assertEquals("user", request.source().username());
     assertTrue(request.applyStrategy().serverSideApply());
     assertTrue(request.applyStrategy().forceConflicts());
-    assertEquals(DryRunMode.SERVER, request.dryRunMode());
+    assertEquals(DryRunMode.SERVER, request.dryRun());
     assertEquals(WaitMode.WATCHER, request.waitMode());
     assertTrue(request.takeOwnership());
     assertEquals(1, request.values().get("a"));
@@ -196,7 +199,7 @@ class SdkModelCoverageTest {
             .source(s -> s.username("user").password("pass"))
             .namespace("apps")
             .install(true)
-            .dryRunMode(DryRunMode.CLIENT)
+            .dryRun(DryRunMode.CLIENT)
             .waitMode(WaitMode.HOOK_ONLY)
             .waitForJobs(true)
             .timeout(Duration.ofMinutes(2))
@@ -230,7 +233,7 @@ class SdkModelCoverageTest {
             .releaseName("nginx")
             .namespace("apps")
             .revision(3)
-            .dryRunMode(DryRunMode.SERVER)
+            .dryRun(DryRunMode.SERVER)
             .timeout(Duration.ofSeconds(20))
             .waitMode(WaitMode.WATCHER)
             .waitForJobs(true)
@@ -331,13 +334,14 @@ class SdkModelCoverageTest {
     assertEquals("release notes", notes.notes());
     assertEquals("nginx", metadata.name());
 
-    var upgradeFailure = new ReleaseFailure("boom", "runOperation", "upgrade");
-    var uninstallFailure = new ReleaseFailure("boom", "runOperation", "uninstall");
-    var rollbackFailure = new ReleaseFailure("boom", "runOperation", "rollback");
+    var upgradeFailure = new ReleaseFailure(new HelmFailure("boom", "runOperation", "upgrade"));
+    var uninstallFailure =
+        new UninstallFailure(new HelmFailure("boom", "runOperation", "uninstall"));
+    var rollbackFailure = new RollbackFailure(new HelmFailure("boom", "runOperation", "rollback"));
     assertEquals("upgrade", upgradeFailure.operation());
     assertEquals("uninstall", uninstallFailure.operation());
     assertEquals("rollback", rollbackFailure.operation());
-    assertTrue(ReleaseOutcome.class.isSealed());
+    assertTrue(ReleaseResult.class.isSealed());
   }
 
   @Test

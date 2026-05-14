@@ -1,73 +1,68 @@
 package dev.nthings.helm4j.repo;
 
-import java.util.function.Consumer;
-
 import dev.nthings.helm4j.internal.api.NamespaceClient;
 import dev.nthings.helm4j.internal.gateway.RepoGateway;
 import dev.nthings.helm4j.model.ListResult;
 
-/** Repository and registry namespace for Helm SDK operations. */
+/**
+ * Repository and registry namespace for Helm SDK operations.
+ *
+ * <p>Each operation has two entry points: a method that returns a runnable, fluent request builder
+ * (call {@code execute()} on it), and an overload that takes a pre-built request for reuse.
+ */
 public final class RepoClient extends NamespaceClient<RepoGateway> {
 
   public RepoClient(RepoGateway gateway) {
     super(gateway);
   }
 
-  public RepoAddResult add(Consumer<RepoAddRequest.Builder> spec) {
-    return buildAndInvoke(RepoAddRequest::builder, spec, RepoAddRequest.Builder::build, this::add);
+  /** Begins a fluent repository add; call {@code execute()} to run it. */
+  public RepoAddRequest.Builder add() {
+    return RepoAddRequest.builder(gateway);
   }
 
   public RepoAddResult add(RepoAddRequest request) {
-    return invoke(request, gateway::repoAdd);
+    return gateway.repoAdd(request);
   }
 
-  public ListResult<RepoUpdateEntry> update() {
-    return update(RepoUpdateRequest.builder().build());
-  }
-
-  public ListResult<RepoUpdateEntry> update(Consumer<RepoUpdateRequest.Builder> spec) {
-    return buildAndInvoke(
-        RepoUpdateRequest::builder, spec, RepoUpdateRequest.Builder::build, this::update);
+  /** Begins a fluent repository update; call {@code execute()} to run it. */
+  public RepoUpdateRequest.Builder update() {
+    return RepoUpdateRequest.builder(gateway);
   }
 
   public ListResult<RepoUpdateEntry> update(RepoUpdateRequest request) {
-    return invoke(request, gateway::repoUpdate);
+    return gateway.repoUpdate(request);
   }
 
+  /** Lists the configured chart repositories. */
   public ListResult<RepoSummary> list() {
     return gateway.repoList();
   }
 
-  public ListResult<String> remove(Consumer<RepoRemoveRequest.Builder> spec) {
-    return buildAndInvoke(
-        RepoRemoveRequest::builder, spec, RepoRemoveRequest.Builder::build, this::remove);
+  /** Begins a fluent repository removal; call {@code execute()} to run it. */
+  public RepoRemoveRequest.Builder remove() {
+    return RepoRemoveRequest.builder(gateway);
   }
 
   public ListResult<String> remove(RepoRemoveRequest request) {
-    return invoke(request, gateway::repoRemove);
+    return gateway.repoRemove(request);
   }
 
-  public RegistryResult registryLogin(Consumer<RegistryLoginRequest.Builder> spec) {
-    return buildAndInvoke(
-        RegistryLoginRequest::builder,
-        spec,
-        RegistryLoginRequest.Builder::build,
-        this::registryLogin);
+  /** Begins a fluent registry login; call {@code execute()} to run it. */
+  public RegistryLoginRequest.Builder registryLogin() {
+    return RegistryLoginRequest.builder(gateway);
   }
 
   public RegistryResult registryLogin(RegistryLoginRequest request) {
-    return invoke(request, gateway::registryLogin);
+    return gateway.registryLogin(request);
   }
 
-  public RegistryResult registryLogout(Consumer<RegistryLogoutRequest.Builder> spec) {
-    return buildAndInvoke(
-        RegistryLogoutRequest::builder,
-        spec,
-        RegistryLogoutRequest.Builder::build,
-        this::registryLogout);
+  /** Begins a fluent registry logout; call {@code execute()} to run it. */
+  public RegistryLogoutRequest.Builder registryLogout() {
+    return RegistryLogoutRequest.builder(gateway);
   }
 
   public RegistryResult registryLogout(RegistryLogoutRequest request) {
-    return invoke(request, gateway::registryLogout);
+    return gateway.registryLogout(request);
   }
 }

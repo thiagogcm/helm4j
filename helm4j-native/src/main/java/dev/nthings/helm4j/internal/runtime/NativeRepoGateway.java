@@ -22,8 +22,8 @@ import dev.nthings.helm4j.repo.RepoUpdateRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static dev.nthings.helm4j.internal.runtime.NativeGatewaySupport.failure;
 import static dev.nthings.helm4j.internal.runtime.NativeGatewaySupport.listOrEmpty;
-import static dev.nthings.helm4j.internal.runtime.NativeGatewaySupport.messageOrUnknown;
 import static dev.nthings.helm4j.internal.runtime.NativeGatewaySupport.operationError;
 import static dev.nthings.helm4j.internal.runtime.NativeGatewaySupport.utf8;
 
@@ -53,10 +53,9 @@ final class NativeRepoGateway implements RepoGateway {
                 bridge.repo(
                     utf8("add"), support.toJsonBytes(NativeOptions.repoAdd(request), "repo add")));
 
-    var failure = operationError(root, "repo add");
-    if (failure != null) {
-      return new RepoAddFailure(
-          messageOrUnknown(failure.message()), failure.stage(), failure.operation());
+    var error = operationError(root, "repo add");
+    if (error != null) {
+      return new RepoAddFailure(failure(error));
     }
 
     var response = support.convert(root, RepoAddPayload.class, "repo add");
