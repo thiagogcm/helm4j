@@ -2,10 +2,7 @@ package dev.nthings.helm4j.release;
 
 import java.util.List;
 
-import dev.nthings.helm4j.internal.api.Invocations;
-import dev.nthings.helm4j.internal.gateway.ReleaseGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
-import dev.nthings.helm4j.model.ListResult;
 
 import org.jspecify.annotations.Nullable;
 
@@ -29,15 +26,10 @@ public record ReleaseListRequest(
   }
 
   public static Builder builder() {
-    return new Builder(null);
-  }
-
-  static Builder builder(ReleaseGateway gateway) {
-    return new Builder(gateway);
+    return new Builder();
   }
 
   public static final class Builder {
-    private final @Nullable ReleaseGateway gateway;
     private @Nullable String namespace;
     private boolean allNamespaces;
     private @Nullable String filter;
@@ -48,9 +40,7 @@ public record ReleaseListRequest(
     private boolean sortReverse;
     private @Nullable String selector;
 
-    private Builder(@Nullable ReleaseGateway gateway) {
-      this.gateway = gateway;
-    }
+    private Builder() {}
 
     public Builder namespace(String value) {
       this.namespace = value;
@@ -108,11 +98,6 @@ public record ReleaseListRequest(
           sortByDate,
           sortReverse,
           selector);
-    }
-
-    /** Builds the request and lists releases through the bound client. */
-    public ListResult<ReleaseInfo> execute() {
-      return Invocations.requireBound(gateway).list(build());
     }
   }
 }

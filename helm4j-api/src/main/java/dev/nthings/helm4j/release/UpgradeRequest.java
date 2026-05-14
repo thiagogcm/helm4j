@@ -7,8 +7,6 @@ import java.util.function.Consumer;
 
 import dev.nthings.helm4j.chart.ChartRef;
 import dev.nthings.helm4j.chart.ChartSource;
-import dev.nthings.helm4j.internal.api.Invocations;
-import dev.nthings.helm4j.internal.gateway.ReleaseGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
 import org.jspecify.annotations.Nullable;
@@ -55,15 +53,10 @@ public record UpgradeRequest(
   }
 
   public static Builder builder() {
-    return new Builder(null);
-  }
-
-  static Builder builder(ReleaseGateway gateway) {
-    return new Builder(gateway);
+    return new Builder();
   }
 
   public static final class Builder {
-    private final @Nullable ReleaseGateway gateway;
     private final ChartSource.Builder sourceBuilder = ChartSource.builder();
     private @Nullable String releaseName;
     private @Nullable ChartRef chart;
@@ -93,9 +86,7 @@ public record UpgradeRequest(
     private @Nullable Map<String, Object> values;
     private @Nullable Map<String, String> labels;
 
-    private Builder(@Nullable ReleaseGateway gateway) {
-      this.gateway = gateway;
-    }
+    private Builder() {}
 
     public Builder releaseName(String value) {
       this.releaseName = value;
@@ -268,11 +259,6 @@ public record UpgradeRequest(
           applyStrategy,
           ModelSupport.immutableMapOrEmpty(values),
           ModelSupport.immutableMapOrEmpty(labels));
-    }
-
-    /** Builds the request and upgrades it through the bound client. */
-    public ReleaseResult execute() {
-      return Invocations.requireBound(gateway).upgrade(build());
     }
   }
 }

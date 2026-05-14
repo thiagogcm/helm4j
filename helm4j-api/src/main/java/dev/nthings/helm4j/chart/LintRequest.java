@@ -4,8 +4,6 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.Objects;
 
-import dev.nthings.helm4j.internal.api.Invocations;
-import dev.nthings.helm4j.internal.gateway.ChartGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
 import org.jspecify.annotations.Nullable;
@@ -24,24 +22,17 @@ public record LintRequest(
   }
 
   public static Builder builder() {
-    return new Builder(null);
-  }
-
-  static Builder builder(ChartGateway gateway) {
-    return new Builder(gateway);
+    return new Builder();
   }
 
   public static final class Builder {
-    private final @Nullable ChartGateway gateway;
     private @Nullable Path chartPath;
     private boolean strict;
     private boolean quiet;
     private boolean withSubcharts;
     private @Nullable Map<String, Object> values;
 
-    private Builder(@Nullable ChartGateway gateway) {
-      this.gateway = gateway;
-    }
+    private Builder() {}
 
     public Builder chartPath(Path value) {
       this.chartPath = value;
@@ -75,11 +66,6 @@ public record LintRequest(
           quiet,
           withSubcharts,
           ModelSupport.immutableMapOrEmpty(values));
-    }
-
-    /** Builds the request and lints the chart through the bound client. */
-    public LintResult execute() {
-      return Invocations.requireBound(gateway).lint(build());
     }
   }
 }

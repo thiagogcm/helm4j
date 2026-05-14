@@ -5,8 +5,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 
-import dev.nthings.helm4j.internal.api.Invocations;
-import dev.nthings.helm4j.internal.gateway.ChartGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
 import org.jspecify.annotations.Nullable;
@@ -43,15 +41,10 @@ public record TemplateRequest(
   }
 
   public static Builder builder() {
-    return new Builder(null);
-  }
-
-  static Builder builder(ChartGateway gateway) {
-    return new Builder(gateway);
+    return new Builder();
   }
 
   public static final class Builder {
-    private final @Nullable ChartGateway gateway;
     private final ChartSource.Builder sourceBuilder = ChartSource.builder();
     private @Nullable String releaseName;
     private @Nullable ChartRef chart;
@@ -70,9 +63,7 @@ public record TemplateRequest(
     private @Nullable Map<String, Object> values;
     private @Nullable Map<String, String> labels;
 
-    private Builder(@Nullable ChartGateway gateway) {
-      this.gateway = gateway;
-    }
+    private Builder() {}
 
     public Builder releaseName(String value) {
       this.releaseName = value;
@@ -179,11 +170,6 @@ public record TemplateRequest(
           ModelSupport.immutableListOrEmpty(apiVersions),
           ModelSupport.immutableMapOrEmpty(values),
           ModelSupport.immutableMapOrEmpty(labels));
-    }
-
-    /** Builds the request and renders the chart through the bound client. */
-    public TemplateResult execute() {
-      return Invocations.requireBound(gateway).template(build());
     }
   }
 }

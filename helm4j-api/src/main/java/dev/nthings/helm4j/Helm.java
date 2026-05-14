@@ -4,16 +4,15 @@ package dev.nthings.helm4j;
  * Standard static entry point for the Helm SDK.
  *
  * <p>Obtain a {@link HelmClient} with {@link #client()} and reach operations through its discovered
- * namespaces — {@code repo()}, {@code chart()} and {@code release()}. Each operation returns a
- * fluent, runnable request builder:
+ * namespaces — {@code repo()}, {@code chart()} and {@code release()}. Each operation takes a
+ * consumer that configures a fluent request builder:
  *
  * <pre>{@code
  * try (var helm = Helm.client()) {
- *   var result = helm.release().install()
+ *   var result = helm.release().install(b -> b
  *       .releaseName("nginx")
  *       .chart(ChartRef.repo("bitnami/nginx"))
- *       .namespace("apps")
- *       .execute();
+ *       .namespace("apps"));
  * }
  * }</pre>
  */

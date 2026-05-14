@@ -1,7 +1,5 @@
 package dev.nthings.helm4j.repo;
 
-import dev.nthings.helm4j.internal.api.Invocations;
-import dev.nthings.helm4j.internal.gateway.RepoGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
 import org.jspecify.annotations.Nullable;
@@ -27,15 +25,10 @@ public record RegistryLoginRequest(
   }
 
   public static Builder builder() {
-    return new Builder(null);
-  }
-
-  static Builder builder(RepoGateway gateway) {
-    return new Builder(gateway);
+    return new Builder();
   }
 
   public static final class Builder {
-    private final @Nullable RepoGateway gateway;
     private @Nullable String hostname;
     private @Nullable String username;
     private @Nullable String password;
@@ -45,9 +38,7 @@ public record RegistryLoginRequest(
     private boolean insecure;
     private boolean plainHttp;
 
-    private Builder(@Nullable RepoGateway gateway) {
-      this.gateway = gateway;
-    }
+    private Builder() {}
 
     public Builder hostname(String value) {
       this.hostname = value;
@@ -99,11 +90,6 @@ public record RegistryLoginRequest(
           certificateAuthorityFile,
           insecure,
           plainHttp);
-    }
-
-    /** Builds the request and logs in to the registry through the bound client. */
-    public RegistryResult execute() {
-      return Invocations.requireBound(gateway).registryLogin(build());
     }
   }
 }

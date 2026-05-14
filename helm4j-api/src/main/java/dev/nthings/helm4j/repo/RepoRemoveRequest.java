@@ -4,10 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import dev.nthings.helm4j.internal.api.Invocations;
-import dev.nthings.helm4j.internal.gateway.RepoGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
-import dev.nthings.helm4j.model.ListResult;
 
 import org.jspecify.annotations.Nullable;
 
@@ -19,20 +16,13 @@ public record RepoRemoveRequest(List<String> names) {
   }
 
   public static Builder builder() {
-    return new Builder(null);
-  }
-
-  static Builder builder(RepoGateway gateway) {
-    return new Builder(gateway);
+    return new Builder();
   }
 
   public static final class Builder {
-    private final @Nullable RepoGateway gateway;
     private @Nullable List<String> names;
 
-    private Builder(@Nullable RepoGateway gateway) {
-      this.gateway = gateway;
-    }
+    private Builder() {}
 
     public Builder names(List<String> value) {
       this.names = value;
@@ -46,11 +36,6 @@ public record RepoRemoveRequest(List<String> names) {
 
     public RepoRemoveRequest build() {
       return new RepoRemoveRequest(normalizeNames(names));
-    }
-
-    /** Builds the request and removes the repositories through the bound client. */
-    public ListResult<String> execute() {
-      return Invocations.requireBound(gateway).repoRemove(build());
     }
   }
 

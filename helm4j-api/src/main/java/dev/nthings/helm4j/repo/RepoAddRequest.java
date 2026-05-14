@@ -2,8 +2,6 @@ package dev.nthings.helm4j.repo;
 
 import java.time.Duration;
 
-import dev.nthings.helm4j.internal.api.Invocations;
-import dev.nthings.helm4j.internal.gateway.RepoGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
 import org.jspecify.annotations.Nullable;
@@ -34,15 +32,10 @@ public record RepoAddRequest(
   }
 
   public static Builder builder() {
-    return new Builder(null);
-  }
-
-  static Builder builder(RepoGateway gateway) {
-    return new Builder(gateway);
+    return new Builder();
   }
 
   public static final class Builder {
-    private final @Nullable RepoGateway gateway;
     private @Nullable String name;
     private @Nullable String url;
     private @Nullable String username;
@@ -56,9 +49,7 @@ public record RepoAddRequest(
     private boolean allowDeprecatedRepositories;
     private @Nullable Duration timeout;
 
-    private Builder(@Nullable RepoGateway gateway) {
-      this.gateway = gateway;
-    }
+    private Builder() {}
 
     public Builder name(String value) {
       this.name = value;
@@ -134,11 +125,6 @@ public record RepoAddRequest(
           forceUpdate,
           allowDeprecatedRepositories,
           timeout);
-    }
-
-    /** Builds the request and adds the repository through the bound client. */
-    public RepoAddResult execute() {
-      return Invocations.requireBound(gateway).repoAdd(build());
     }
   }
 }

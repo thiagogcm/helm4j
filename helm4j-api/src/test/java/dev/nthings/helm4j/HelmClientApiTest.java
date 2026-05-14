@@ -23,10 +23,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Exercises the public namespace clients and fluent terminal builders against an in-module {@link
- * FakeHelmGateway}, covering the API surface without the native runtime.
+ * Exercises the public namespace clients and their consumer-based fluent entry points against an
+ * in-module {@link FakeHelmGateway}, covering the API surface without the native runtime.
  */
-@DisplayName("HelmClient API: namespace client delegation and fluent terminal builders")
+@DisplayName("HelmClient API: namespace client delegation and fluent request builders")
 class HelmClientApiTest {
 
   @Test
@@ -50,18 +50,18 @@ class HelmClientApiTest {
     var fake = new FakeHelmGateway();
     var repo = HelmClient.using(fake).repo();
 
-    repo.add().name("bitnami").url("https://charts.bitnami.com/bitnami").execute();
+    repo.add(b -> b.name("bitnami").url("https://charts.bitnami.com/bitnami"));
     assertInstanceOf(RepoAddRequest.class, fake.lastRequest);
 
-    repo.update().execute();
-    repo.update().names("bitnami").timeout(Duration.ofSeconds(20)).execute();
-    assertEquals(0, repo.update().names("bitnami").execute().size());
+    repo.update(b -> {});
+    repo.update(b -> b.names("bitnami").timeout(Duration.ofSeconds(20)));
+    assertEquals(0, repo.update(b -> b.names("bitnami")).size());
 
     assertEquals(0, repo.list().size());
-    assertEquals(0, repo.remove().names("bitnami").execute().size());
+    assertEquals(0, repo.remove(b -> b.names("bitnami")).size());
 
-    repo.registryLogin().hostname("registry.example").username("u").password("p").execute();
-    repo.registryLogout().hostname("registry.example").execute();
+    repo.registryLogin(b -> b.hostname("registry.example").username("u").password("p"));
+    repo.registryLogout(b -> b.hostname("registry.example"));
   }
 
   @Test
@@ -70,20 +70,20 @@ class HelmClientApiTest {
     var chart = HelmClient.using(fake).chart();
     var chartRef = ChartRef.repo("bitnami/nginx");
 
-    assertEquals(0, chart.searchRepo().keyword("nginx").execute().size());
-    assertEquals(0, chart.searchHub().keyword("nginx").execute().size());
+    assertEquals(0, chart.searchRepo(b -> b.keyword("nginx")).size());
+    assertEquals(0, chart.searchHub(b -> b.keyword("nginx")).size());
 
     for (var mode : ShowMode.values()) {
-      chart.show(mode, chartRef).execute();
+      chart.show(mode, chartRef, b -> {});
       assertEquals(mode.wireValue(), fake.lastShowMode);
     }
 
-    chart.template().releaseName("nginx").chart(chartRef).execute();
-    chart.lint().chartPath(Path.of("/tmp/chart")).execute();
-    chart.pull().chart(ChartRef.repo("bitnami/nginx")).execute();
-    chart.push().chartReference("/tmp/nginx.tgz").remote("oci://registry.example").execute();
-    chart.packageChart().chartPath(Path.of("/tmp/chart")).execute();
-    chart.dependency().chartPath(Path.of("/tmp/chart")).execute();
+    chart.template(b -> b.releaseName("nginx").chart(chartRef));
+    chart.lint(b -> b.chartPath(Path.of("/tmp/chart")));
+    chart.pull(b -> b.chart(ChartRef.repo("bitnami/nginx")));
+    chart.push(b -> b.chartReference("/tmp/nginx.tgz").remote("oci://registry.example"));
+    chart.packageChart(b -> b.chartPath(Path.of("/tmp/chart")));
+    chart.dependency(b -> b.chartPath(Path.of("/tmp/chart")));
   }
 
   @Test
@@ -92,32 +92,24 @@ class HelmClientApiTest {
     var release = HelmClient.using(fake).release();
     var chartRef = ChartRef.repo("bitnami/nginx");
 
-    release.install().releaseName("nginx").chart(chartRef).execute();
-    release.upgrade().releaseName("nginx").chart(chartRef).execute();
-    release.uninstall().releaseName("nginx").execute();
-    release.status().releaseName("nginx").execute();
-    release.rollback().releaseName("nginx").revision(1).execute();
-    assertEquals(0, release.history().releaseName("nginx").execute().size());
+    release.install(b -> b.releaseName("nginx").chart(chartRef));
+    release.upgrade(b -> b.releaseName("nginx").chart(chartRef));
+    release.uninstall(b -> b.releaseName("nginx"));
+    release.status(b -> b.releaseName("nginx"));
+    release.rollback(b -> b.releaseName("nginx").revision(1));
+    assertEquals(0, release.history(b -> b.releaseName("nginx")).size());
 
-    assertEquals(0, release.list().execute().size());
+    assertEquals(0, release.list(b -> {}).size());
 
-    release.test().releaseName("nginx").execute();
-    release.get().releaseName("nginx").all();
-    release.get().releaseName("nginx").values();
-    release.get().releaseName("nginx").manifest();
-    release.get().releaseName("nginx").hooks();
-    release.get().releaseName("nginx").notes();
-    release.get().releaseName("nginx").metadata();
+    release.test(b -> b.releaseName("nginx"));
+    release.getAll(b -> b.releaseName("nginx"));
+    release.getValues(b -> b.releaseName("nginx"));
+    release.getManifest(b -> b.releaseName("nginx"));
+    release.getHooks(b -> b.releaseName("nginx"));
+    release.getNotes(b -> b.releaseName("nginx"));
+    release.getMetadata(b -> b.releaseName("nginx"));
 
     assertEquals(14, fake.invocations);
-  }
-
-  @Test
-  @DisplayName("A request builder created via builder() is not bound and rejects execute()")
-  void unboundBuilderRejectsExecute() {
-    var unbound =
-        InstallRequest.builder().releaseName("nginx").chart(ChartRef.repo("bitnami/nginx"));
-    assertThrows(IllegalStateException.class, unbound::execute);
   }
 
   @Test

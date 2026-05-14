@@ -1,7 +1,5 @@
 package dev.nthings.helm4j.chart;
 
-import dev.nthings.helm4j.internal.api.Invocations;
-import dev.nthings.helm4j.internal.gateway.ChartGateway;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
 import org.jspecify.annotations.Nullable;
@@ -25,15 +23,10 @@ public record PushRequest(
   }
 
   public static Builder builder() {
-    return new Builder(null);
-  }
-
-  static Builder builder(ChartGateway gateway) {
-    return new Builder(gateway);
+    return new Builder();
   }
 
   public static final class Builder {
-    private final @Nullable ChartGateway gateway;
     private @Nullable String chartReference;
     private @Nullable String remote;
     private boolean plainHttp;
@@ -42,9 +35,7 @@ public record PushRequest(
     private @Nullable String keyFile;
     private @Nullable String certificateAuthorityFile;
 
-    private Builder(@Nullable ChartGateway gateway) {
-      this.gateway = gateway;
-    }
+    private Builder() {}
 
     public Builder chartReference(String value) {
       this.chartReference = value;
@@ -90,11 +81,6 @@ public record PushRequest(
           certificateFile,
           keyFile,
           certificateAuthorityFile);
-    }
-
-    /** Builds the request and pushes the chart through the bound client. */
-    public PushResult execute() {
-      return Invocations.requireBound(gateway).push(build());
     }
   }
 }
