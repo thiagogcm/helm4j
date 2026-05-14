@@ -89,6 +89,8 @@ final class NativeOptions {
     return options;
   }
 
+  // ShowRequest carries no ChartRef — the show gateway holds it alongside the mode — so the
+  // chart is passed in separately here rather than read from the request like the others.
   static Map<String, Object> show(ChartRef chart, ShowRequest request) {
     var options = options();
     putChartRef(options, chart);

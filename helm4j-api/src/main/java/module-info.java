@@ -5,7 +5,10 @@ import org.jspecify.annotations.NullMarked;
  * by the helm4j-native module, discovered at runtime via {@link java.util.ServiceLoader}.
  *
  * <p>The module is {@link NullMarked}: every type usage is non-null unless explicitly annotated
- * {@code @Nullable}.
+ * {@code @Nullable}. {@code @Nullable} is applied to the public surface — request and result record
+ * components and exported method signatures. Internal mutable builder fields and the unbound {@code
+ * gateway} reference are intentionally left unannotated; tightening those is a follow-up for
+ * whenever a nullness checker is wired into the build.
  *
  * <p>{@code @SuppressWarnings("module")}: the qualified {@code exports ... to
  * dev.nthings.helm4j.runtime} names the native module, which cannot be a compile dependency of this
