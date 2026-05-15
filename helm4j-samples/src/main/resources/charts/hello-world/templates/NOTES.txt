@@ -1,0 +1,6 @@
+Thank you for installing {{ .Chart.Name }}.
+
+The release {{ .Release.Name }} was deployed in namespace {{ .Release.Namespace }}.
+Inspect the configured message with:
+
+  kubectl -n {{ .Release.Namespace }} get configmap {{ .Release.Name }}-hello -o jsonpath='{.data.message}'
