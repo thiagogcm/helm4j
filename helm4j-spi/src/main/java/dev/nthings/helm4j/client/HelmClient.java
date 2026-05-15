@@ -42,9 +42,22 @@ public final class HelmClient implements AutoCloseable {
     this.release = new ReleaseClient(releaseGateway);
   }
 
-  /** Creates a client backed by the native Helm runtime discovered on the module path. */
+  /**
+   * Creates a client backed by the {@link HelmGatewayProvider} discovered via {@link
+   * ServiceLoader}. The {@code helm4j-native} module supplies the FFM-backed provider.
+   *
+   * @throws IllegalStateException if no {@link HelmGatewayProvider} is on the module path
+   */
   public static HelmClient create() {
-    return using(ProviderHolder.INSTANCE.create());
+    var provider =
+        ServiceLoader.load(HelmGatewayProvider.class)
+            .findFirst()
+            .orElseThrow(
+                () ->
+                    new IllegalStateException(
+                        "No HelmGatewayProvider found on the module path. Add the helm4j-native"
+                            + " module."));
+    return using(provider.create());
   }
 
   /**
@@ -81,20 +94,4 @@ public final class HelmClient implements AutoCloseable {
    */
   @Override
   public void close() {}
-
-  /**
-   * Lazy-initialization holder for the {@link HelmGatewayProvider} resolved via {@link
-   * ServiceLoader}. The native runtime module supplies the implementation; a resolution failure
-   * means it is missing from the module path.
-   */
-  private static final class ProviderHolder {
-    static final HelmGatewayProvider INSTANCE =
-        ServiceLoader.load(HelmGatewayProvider.class)
-            .findFirst()
-            .orElseThrow(
-                () ->
-                    new IllegalStateException(
-                        "No HelmGatewayProvider found on the module path. Add the helm4j-native"
-                            + " module."));
-  }
 }

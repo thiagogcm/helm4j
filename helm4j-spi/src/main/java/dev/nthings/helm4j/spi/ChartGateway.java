@@ -22,7 +22,7 @@ import dev.nthings.helm4j.chart.TemplateRequest;
 import dev.nthings.helm4j.chart.TemplateResult;
 import dev.nthings.helm4j.model.ListResult;
 
-/** Internal chart operations exposed to the chart namespace client. */
+/** SPI for chart operations, backing the chart namespace client. */
 public interface ChartGateway {
 
   ListResult<RepoChartSummary> searchRepo(RepoSearchRequest request);

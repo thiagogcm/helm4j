@@ -11,7 +11,7 @@ import dev.nthings.helm4j.repo.RepoSummary;
 import dev.nthings.helm4j.repo.RepoUpdateEntry;
 import dev.nthings.helm4j.repo.RepoUpdateRequest;
 
-/** Internal repository and registry operations exposed to the repo namespace client. */
+/** SPI for repository and registry operations, backing the repo namespace client. */
 public interface RepoGateway {
 
   RepoAddResult repoAdd(RepoAddRequest request);

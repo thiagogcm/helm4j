@@ -69,6 +69,16 @@ by the Go logic in `libhelm4j`, and the JSON response is deserialized back into 
 `tools.jackson.databind` for this reason; `helm4j-api` itself does not depend on
 Jackson.
 
+## Known trade-off: the `helm4j-spi` module name
+
+`helm4j-spi` ships both the gateway SPI *and* the primary user entry point (`Helm`,
+`HelmClient`). Naming it `-spi` slightly undersells it — a consumer who just wants the
+client still depends on an artifact named "spi". The two are kept together because the
+client facade and the SPI are mutually referential (the client discovers and wraps an
+SPI implementation) and splitting them would add a fourth module for little gain. This
+is accepted pre-1.0; renaming the module (e.g. `helm4j-client` / `helm4j-core`) or
+splitting the facade out remains an option before the first release.
+
 ## Depending on Helm4j
 
 Consumers compile against `helm4j-spi` (which brings `helm4j-api` transitively) and put

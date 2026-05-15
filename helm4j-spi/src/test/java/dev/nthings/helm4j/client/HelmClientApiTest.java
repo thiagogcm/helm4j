@@ -37,6 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Exercises the public namespace clients and both entry-point styles — the consumer-based fluent
@@ -206,8 +207,9 @@ class HelmClientApiTest {
   void staticEntryPointsRequireAProvider() {
     // No helm4j-native (or any HelmGatewayProvider) is on the test module path, so gateway
     // discovery fails fast. This exercises HelmClient.create() and the Helm bootstrap facade.
-    assertThrows(Throwable.class, HelmClient::create);
-    assertThrows(Throwable.class, Helm::client);
-    assertThrows(Throwable.class, Helm::version);
+    var fromCreate = assertThrows(IllegalStateException.class, HelmClient::create);
+    assertTrue(fromCreate.getMessage().contains("helm4j-native"));
+    assertThrows(IllegalStateException.class, Helm::client);
+    assertThrows(IllegalStateException.class, Helm::version);
   }
 }

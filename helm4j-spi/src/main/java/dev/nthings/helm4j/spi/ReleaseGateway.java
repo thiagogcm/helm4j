@@ -24,7 +24,7 @@ import dev.nthings.helm4j.release.UninstallRequest;
 import dev.nthings.helm4j.release.UninstallResult;
 import dev.nthings.helm4j.release.UpgradeRequest;
 
-/** Internal release lifecycle operations exposed to the release namespace client. */
+/** SPI for release lifecycle and inspection operations, backing the release namespace client. */
 public interface ReleaseGateway {
 
   ReleaseResult install(InstallRequest request);
