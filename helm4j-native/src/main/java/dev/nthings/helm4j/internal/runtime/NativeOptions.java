@@ -111,7 +111,7 @@ final class NativeOptions {
     putIfNonNull(options, "namespace", request.namespace());
     options.put("createNamespace", request.createNamespace());
     putIfNonNull(options, "dryRun", dryRunModeValue(request.dryRun()));
-    putIfNonNull(options, "wait", waitModeValue(request.waitMode()));
+    options.put("wait", waitModeWireValue(request.waitMode()));
     options.put("waitForJobs", request.waitForJobs());
     putIfNonNull(options, "timeout", durationString(request.timeout()));
     putIfNonNull(options, "description", request.description());
@@ -147,7 +147,7 @@ final class NativeOptions {
     putIfNonNull(options, "namespace", request.namespace());
     options.put("install", request.install());
     putIfNonNull(options, "dryRun", dryRunModeValue(request.dryRun()));
-    putIfNonNull(options, "wait", waitModeValue(request.waitMode()));
+    options.put("wait", waitModeWireValue(request.waitMode()));
     options.put("waitForJobs", request.waitForJobs());
     putIfNonNull(options, "timeout", durationString(request.timeout()));
     putIfNonNull(options, "description", request.description());
@@ -186,7 +186,7 @@ final class NativeOptions {
     options.put("ignoreNotFound", request.ignoreNotFound());
     putIfNonNull(options, "timeout", durationString(request.timeout()));
     putIfNonNull(options, "description", request.description());
-    putIfNonNull(options, "wait", waitModeValue(request.waitMode()));
+    options.put("wait", waitModeWireValue(request.waitMode()));
     putIfNonNull(options, "deletionPropagation", request.deletionPropagation());
     return options;
   }
@@ -206,7 +206,7 @@ final class NativeOptions {
     options.put("disableHooks", request.disableHooks());
     options.put("forceReplace", request.forceReplace());
     putIfNonNull(options, "timeout", durationString(request.timeout()));
-    putIfNonNull(options, "wait", waitModeValue(request.waitMode()));
+    options.put("wait", waitModeWireValue(request.waitMode()));
     options.put("waitForJobs", request.waitForJobs());
     options.put("cleanupOnFail", request.cleanupOnFail());
     options.put("maxHistory", request.maxHistory());
@@ -397,8 +397,10 @@ final class NativeOptions {
     return dryRunMode == null ? null : dryRunMode.wireValue();
   }
 
-  private static @Nullable String waitModeValue(@Nullable WaitMode waitMode) {
-    return waitMode == null ? null : waitMode.wireValue();
+  // Helm v4 errors when "wait" is omitted; default to WATCHER so the SDK contract
+  // that an unspecified strategy yields Helm's documented default still holds.
+  private static String waitModeWireValue(@Nullable WaitMode waitMode) {
+    return (waitMode == null ? WaitMode.WATCHER : waitMode).wireValue();
   }
 
   private static LinkedHashMap<String, Object> options() {

@@ -35,9 +35,11 @@ type Options struct {
 	MaxHistory      int    `json:"maxHistory,omitempty"`
 }
 
-// Response is the top-level JSON payload returned across the FFM boundary.
+// Response is the top-level JSON payload returned across the FFM boundary; the
+// Java RollbackPayload reads {releaseName, revision} at the root.
 type Response struct {
-	Release releaseutil.ReleaseInfo `json:"release"`
+	ReleaseName string `json:"releaseName"`
+	Revision    int    `json:"revision"`
 }
 
 // Run executes a helm rollback operation for the given release name.
@@ -106,7 +108,10 @@ func Run(releaseName string, opts Options) (string, error) {
 		return "", fmt.Errorf("map release: %w", err)
 	}
 
-	resp := Response{Release: info}
+	resp := Response{
+		ReleaseName: info.Name,
+		Revision:    info.Revision,
+	}
 	result, err := bridge.MarshalJSON(resp)
 	if err != nil {
 		return "", err

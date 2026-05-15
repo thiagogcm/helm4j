@@ -31,6 +31,7 @@ type Message struct {
 type Response struct {
 	Messages     []Message `json:"messages"`
 	TotalCharts  int       `json:"totalCharts"`
+	ChartsTested int       `json:"chartsTested"`
 	ChartsFailed int       `json:"chartsFailed"`
 }
 
@@ -78,9 +79,12 @@ func Run(chartPath string, opts Options) (string, error) {
 		}
 	}
 
+	// Helm v4's lint.Result only carries TotalChartsLinted; "tested" mirrors that
+	// figure so the Java LintResult exposes both counters without parity drift.
 	resp := Response{
 		Messages:     messages,
 		TotalCharts:  result.TotalChartsLinted,
+		ChartsTested: result.TotalChartsLinted,
 		ChartsFailed: failedCount,
 	}
 

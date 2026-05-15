@@ -48,7 +48,8 @@ type MetadataEntry struct {
 }
 
 // Response is the top-level JSON payload returned across the FFM boundary.
-// Fields are populated based on the requested mode.
+// Fields are populated based on the requested mode. The "metadata" mode uses a
+// separate inline shape (see getMetadata) that flattens MetadataEntry at root.
 type Response struct {
 	Mode     string                   `json:"mode"`
 	Release  *releaseutil.ReleaseInfo `json:"release,omitempty"`
@@ -56,7 +57,6 @@ type Response struct {
 	Manifest string                   `json:"manifest,omitempty"`
 	Hooks    []HookEntry              `json:"hooks,omitempty"`
 	Notes    string                   `json:"notes,omitempty"`
-	Metadata *MetadataEntry           `json:"metadata,omitempty"`
 }
 
 // Run executes a helm get operation for the given mode and release name.
@@ -213,7 +213,12 @@ func getMetadata(env *helmenv.Env, releaseName string, opts Options) (string, er
 		DeployedAt:   meta.DeployedAt,
 	}
 
-	resp := Response{Mode: "metadata", Metadata: &entry}
+	// Flatten metadata at root so the Java GetMetadataPayload reads fields at the
+	// top level, like every other get mode (values, manifest, hooks, notes).
+	resp := struct {
+		Mode string `json:"mode"`
+		MetadataEntry
+	}{Mode: "metadata", MetadataEntry: entry}
 	return bridge.MarshalJSON(resp)
 }
 

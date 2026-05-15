@@ -86,6 +86,13 @@ func Run(releaseName string, opts Options) (string, error) {
 		return "", fmt.Errorf("helm uninstall: %w", err)
 	}
 
+	// Helm v4's action.Uninstall returns (nil, nil) when IgnoreNotFound is set
+	// and the release does not exist. Treat that as a no-op success so the
+	// caller sees an empty Response rather than a panic.
+	if res == nil {
+		return bridge.MarshalJSON(Response{})
+	}
+
 	resp := Response{Info: res.Info}
 	if res.Release != nil {
 		info, mapErr := releaseutil.MapRelease(res.Release)
