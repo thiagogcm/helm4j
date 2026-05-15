@@ -38,6 +38,96 @@ tasks.named<JavaExec>("run") {
     systemProperty("helm4j.samples.chart", helloChart.asFile.absolutePath)
 }
 
+// helm4j-runtime is runtimeOnly (not in `requires`), so name it in --add-modules
+// so jlink resolves it and ServiceLoader can find the FFM provider. Native access
+// piggybacks on the `Enable-Native-Access` manifest attribute jlink preserves in
+// the jimage; --add-options is a no-op on JDK 25 jlink.
+val jlinkModulesDir = layout.buildDirectory.dir("jlink-modules")
+val jlinkImageDir = layout.buildDirectory.dir("jlink/hello-helm")
+
+val stageJlinkModules by tasks.registering(Sync::class) {
+    group = "distribution"
+    description = "Stages modular jars (runtime classpath + own jar) for jlink."
+    from(configurations.named("runtimeClasspath"))
+    from(tasks.named<Jar>("jar"))
+    into(jlinkModulesDir)
+}
+
+val jlink by tasks.registering(Exec::class) {
+    group = "distribution"
+    description = "Builds a self-contained runtime image for the sample app via jlink."
+    dependsOn(stageJlinkModules)
+
+    val launcher = javaToolchains.launcherFor(java.toolchain)
+    val jlinkExecutable = launcher.map {
+        it.metadata.installationPath.file("bin/jlink").asFile.absolutePath
+    }
+    val jmodsDir = launcher.map {
+        it.metadata.installationPath.dir("jmods").asFile.absolutePath
+    }
+    val outputDir = jlinkImageDir.map { it.asFile }
+    val modulesDir = jlinkModulesDir.map { it.asFile }
+
+    inputs.dir(modulesDir)
+    outputs.dir(outputDir)
+
+    doFirst {
+        // jlink refuses to overwrite an existing output directory.
+        outputDir.get().deleteRecursively()
+        executable = jlinkExecutable.get()
+        val modulePath = buildList {
+            add(modulesDir.get().absolutePath)
+            // Temurin ships without jmods; jlink falls back to run-time image linking.
+            val jmods = File(jmodsDir.get())
+            if (jmods.isDirectory) add(jmods.absolutePath)
+        }.joinToString(File.pathSeparator)
+        args(
+            "--module-path",
+            modulePath,
+            "--add-modules",
+            "dev.nthings.helm4j.samples,dev.nthings.helm4j.runtime",
+            "--launcher",
+            "hello-helm=dev.nthings.helm4j.samples/dev.nthings.helm4j.samples.HelloHelm",
+            "--no-header-files",
+            "--no-man-pages",
+            "--strip-debug",
+            "--compress",
+            "zip-6",
+            "--output",
+            outputDir.get().absolutePath,
+        )
+    }
+
+    // Placeholder so Exec validation passes; the real path is set in doFirst.
+    executable = "jlink"
+}
+
+// Invokes bin/java directly rather than bin/hello-helm because the jlink launcher
+// splices "$@" after `-m`, turning any args into program arguments instead of JVM
+// options — so passing `-Dprop=value` to the launcher does not set a system property.
+val runJlink by tasks.registering(Exec::class) {
+    group = "application"
+    description = "Runs the jlink-produced image against the bundled chart."
+    dependsOn(jlink)
+
+    val javaFile = jlinkImageDir.map { it.file("bin/java").asFile }
+    inputs.file(javaFile)
+    workingDir = rootProject.projectDir
+
+    doFirst {
+        executable = javaFile.get().absolutePath
+        args(
+            "-Dhelm4j.samples.chart=${helloChart.asFile.absolutePath}",
+            "-Dhelm4j.library.path=${rootProject.projectDir}/libhelm4j",
+            "-m",
+            "dev.nthings.helm4j.samples/dev.nthings.helm4j.samples.HelloHelm",
+        )
+    }
+
+    // Placeholder so Exec validation passes; the real path is set in doFirst.
+    executable = "java"
+}
+
 // Native image build. The graalvm-buildtools plugin reads the entry point from
 // the application{} block above, so the same configuration drives `gradle run`
 // and `gradle nativeCompile`. native-image flattens helm4j-native onto the
