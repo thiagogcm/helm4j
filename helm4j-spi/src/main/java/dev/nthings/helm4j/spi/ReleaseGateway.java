@@ -6,52 +6,55 @@ import dev.nthings.helm4j.release.GetHooksResult;
 import dev.nthings.helm4j.release.GetManifestResult;
 import dev.nthings.helm4j.release.GetMetadataResult;
 import dev.nthings.helm4j.release.GetNotesResult;
-import dev.nthings.helm4j.release.GetRequest;
+import dev.nthings.helm4j.release.GetRelease;
 import dev.nthings.helm4j.release.GetValuesResult;
 import dev.nthings.helm4j.release.HistoryEntry;
-import dev.nthings.helm4j.release.HistoryRequest;
-import dev.nthings.helm4j.release.InstallRequest;
-import dev.nthings.helm4j.release.ReleaseInfo;
-import dev.nthings.helm4j.release.ReleaseListRequest;
-import dev.nthings.helm4j.release.ReleaseResult;
-import dev.nthings.helm4j.release.RollbackRequest;
-import dev.nthings.helm4j.release.RollbackResult;
-import dev.nthings.helm4j.release.StatusRequest;
-import dev.nthings.helm4j.release.StatusResult;
-import dev.nthings.helm4j.release.TestRequest;
+import dev.nthings.helm4j.release.InstallRelease;
+import dev.nthings.helm4j.release.ListReleases;
+import dev.nthings.helm4j.release.Release;
+import dev.nthings.helm4j.release.ReleaseHistory;
+import dev.nthings.helm4j.release.RollbackRelease;
+import dev.nthings.helm4j.release.RollbackReport;
+import dev.nthings.helm4j.release.StatusRelease;
+import dev.nthings.helm4j.release.TestRelease;
 import dev.nthings.helm4j.release.TestResult;
-import dev.nthings.helm4j.release.UninstallRequest;
-import dev.nthings.helm4j.release.UninstallResult;
-import dev.nthings.helm4j.release.UpgradeRequest;
+import dev.nthings.helm4j.release.UninstallRelease;
+import dev.nthings.helm4j.release.UninstallReport;
+import dev.nthings.helm4j.release.UpgradeRelease;
 
-/** SPI for release lifecycle and inspection operations, backing the release namespace client. */
+/**
+ * SPI for release lifecycle and inspection operations.
+ *
+ * <p>Mutations return a domain value on success. Failures throw {@code HelmCommandException}; the
+ * pending-on-cluster case is encoded by {@link Release#status()} (e.g. {@code PENDING_INSTALL}).
+ */
 public interface ReleaseGateway {
 
-  ReleaseResult install(InstallRequest request);
+  Release install(InstallRelease request);
 
-  ReleaseResult upgrade(UpgradeRequest request);
+  Release upgrade(UpgradeRelease request);
 
-  UninstallResult uninstall(UninstallRequest request);
+  UninstallReport uninstall(UninstallRelease request);
 
-  StatusResult status(StatusRequest request);
+  Release status(StatusRelease request);
 
-  RollbackResult rollback(RollbackRequest request);
+  RollbackReport rollback(RollbackRelease request);
 
-  ListResult<HistoryEntry> history(HistoryRequest request);
+  ListResult<HistoryEntry> history(ReleaseHistory request);
 
-  ListResult<ReleaseInfo> list(ReleaseListRequest request);
+  ListResult<Release> list(ListReleases request);
 
-  TestResult test(TestRequest request);
+  TestResult test(TestRelease request);
 
-  GetAllResult getAll(GetRequest request);
+  GetAllResult getAll(GetRelease request);
 
-  GetValuesResult getValues(GetRequest request);
+  GetValuesResult getValues(GetRelease request);
 
-  GetManifestResult getManifest(GetRequest request);
+  GetManifestResult getManifest(GetRelease request);
 
-  GetHooksResult getHooks(GetRequest request);
+  GetHooksResult getHooks(GetRelease request);
 
-  GetNotesResult getNotes(GetRequest request);
+  GetNotesResult getNotes(GetRelease request);
 
-  GetMetadataResult getMetadata(GetRequest request);
+  GetMetadataResult getMetadata(GetRelease request);
 }

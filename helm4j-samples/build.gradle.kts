@@ -17,16 +17,16 @@ java {
 }
 
 dependencies {
-    // Consumers compile against helm4j-spi (helm4j-api comes transitively) and put
-    // helm4j-native on the runtime path. See docs/architecture.md.
-    implementation(project(":helm4j-spi"))
-    runtimeOnly(project(":helm4j-native"))
+    // Consumers compile against helm4j-client (helm4j-model + helm4j-spi come transitively)
+    // and put helm4j-runtime-native on the runtime path. See docs/architecture.md.
+    implementation(project(":helm4j-client"))
+    runtimeOnly(project(":helm4j-runtime-native"))
 }
 
 application {
     mainModule = "dev.nthings.helm4j.samples"
     mainClass = "dev.nthings.helm4j.samples.HelloHelm"
-    applicationDefaultJvmArgs = listOf("--enable-native-access=dev.nthings.helm4j.runtime")
+    applicationDefaultJvmArgs = listOf("--enable-native-access=dev.nthings.helm4j.runtime.ffm")
 }
 
 val helloChart = layout.projectDirectory.dir("src/main/resources/charts/hello-world")
@@ -85,7 +85,7 @@ val jlink by tasks.registering(Exec::class) {
             "--module-path",
             modulePath,
             "--add-modules",
-            "dev.nthings.helm4j.samples,dev.nthings.helm4j.runtime",
+            "dev.nthings.helm4j.samples,dev.nthings.helm4j.runtime.ffm",
             "--launcher",
             "hello-helm=dev.nthings.helm4j.samples/dev.nthings.helm4j.samples.HelloHelm",
             "--no-header-files",

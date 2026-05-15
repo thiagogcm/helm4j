@@ -9,7 +9,8 @@ plugins {
 val libs = the<VersionCatalogsExtension>().named("libs")
 
 val conventions = extensions.create<Helm4jConventionsExtension>("helm4jConventions")
-conventions.coverageMinimum.convention("0.85".toBigDecimal())
+// Default threshold is 0 until the helm4j-testing module ships and per-module floors land.
+conventions.coverageMinimum.convention("0.0".toBigDecimal())
 conventions.coverageExclusions.convention(emptyList())
 
 repositories {

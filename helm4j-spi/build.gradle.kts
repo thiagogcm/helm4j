@@ -3,5 +3,5 @@ plugins {
 }
 
 dependencies {
-    api(project(":helm4j-api"))
+    api(project(":helm4j-model"))
 }

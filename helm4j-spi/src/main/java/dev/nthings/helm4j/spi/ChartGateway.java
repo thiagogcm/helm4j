@@ -4,7 +4,6 @@ import dev.nthings.helm4j.chart.ChartRef;
 import dev.nthings.helm4j.chart.DependencyRequest;
 import dev.nthings.helm4j.chart.DependencyResult;
 import dev.nthings.helm4j.chart.HubChartSummary;
-import dev.nthings.helm4j.chart.HubSearchRequest;
 import dev.nthings.helm4j.chart.LintRequest;
 import dev.nthings.helm4j.chart.LintResult;
 import dev.nthings.helm4j.chart.PackageChartRequest;
@@ -14,7 +13,8 @@ import dev.nthings.helm4j.chart.PullResult;
 import dev.nthings.helm4j.chart.PushRequest;
 import dev.nthings.helm4j.chart.PushResult;
 import dev.nthings.helm4j.chart.RepoChartSummary;
-import dev.nthings.helm4j.chart.RepoSearchRequest;
+import dev.nthings.helm4j.chart.SearchCharts;
+import dev.nthings.helm4j.chart.SearchHub;
 import dev.nthings.helm4j.chart.ShowMode;
 import dev.nthings.helm4j.chart.ShowRequest;
 import dev.nthings.helm4j.chart.ShowResult;
@@ -25,9 +25,9 @@ import dev.nthings.helm4j.model.ListResult;
 /** SPI for chart operations, backing the chart namespace client. */
 public interface ChartGateway {
 
-  ListResult<RepoChartSummary> searchRepo(RepoSearchRequest request);
+  ListResult<RepoChartSummary> searchRepository(SearchCharts request);
 
-  ListResult<HubChartSummary> searchHub(HubSearchRequest request);
+  ListResult<HubChartSummary> searchHub(SearchHub request);
 
   PullResult pull(PullRequest request);
 
