@@ -1,7 +1,8 @@
-package dev.nthings.helm4j;
+package dev.nthings.helm4j.client;
 
 import java.util.List;
 
+import dev.nthings.helm4j.VersionInfo;
 import dev.nthings.helm4j.chart.ChartRef;
 import dev.nthings.helm4j.chart.DependencyRequest;
 import dev.nthings.helm4j.chart.DependencyResult;
@@ -22,7 +23,6 @@ import dev.nthings.helm4j.chart.ShowRequest;
 import dev.nthings.helm4j.chart.ShowResult;
 import dev.nthings.helm4j.chart.TemplateRequest;
 import dev.nthings.helm4j.chart.TemplateResult;
-import dev.nthings.helm4j.internal.gateway.HelmGateway;
 import dev.nthings.helm4j.model.ListResult;
 import dev.nthings.helm4j.release.GetAllResult;
 import dev.nthings.helm4j.release.GetHooksResult;
@@ -55,6 +55,7 @@ import dev.nthings.helm4j.repo.RepoRemoveRequest;
 import dev.nthings.helm4j.repo.RepoSummary;
 import dev.nthings.helm4j.repo.RepoUpdateEntry;
 import dev.nthings.helm4j.repo.RepoUpdateRequest;
+import dev.nthings.helm4j.spi.HelmGateway;
 
 /**
  * In-module {@link HelmGateway} double used to drive the public namespace clients without the

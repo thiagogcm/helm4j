@@ -1,17 +1,18 @@
-package dev.nthings.helm4j;
+package dev.nthings.helm4j.client;
 
 import java.util.Objects;
 import java.util.ServiceLoader;
 
-import dev.nthings.helm4j.chart.ChartClient;
-import dev.nthings.helm4j.internal.gateway.ChartGateway;
-import dev.nthings.helm4j.internal.gateway.HelmGateway;
-import dev.nthings.helm4j.internal.gateway.HelmGatewayProvider;
-import dev.nthings.helm4j.internal.gateway.ReleaseGateway;
-import dev.nthings.helm4j.internal.gateway.RepoGateway;
-import dev.nthings.helm4j.internal.gateway.SystemGateway;
-import dev.nthings.helm4j.release.ReleaseClient;
-import dev.nthings.helm4j.repo.RepoClient;
+import dev.nthings.helm4j.VersionInfo;
+import dev.nthings.helm4j.client.chart.ChartClient;
+import dev.nthings.helm4j.client.release.ReleaseClient;
+import dev.nthings.helm4j.client.repo.RepoClient;
+import dev.nthings.helm4j.spi.ChartGateway;
+import dev.nthings.helm4j.spi.HelmGateway;
+import dev.nthings.helm4j.spi.HelmGatewayProvider;
+import dev.nthings.helm4j.spi.ReleaseGateway;
+import dev.nthings.helm4j.spi.RepoGateway;
+import dev.nthings.helm4j.spi.SystemGateway;
 
 /**
  * Root client for Helm SDK namespaces.
@@ -49,9 +50,9 @@ public final class HelmClient implements AutoCloseable {
   /**
    * Wraps a caller-supplied {@link HelmGateway} directly, bypassing native gateway discovery.
    *
-   * <p>{@link HelmGateway} is only exported to the native runtime module, so this entry point is
-   * not reachable from the consumer-facing API surface; it exists for the runtime module and its
-   * tests.
+   * <p>This is the SPI extension point: it lets callers drive the SDK with an alternative {@link
+   * HelmGateway} implementation — a process-based gateway, an in-memory fake, or a test double —
+   * without the native runtime module on the module path.
    */
   public static HelmClient using(HelmGateway gateway) {
     Objects.requireNonNull(gateway, "gateway");

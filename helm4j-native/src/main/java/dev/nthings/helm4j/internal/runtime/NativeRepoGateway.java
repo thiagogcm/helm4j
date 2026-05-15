@@ -5,7 +5,6 @@ import java.util.Map;
 import java.util.Objects;
 
 import dev.nthings.helm4j.errors.HelmException;
-import dev.nthings.helm4j.internal.gateway.RepoGateway;
 import dev.nthings.helm4j.model.ListResult;
 import dev.nthings.helm4j.repo.RegistryLoginRequest;
 import dev.nthings.helm4j.repo.RegistryLogoutRequest;
@@ -18,6 +17,7 @@ import dev.nthings.helm4j.repo.RepoRemoveRequest;
 import dev.nthings.helm4j.repo.RepoSummary;
 import dev.nthings.helm4j.repo.RepoUpdateEntry;
 import dev.nthings.helm4j.repo.RepoUpdateRequest;
+import dev.nthings.helm4j.spi.RepoGateway;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

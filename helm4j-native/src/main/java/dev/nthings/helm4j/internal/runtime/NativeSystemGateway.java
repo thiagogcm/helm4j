@@ -4,7 +4,7 @@ import java.util.Objects;
 
 import dev.nthings.helm4j.VersionInfo;
 import dev.nthings.helm4j.errors.HelmException;
-import dev.nthings.helm4j.internal.gateway.SystemGateway;
+import dev.nthings.helm4j.spi.SystemGateway;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

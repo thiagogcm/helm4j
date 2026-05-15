@@ -1,11 +1,31 @@
-package dev.nthings.helm4j.chart;
+package dev.nthings.helm4j.client.chart;
 
 import java.util.Objects;
 import java.util.function.Consumer;
 
-import dev.nthings.helm4j.internal.api.NamespaceClient;
-import dev.nthings.helm4j.internal.gateway.ChartGateway;
+import dev.nthings.helm4j.chart.ChartRef;
+import dev.nthings.helm4j.chart.DependencyRequest;
+import dev.nthings.helm4j.chart.DependencyResult;
+import dev.nthings.helm4j.chart.HubChartSummary;
+import dev.nthings.helm4j.chart.HubSearchRequest;
+import dev.nthings.helm4j.chart.LintRequest;
+import dev.nthings.helm4j.chart.LintResult;
+import dev.nthings.helm4j.chart.PackageChartRequest;
+import dev.nthings.helm4j.chart.PackageChartResult;
+import dev.nthings.helm4j.chart.PullRequest;
+import dev.nthings.helm4j.chart.PullResult;
+import dev.nthings.helm4j.chart.PushRequest;
+import dev.nthings.helm4j.chart.PushResult;
+import dev.nthings.helm4j.chart.RepoChartSummary;
+import dev.nthings.helm4j.chart.RepoSearchRequest;
+import dev.nthings.helm4j.chart.ShowMode;
+import dev.nthings.helm4j.chart.ShowRequest;
+import dev.nthings.helm4j.chart.ShowResult;
+import dev.nthings.helm4j.chart.TemplateRequest;
+import dev.nthings.helm4j.chart.TemplateResult;
+import dev.nthings.helm4j.client.internal.NamespaceClient;
 import dev.nthings.helm4j.model.ListResult;
+import dev.nthings.helm4j.spi.ChartGateway;
 
 /**
  * Chart namespace for search and chart-content operations.

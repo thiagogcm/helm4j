@@ -1,10 +1,19 @@
-package dev.nthings.helm4j.repo;
+package dev.nthings.helm4j.client.repo;
 
 import java.util.function.Consumer;
 
-import dev.nthings.helm4j.internal.api.NamespaceClient;
-import dev.nthings.helm4j.internal.gateway.RepoGateway;
+import dev.nthings.helm4j.client.internal.NamespaceClient;
 import dev.nthings.helm4j.model.ListResult;
+import dev.nthings.helm4j.repo.RegistryLoginRequest;
+import dev.nthings.helm4j.repo.RegistryLogoutRequest;
+import dev.nthings.helm4j.repo.RegistryResult;
+import dev.nthings.helm4j.repo.RepoAddRequest;
+import dev.nthings.helm4j.repo.RepoAddResult;
+import dev.nthings.helm4j.repo.RepoRemoveRequest;
+import dev.nthings.helm4j.repo.RepoSummary;
+import dev.nthings.helm4j.repo.RepoUpdateEntry;
+import dev.nthings.helm4j.repo.RepoUpdateRequest;
+import dev.nthings.helm4j.spi.RepoGateway;
 
 /**
  * Repository and registry namespace for Helm SDK operations.

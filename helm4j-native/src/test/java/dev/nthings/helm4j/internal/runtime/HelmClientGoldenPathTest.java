@@ -8,12 +8,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import dev.nthings.helm4j.HelmClient;
 import dev.nthings.helm4j.chart.ChartRef;
 import dev.nthings.helm4j.chart.HubChartSummary;
 import dev.nthings.helm4j.chart.LintSeverity;
 import dev.nthings.helm4j.chart.RepoChartSummary;
 import dev.nthings.helm4j.chart.ShowMode;
+import dev.nthings.helm4j.client.HelmClient;
 import dev.nthings.helm4j.errors.HelmException;
 import dev.nthings.helm4j.release.ApplyStrategy;
 import dev.nthings.helm4j.release.DryRunMode;

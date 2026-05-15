@@ -1,4 +1,4 @@
-package dev.nthings.helm4j.internal.gateway;
+package dev.nthings.helm4j.spi;
 
 import dev.nthings.helm4j.VersionInfo;
 

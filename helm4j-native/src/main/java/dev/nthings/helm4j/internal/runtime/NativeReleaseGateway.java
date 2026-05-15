@@ -5,7 +5,6 @@ import java.util.Map;
 import java.util.Objects;
 
 import dev.nthings.helm4j.errors.HelmException;
-import dev.nthings.helm4j.internal.gateway.ReleaseGateway;
 import dev.nthings.helm4j.model.ListResult;
 import dev.nthings.helm4j.release.GetAllResult;
 import dev.nthings.helm4j.release.GetHooksResult;
@@ -39,6 +38,7 @@ import dev.nthings.helm4j.release.UninstallRequest;
 import dev.nthings.helm4j.release.UninstallResult;
 import dev.nthings.helm4j.release.UninstallSuccess;
 import dev.nthings.helm4j.release.UpgradeRequest;
+import dev.nthings.helm4j.spi.ReleaseGateway;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

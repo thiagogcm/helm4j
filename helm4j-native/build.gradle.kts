@@ -3,7 +3,7 @@ plugins {
 }
 
 dependencies {
-    api(project(":helm4j-api"))
+    api(project(":helm4j-spi"))
 
     implementation(libs.slf4j.api)
     implementation(platform(libs.jackson.bom))

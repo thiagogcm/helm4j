@@ -1,7 +1,7 @@
 package dev.nthings.helm4j.internal.runtime;
 
-import dev.nthings.helm4j.internal.gateway.HelmGateway;
-import dev.nthings.helm4j.internal.gateway.HelmGatewayProvider;
+import dev.nthings.helm4j.spi.HelmGateway;
+import dev.nthings.helm4j.spi.HelmGatewayProvider;
 
 import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.ObjectMapper;

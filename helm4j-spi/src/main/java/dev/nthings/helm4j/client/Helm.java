@@ -1,4 +1,6 @@
-package dev.nthings.helm4j;
+package dev.nthings.helm4j.client;
+
+import dev.nthings.helm4j.VersionInfo;
 
 /**
  * Standard static entry point for the Helm SDK.

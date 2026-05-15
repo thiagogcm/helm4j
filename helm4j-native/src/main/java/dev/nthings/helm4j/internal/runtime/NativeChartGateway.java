@@ -26,8 +26,8 @@ import dev.nthings.helm4j.chart.ShowResult;
 import dev.nthings.helm4j.chart.TemplateRequest;
 import dev.nthings.helm4j.chart.TemplateResult;
 import dev.nthings.helm4j.errors.HelmException;
-import dev.nthings.helm4j.internal.gateway.ChartGateway;
 import dev.nthings.helm4j.model.ListResult;
+import dev.nthings.helm4j.spi.ChartGateway;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

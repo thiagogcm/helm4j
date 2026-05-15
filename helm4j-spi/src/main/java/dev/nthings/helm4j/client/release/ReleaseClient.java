@@ -1,10 +1,32 @@
-package dev.nthings.helm4j.release;
+package dev.nthings.helm4j.client.release;
 
 import java.util.function.Consumer;
 
-import dev.nthings.helm4j.internal.api.NamespaceClient;
-import dev.nthings.helm4j.internal.gateway.ReleaseGateway;
+import dev.nthings.helm4j.client.internal.NamespaceClient;
 import dev.nthings.helm4j.model.ListResult;
+import dev.nthings.helm4j.release.GetAllResult;
+import dev.nthings.helm4j.release.GetHooksResult;
+import dev.nthings.helm4j.release.GetManifestResult;
+import dev.nthings.helm4j.release.GetMetadataResult;
+import dev.nthings.helm4j.release.GetNotesResult;
+import dev.nthings.helm4j.release.GetRequest;
+import dev.nthings.helm4j.release.GetValuesResult;
+import dev.nthings.helm4j.release.HistoryEntry;
+import dev.nthings.helm4j.release.HistoryRequest;
+import dev.nthings.helm4j.release.InstallRequest;
+import dev.nthings.helm4j.release.ReleaseInfo;
+import dev.nthings.helm4j.release.ReleaseListRequest;
+import dev.nthings.helm4j.release.ReleaseResult;
+import dev.nthings.helm4j.release.RollbackRequest;
+import dev.nthings.helm4j.release.RollbackResult;
+import dev.nthings.helm4j.release.StatusRequest;
+import dev.nthings.helm4j.release.StatusResult;
+import dev.nthings.helm4j.release.TestRequest;
+import dev.nthings.helm4j.release.TestResult;
+import dev.nthings.helm4j.release.UninstallRequest;
+import dev.nthings.helm4j.release.UninstallResult;
+import dev.nthings.helm4j.release.UpgradeRequest;
+import dev.nthings.helm4j.spi.ReleaseGateway;
 
 /**
  * Release namespace for lifecycle and inspection operations.

@@ -1,4 +1,4 @@
-package dev.nthings.helm4j.internal.api;
+package dev.nthings.helm4j.client.internal;
 
 import java.util.Objects;
 
