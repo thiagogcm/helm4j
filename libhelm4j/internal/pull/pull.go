@@ -47,7 +47,7 @@ func Run(chartRef string, opts Options) (string, error) {
 		return "", fmt.Errorf("bootstrap helm: %w", err)
 	}
 
-	regClient, err := helmenv.BuildRegistryClient(env.Settings, helmenv.RegistryOptsFromChartPath(opts.ChartPathOpts))
+	regClient, err := helmenv.BuildRegistryClient(env.Settings, opts.ChartPathOpts.RegistryOptions())
 	if err != nil {
 		return "", fmt.Errorf("registry client: %w", err)
 	}
@@ -56,7 +56,7 @@ func Run(chartRef string, opts Options) (string, error) {
 	client.Settings = env.Settings
 	client.SetRegistryClient(regClient)
 
-	helmenv.ApplyChartPathOptions(&client.ChartPathOptions, opts.ChartPathOpts)
+	opts.ChartPathOpts.ApplyTo(&client.ChartPathOptions)
 	client.Devel = opts.Devel
 
 	// Pull-specific

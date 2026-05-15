@@ -121,3 +121,21 @@ func MarshalJSON(value any) (string, error) {
 	}
 	return string(b), nil
 }
+
+// Run is the canonical operation pipeline: parse JSON options into T, invoke
+// op, and return either the JSON result string or an encoded error payload.
+// kvPairs are promoted to top-level fields in error payloads as context.
+//
+// The returned string is always a valid JSON document — either the operation's
+// own response or an OperationError envelope produced by EncodeError.
+func Run[T any](raw string, op func(T) (string, error), kvPairs ...string) string {
+	opts, err := ParseOptions[T](raw)
+	if err != nil {
+		return EncodeError(StageParseOptions, err, kvPairs...)
+	}
+	result, err := op(opts)
+	if err != nil {
+		return EncodeError(StageRun, err, kvPairs...)
+	}
+	return result
+}

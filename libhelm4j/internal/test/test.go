@@ -90,26 +90,15 @@ func Run(releaseName string, opts Options) (string, error) {
 	}
 
 	// Collect test hook results. Hook events and phase require the v1 type;
-	// the release.HookAccessor interface only provides Path() and Manifest().
-	var results []TestResult
-	for _, h := range acc.Hooks() {
-		v1h, ok := h.(*v1release.Hook)
-		if !ok {
-			v, cast := h.(v1release.Hook)
-			if !cast {
-				continue
-			}
-			v1h = &v
-		}
-		if slices.Contains(v1h.Events, v1release.HookTest) {
+	// [releaseutil.V1Hooks] centralises the type-assertion ladder.
+	results := []TestResult{}
+	for h := range releaseutil.V1Hooks(acc.Hooks()) {
+		if slices.Contains(h.Events, v1release.HookTest) {
 			results = append(results, TestResult{
-				Name:   v1h.Name,
-				Status: string(v1h.LastRun.Phase),
+				Name:   h.Name,
+				Status: string(h.LastRun.Phase),
 			})
 		}
-	}
-	if results == nil {
-		results = []TestResult{}
 	}
 
 	resp := Response{Release: info, Results: results}

@@ -22,35 +22,35 @@ type ChartPathOpts struct {
 	Devel                 bool   `json:"devel,omitempty"`
 }
 
-// ApplyChartPathOptions copies the fields from [ChartPathOpts] into an
+// ApplyTo copies the fields from this [ChartPathOpts] into an
 // [action.ChartPathOptions] value. Devel is intentionally excluded because
 // it is a field on the action struct itself, not on ChartPathOptions.
-func ApplyChartPathOptions(cpo *action.ChartPathOptions, src ChartPathOpts) {
-	cpo.Version = src.Version
-	cpo.RepoURL = src.RepoURL
-	cpo.Username = src.Username
-	cpo.Password = src.Password
-	cpo.PlainHTTP = src.PlainHTTP
-	cpo.InsecureSkipTLSVerify = src.InsecureSkipTLSVerify
-	cpo.Keyring = src.Keyring
-	cpo.CertFile = src.CertFile
-	cpo.KeyFile = src.KeyFile
-	cpo.CaFile = src.CaFile
-	cpo.PassCredentialsAll = src.PassCredentialsAll
-	cpo.Verify = src.Verify
+func (c ChartPathOpts) ApplyTo(cpo *action.ChartPathOptions) {
+	cpo.Version = c.Version
+	cpo.RepoURL = c.RepoURL
+	cpo.Username = c.Username
+	cpo.Password = c.Password
+	cpo.PlainHTTP = c.PlainHTTP
+	cpo.InsecureSkipTLSVerify = c.InsecureSkipTLSVerify
+	cpo.Keyring = c.Keyring
+	cpo.CertFile = c.CertFile
+	cpo.KeyFile = c.KeyFile
+	cpo.CaFile = c.CaFile
+	cpo.PassCredentialsAll = c.PassCredentialsAll
+	cpo.Verify = c.Verify
 }
 
-// RegistryOptsFromChartPath derives [RegistryOptions] from the authentication
-// and transport fields present in [ChartPathOpts], avoiding duplicate field
+// RegistryOptions derives [RegistryOptions] from the authentication and
+// transport fields present in this [ChartPathOpts], avoiding duplicate field
 // copying when building a registry client.
-func RegistryOptsFromChartPath(src ChartPathOpts) RegistryOptions {
+func (c ChartPathOpts) RegistryOptions() RegistryOptions {
 	return RegistryOptions{
-		CertFile:              src.CertFile,
-		KeyFile:               src.KeyFile,
-		CaFile:                src.CaFile,
-		InsecureSkipTLSVerify: src.InsecureSkipTLSVerify,
-		PlainHTTP:             src.PlainHTTP,
-		Username:              src.Username,
-		Password:              src.Password,
+		CertFile:              c.CertFile,
+		KeyFile:               c.KeyFile,
+		CaFile:                c.CaFile,
+		InsecureSkipTLSVerify: c.InsecureSkipTLSVerify,
+		PlainHTTP:             c.PlainHTTP,
+		Username:              c.Username,
+		Password:              c.Password,
 	}
 }

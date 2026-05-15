@@ -13,8 +13,6 @@ import (
 
 	"helm.sh/helm/v4/pkg/action"
 	"helm.sh/helm/v4/pkg/chart"
-	"helm.sh/helm/v4/pkg/downloader"
-	"helm.sh/helm/v4/pkg/getter"
 	"helm.sh/helm/v4/pkg/kube"
 	"helm.sh/helm/v4/pkg/storage/driver"
 
@@ -96,7 +94,7 @@ func Run(releaseName, chartRef string, opts Options) (string, error) {
 		return "", fmt.Errorf("bootstrap helm: %w", err)
 	}
 
-	regClient, err := helmenv.BuildRegistryClient(env.Settings, helmenv.RegistryOptsFromChartPath(opts.ChartPathOpts))
+	regClient, err := helmenv.BuildRegistryClient(env.Settings, opts.ChartPathOpts.RegistryOptions())
 	if err != nil {
 		return "", fmt.Errorf("registry client: %w", err)
 	}
@@ -112,14 +110,14 @@ func Run(releaseName, chartRef string, opts Options) (string, error) {
 	}
 
 	// --- dependency preflight ---
-	ch, err = checkDependencies(ch, chartPath, chartRef, client, env, opts, log)
+	ch, err = helmenv.EnsureDependencies(env, ch, chartPath, chartRef, client.Version, client.Devel, opts.DependencyUpdate, client)
 	if err != nil {
 		return "", err
 	}
 
 	vals := opts.Values
 	if vals == nil {
-		vals = make(map[string]any)
+		vals = map[string]any{}
 	}
 
 	ctx := context.Background()
@@ -222,7 +220,7 @@ func mapUpgradeToInstall(inst *action.Install, upgrade *action.Upgrade, opts Opt
 }
 
 func applyOptions(client *action.Upgrade, opts Options) {
-	helmenv.ApplyChartPathOptions(&client.ChartPathOptions, opts.ChartPathOpts)
+	opts.ChartPathOpts.ApplyTo(&client.ChartPathOptions)
 
 	client.Devel = opts.Devel
 	client.Namespace = opts.Namespace
@@ -260,45 +258,3 @@ func applyOptions(client *action.Upgrade, opts Options) {
 	}
 }
 
-// checkDependencies verifies the chart's dependencies are present. When
-// opts.DependencyUpdate is true and dependencies are missing, it downloads
-// them and reloads the chart. Otherwise it returns an error.
-func checkDependencies(ch any, chartPath, chartRef string, client *action.Upgrade, env *helmenv.Env, opts Options, log *slog.Logger) (any, error) {
-	chAcc, err := chart.NewAccessor(ch)
-	if err != nil {
-		return ch, nil
-	}
-
-	deps := chAcc.MetaDependencies()
-	if len(deps) == 0 {
-		return ch, nil
-	}
-
-	if err := action.CheckDependencies(ch, deps); err != nil {
-		if !opts.DependencyUpdate {
-			return nil, fmt.Errorf("missing chart dependencies: %w; run 'helm dependency build' or set dependencyUpdate", err)
-		}
-
-		log.Debug("updating chart dependencies", slog.String("chartPath", chartPath))
-		man := &downloader.Manager{
-			ChartPath:        chartPath,
-			Getters:          getter.All(env.Settings),
-			RegistryClient:   env.Config.RegistryClient,
-			RepositoryConfig: env.Settings.RepositoryConfig,
-			RepositoryCache:  env.Settings.RepositoryCache,
-			ContentCache:     env.Settings.ContentCache,
-			Debug:            env.Settings.Debug,
-		}
-		if err := man.Update(); err != nil {
-			return nil, fmt.Errorf("update dependencies: %w", err)
-		}
-
-		_, reloaded, err := helmenv.LocateAndLoadChart(chartRef, client.Version, client.Devel, env.Settings, client)
-		if err != nil {
-			return nil, fmt.Errorf("reload chart after dependency update: %w", err)
-		}
-		return reloaded, nil
-	}
-
-	return ch, nil
-}

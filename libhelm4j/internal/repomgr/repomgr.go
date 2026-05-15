@@ -129,14 +129,12 @@ func Add(opts AddOptions) (AddResponse, error) {
 		return AddResponse{}, errors.New("repository URL is required")
 	}
 	if !opts.AllowDeprecatedRepos {
-		for oldURL, replacementURL := range deprecatedRepos {
-			if strings.Contains(opts.URL, oldURL) {
-				return AddResponse{}, fmt.Errorf(
-					"repo %q is no longer available; try %q instead",
-					opts.URL,
-					replacementURL,
-				)
-			}
+		if replacement, ok := matchDeprecatedRepo(opts.URL); ok {
+			return AddResponse{}, fmt.Errorf(
+				"repo %q is no longer available; try %q instead",
+				opts.URL,
+				replacement,
+			)
 		}
 	}
 
@@ -390,6 +388,17 @@ func parseTimeout(rawTimeout string) time.Duration {
 		return getter.DefaultHTTPTimeout * time.Second
 	}
 	return parsed
+}
+
+// matchDeprecatedRepo returns the suggested replacement URL when url contains
+// the URL fragment of any repository in [deprecatedRepos].
+func matchDeprecatedRepo(url string) (replacement string, ok bool) {
+	for fragment, replacement := range deprecatedRepos {
+		if strings.Contains(url, fragment) {
+			return replacement, true
+		}
+	}
+	return "", false
 }
 
 // removeCachedFiles deletes the index and chart-list files for the named

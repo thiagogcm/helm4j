@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"path/filepath"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -82,7 +83,7 @@ func runRepo(opts Options) ([]Result, error) {
 	idx := search.NewIndex()
 	for _, repository := range rf.Repositories {
 		indexFile := helmpath.CacheIndexFile(repository.Name)
-		ind, err := repo.LoadIndexFile(env.Settings.RepositoryCache + "/" + indexFile)
+		ind, err := repo.LoadIndexFile(filepath.Join(env.Settings.RepositoryCache, indexFile))
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
 				log.Warn("repository index not found; skipping repository",
@@ -203,12 +204,4 @@ func loadRepoIndex(repoFile string) (*repo.File, map[string]string, error) {
 	}
 
 	return rf, urlByName, nil
-}
-
-func normalizeVersion(raw string) *semver.Version {
-	v, err := semver.NewVersion(raw)
-	if err != nil {
-		return nil
-	}
-	return v
 }

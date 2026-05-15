@@ -4,6 +4,7 @@ package releaseutil
 
 import (
 	"fmt"
+	"iter"
 	"time"
 
 	"helm.sh/helm/v4/pkg/chart"
@@ -94,4 +95,28 @@ func MapRelease(rel release.Releaser) (ReleaseInfo, error) {
 	}
 
 	return info, nil
+}
+
+// V1Hooks yields each hook in hooks unwrapped to its concrete *v1release.Hook
+// shape. Hooks that are neither *v1release.Hook nor v1release.Hook are skipped.
+//
+// release.HookAccessor only exposes Path() and Manifest(); callers that need
+// Name, Kind, Events, Weight, or LastRun must reach the v1 type, and this
+// helper centralises that type-assertion ladder.
+func V1Hooks(hooks []release.Hook) iter.Seq[*v1release.Hook] {
+	return func(yield func(*v1release.Hook) bool) {
+		for _, h := range hooks {
+			v1h, ok := h.(*v1release.Hook)
+			if !ok {
+				v, cast := h.(v1release.Hook)
+				if !cast {
+					continue
+				}
+				v1h = &v
+			}
+			if !yield(v1h) {
+				return
+			}
+		}
+	}
 }

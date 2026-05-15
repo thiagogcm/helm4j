@@ -224,29 +224,20 @@ func getMetadata(env *helmenv.Env, releaseName string, opts Options) (string, er
 
 // mapHooks converts the accessor's hook slice into the serialisable HookEntry
 // type. Hook fields beyond Path and Manifest (Name, Kind, Events, Weight) require
-// a v1type assertion since the release.HookAccessor interface only exposes
-// Path() and Manifest().
+// the v1 type, sourced via [releaseutil.V1Hooks].
 func mapHooks(hooks []release.Hook) []HookEntry {
 	var entries []HookEntry
-	for _, h := range hooks {
-		v1h, ok := h.(*v1release.Hook)
-		if !ok {
-			v, cast := h.(v1release.Hook)
-			if !cast {
-				continue
-			}
-			v1h = &v
-		}
-		var events []string
-		for _, e := range v1h.Events {
-			events = append(events, string(e))
+	for h := range releaseutil.V1Hooks(hooks) {
+		events := make([]string, len(h.Events))
+		for i, e := range h.Events {
+			events[i] = string(e)
 		}
 		entries = append(entries, HookEntry{
-			Name:   v1h.Name,
-			Kind:   v1h.Kind,
-			Path:   v1h.Path,
+			Name:   h.Name,
+			Kind:   h.Kind,
+			Path:   h.Path,
 			Events: events,
-			Weight: v1h.Weight,
+			Weight: h.Weight,
 		})
 	}
 	return entries

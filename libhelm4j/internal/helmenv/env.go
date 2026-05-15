@@ -13,6 +13,8 @@ import (
 	"helm.sh/helm/v4/pkg/chart"
 	"helm.sh/helm/v4/pkg/chart/loader"
 	"helm.sh/helm/v4/pkg/cli"
+	"helm.sh/helm/v4/pkg/downloader"
+	"helm.sh/helm/v4/pkg/getter"
 
 	"github.com/thiagogcm/libhelm4j/internal/helmlog"
 )
@@ -93,4 +95,50 @@ func LocateAndLoadChart(chartRef, version string, devel bool, settings *cli.EnvS
 // reference to a local path (e.g. [action.Show], [action.Install]).
 type ChartLocator interface {
 	LocateChart(name string, settings *cli.EnvSettings) (string, error)
+}
+
+// EnsureDependencies verifies the chart's dependencies are present. When
+// allowUpdate is true and dependencies are missing, it downloads them and
+// reloads the chart via locator. Otherwise it returns an error pointing the
+// caller to `helm dependency build`.
+//
+// Charts without declared dependencies pass through unchanged.
+func EnsureDependencies(env *Env, ch chart.Charter, chartPath, chartRef, version string, devel, allowUpdate bool, locator ChartLocator) (chart.Charter, error) {
+	chAcc, err := chart.NewAccessor(ch)
+	if err != nil {
+		return ch, nil
+	}
+
+	deps := chAcc.MetaDependencies()
+	if len(deps) == 0 {
+		return ch, nil
+	}
+
+	if err := action.CheckDependencies(ch, deps); err != nil {
+		if !allowUpdate {
+			return nil, fmt.Errorf("missing chart dependencies: %w; run 'helm dependency build' or set dependencyUpdate", err)
+		}
+
+		helmlog.Logger().Debug("updating chart dependencies", slog.String("chartPath", chartPath))
+		man := &downloader.Manager{
+			ChartPath:        chartPath,
+			Getters:          getter.All(env.Settings),
+			RegistryClient:   env.Config.RegistryClient,
+			RepositoryConfig: env.Settings.RepositoryConfig,
+			RepositoryCache:  env.Settings.RepositoryCache,
+			ContentCache:     env.Settings.ContentCache,
+			Debug:            env.Settings.Debug,
+		}
+		if err := man.Update(); err != nil {
+			return nil, fmt.Errorf("update dependencies: %w", err)
+		}
+
+		_, reloaded, err := LocateAndLoadChart(chartRef, version, devel, env.Settings, locator)
+		if err != nil {
+			return nil, fmt.Errorf("reload chart after dependency update: %w", err)
+		}
+		return reloaded, nil
+	}
+
+	return ch, nil
 }

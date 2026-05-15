@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 
 	"go.yaml.in/yaml/v3"
@@ -69,7 +70,7 @@ func Run(mode action.ShowOutputFormat, chartRef string, opts Options) (string, e
 		return "", fmt.Errorf("bootstrap helm: %w", err)
 	}
 
-	regClient, err := helmenv.BuildRegistryClient(env.Settings, helmenv.RegistryOptsFromChartPath(opts.ChartPathOpts))
+	regClient, err := helmenv.BuildRegistryClient(env.Settings, opts.ChartPathOpts.RegistryOptions())
 	if err != nil {
 		log.Warn("failed to initialize registry client", slog.Any("error", err))
 		return "", fmt.Errorf("registry client: %w", err)
@@ -125,7 +126,7 @@ func Run(mode action.ShowOutputFormat, chartRef string, opts Options) (string, e
 func applyOptions(client *action.Show, opts Options) {
 	client.Devel = opts.Devel
 	client.JSONPathTemplate = opts.JSONPathTemplate
-	helmenv.ApplyChartPathOptions(&client.ChartPathOptions, opts.ChartPathOpts)
+	opts.ChartPathOpts.ApplyTo(&client.ChartPathOptions)
 }
 
 func buildSections(client *action.Show, ch chart.Charter) (Sections, error) {
@@ -186,20 +187,18 @@ func buildSections(client *action.Show, ch chart.Charter) (Sections, error) {
 	return sections, nil
 }
 
+// readmeFileNames lists the case-insensitive filenames that count as a README
+// when scanning a chart's file list.
+var readmeFileNames = []string{"readme.md", "readme.txt", "readme"}
+
 func findReadmeFile(files []*common.File) *common.File {
 	for _, file := range files {
 		if file == nil {
 			continue
 		}
-		if _, ok := readmeFileNames[strings.ToLower(file.Name)]; ok {
+		if slices.Contains(readmeFileNames, strings.ToLower(file.Name)) {
 			return file
 		}
 	}
 	return nil
-}
-
-var readmeFileNames = map[string]struct{}{
-	"readme.md":  {},
-	"readme.txt": {},
-	"readme":     {},
 }
