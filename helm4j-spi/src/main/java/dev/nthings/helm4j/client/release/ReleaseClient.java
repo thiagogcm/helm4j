@@ -41,9 +41,7 @@ public final class ReleaseClient extends NamespaceClient<ReleaseGateway> {
   }
 
   public ReleaseResult install(Consumer<InstallRequest.Builder> spec) {
-    var builder = InstallRequest.builder();
-    spec.accept(builder);
-    return gateway.install(builder.build());
+    return gateway.install(configured(InstallRequest::builder, spec).build());
   }
 
   public ReleaseResult install(InstallRequest request) {
@@ -51,9 +49,7 @@ public final class ReleaseClient extends NamespaceClient<ReleaseGateway> {
   }
 
   public ReleaseResult upgrade(Consumer<UpgradeRequest.Builder> spec) {
-    var builder = UpgradeRequest.builder();
-    spec.accept(builder);
-    return gateway.upgrade(builder.build());
+    return gateway.upgrade(configured(UpgradeRequest::builder, spec).build());
   }
 
   public ReleaseResult upgrade(UpgradeRequest request) {
@@ -61,9 +57,7 @@ public final class ReleaseClient extends NamespaceClient<ReleaseGateway> {
   }
 
   public UninstallResult uninstall(Consumer<UninstallRequest.Builder> spec) {
-    var builder = UninstallRequest.builder();
-    spec.accept(builder);
-    return gateway.uninstall(builder.build());
+    return gateway.uninstall(configured(UninstallRequest::builder, spec).build());
   }
 
   public UninstallResult uninstall(UninstallRequest request) {
@@ -71,9 +65,7 @@ public final class ReleaseClient extends NamespaceClient<ReleaseGateway> {
   }
 
   public StatusResult status(Consumer<StatusRequest.Builder> spec) {
-    var builder = StatusRequest.builder();
-    spec.accept(builder);
-    return gateway.status(builder.build());
+    return gateway.status(configured(StatusRequest::builder, spec).build());
   }
 
   public StatusResult status(StatusRequest request) {
@@ -81,9 +73,7 @@ public final class ReleaseClient extends NamespaceClient<ReleaseGateway> {
   }
 
   public RollbackResult rollback(Consumer<RollbackRequest.Builder> spec) {
-    var builder = RollbackRequest.builder();
-    spec.accept(builder);
-    return gateway.rollback(builder.build());
+    return gateway.rollback(configured(RollbackRequest::builder, spec).build());
   }
 
   public RollbackResult rollback(RollbackRequest request) {
@@ -91,9 +81,7 @@ public final class ReleaseClient extends NamespaceClient<ReleaseGateway> {
   }
 
   public ListResult<HistoryEntry> history(Consumer<HistoryRequest.Builder> spec) {
-    var builder = HistoryRequest.builder();
-    spec.accept(builder);
-    return gateway.history(builder.build());
+    return gateway.history(configured(HistoryRequest::builder, spec).build());
   }
 
   public ListResult<HistoryEntry> history(HistoryRequest request) {
@@ -101,9 +89,7 @@ public final class ReleaseClient extends NamespaceClient<ReleaseGateway> {
   }
 
   public ListResult<ReleaseInfo> list(Consumer<ReleaseListRequest.Builder> spec) {
-    var builder = ReleaseListRequest.builder();
-    spec.accept(builder);
-    return gateway.list(builder.build());
+    return gateway.list(configured(ReleaseListRequest::builder, spec).build());
   }
 
   public ListResult<ReleaseInfo> list(ReleaseListRequest request) {
@@ -111,9 +97,7 @@ public final class ReleaseClient extends NamespaceClient<ReleaseGateway> {
   }
 
   public TestResult test(Consumer<TestRequest.Builder> spec) {
-    var builder = TestRequest.builder();
-    spec.accept(builder);
-    return gateway.test(builder.build());
+    return gateway.test(configured(TestRequest::builder, spec).build());
   }
 
   public TestResult test(TestRequest request) {
@@ -121,7 +105,7 @@ public final class ReleaseClient extends NamespaceClient<ReleaseGateway> {
   }
 
   public GetAllResult getAll(Consumer<GetRequest.Builder> spec) {
-    return gateway.getAll(buildGet(spec));
+    return gateway.getAll(configured(GetRequest::builder, spec).build());
   }
 
   public GetAllResult getAll(GetRequest request) {
@@ -129,7 +113,7 @@ public final class ReleaseClient extends NamespaceClient<ReleaseGateway> {
   }
 
   public GetValuesResult getValues(Consumer<GetRequest.Builder> spec) {
-    return gateway.getValues(buildGet(spec));
+    return gateway.getValues(configured(GetRequest::builder, spec).build());
   }
 
   public GetValuesResult getValues(GetRequest request) {
@@ -137,7 +121,7 @@ public final class ReleaseClient extends NamespaceClient<ReleaseGateway> {
   }
 
   public GetManifestResult getManifest(Consumer<GetRequest.Builder> spec) {
-    return gateway.getManifest(buildGet(spec));
+    return gateway.getManifest(configured(GetRequest::builder, spec).build());
   }
 
   public GetManifestResult getManifest(GetRequest request) {
@@ -145,7 +129,7 @@ public final class ReleaseClient extends NamespaceClient<ReleaseGateway> {
   }
 
   public GetHooksResult getHooks(Consumer<GetRequest.Builder> spec) {
-    return gateway.getHooks(buildGet(spec));
+    return gateway.getHooks(configured(GetRequest::builder, spec).build());
   }
 
   public GetHooksResult getHooks(GetRequest request) {
@@ -153,7 +137,7 @@ public final class ReleaseClient extends NamespaceClient<ReleaseGateway> {
   }
 
   public GetNotesResult getNotes(Consumer<GetRequest.Builder> spec) {
-    return gateway.getNotes(buildGet(spec));
+    return gateway.getNotes(configured(GetRequest::builder, spec).build());
   }
 
   public GetNotesResult getNotes(GetRequest request) {
@@ -161,16 +145,10 @@ public final class ReleaseClient extends NamespaceClient<ReleaseGateway> {
   }
 
   public GetMetadataResult getMetadata(Consumer<GetRequest.Builder> spec) {
-    return gateway.getMetadata(buildGet(spec));
+    return gateway.getMetadata(configured(GetRequest::builder, spec).build());
   }
 
   public GetMetadataResult getMetadata(GetRequest request) {
     return gateway.getMetadata(request);
-  }
-
-  private static GetRequest buildGet(Consumer<GetRequest.Builder> spec) {
-    var builder = GetRequest.builder();
-    spec.accept(builder);
-    return builder.build();
   }
 }

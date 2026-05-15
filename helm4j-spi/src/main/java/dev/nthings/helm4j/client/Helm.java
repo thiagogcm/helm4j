@@ -22,7 +22,10 @@ public final class Helm {
 
   private Helm() {}
 
-  /** Creates a client backed by the native Helm runtime discovered on the module path. */
+  /**
+   * Creates a client backed by the {@code HelmGatewayProvider} discovered via {@code
+   * ServiceLoader}. See {@link HelmClient#create()}.
+   */
   public static HelmClient client() {
     return HelmClient.create();
   }

@@ -71,13 +71,9 @@ Jackson.
 
 ## Known trade-off: the `helm4j-spi` module name
 
-`helm4j-spi` ships both the gateway SPI *and* the primary user entry point (`Helm`,
-`HelmClient`). Naming it `-spi` slightly undersells it — a consumer who just wants the
-client still depends on an artifact named "spi". The two are kept together because the
-client facade and the SPI are mutually referential (the client discovers and wraps an
-SPI implementation) and splitting them would add a fourth module for little gain. This
-is accepted pre-1.0; renaming the module (e.g. `helm4j-client` / `helm4j-core`) or
-splitting the facade out remains an option before the first release.
+`helm4j-spi` ships both the gateway SPI and the primary entry point (`Helm`,
+`HelmClient`) — the two are mutually referential, so they share a module. The `-spi`
+name therefore undersells it; renaming to `helm4j-client` / `helm4j-core` is open pre-1.0.
 
 ## Depending on Helm4j
 

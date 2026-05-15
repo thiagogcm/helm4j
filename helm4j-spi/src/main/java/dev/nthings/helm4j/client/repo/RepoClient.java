@@ -28,9 +28,7 @@ public final class RepoClient extends NamespaceClient<RepoGateway> {
   }
 
   public RepoAddResult add(Consumer<RepoAddRequest.Builder> spec) {
-    var builder = RepoAddRequest.builder();
-    spec.accept(builder);
-    return gateway.repoAdd(builder.build());
+    return gateway.repoAdd(configured(RepoAddRequest::builder, spec).build());
   }
 
   public RepoAddResult add(RepoAddRequest request) {
@@ -38,9 +36,7 @@ public final class RepoClient extends NamespaceClient<RepoGateway> {
   }
 
   public ListResult<RepoUpdateEntry> update(Consumer<RepoUpdateRequest.Builder> spec) {
-    var builder = RepoUpdateRequest.builder();
-    spec.accept(builder);
-    return gateway.repoUpdate(builder.build());
+    return gateway.repoUpdate(configured(RepoUpdateRequest::builder, spec).build());
   }
 
   public ListResult<RepoUpdateEntry> update(RepoUpdateRequest request) {
@@ -53,9 +49,7 @@ public final class RepoClient extends NamespaceClient<RepoGateway> {
   }
 
   public ListResult<String> remove(Consumer<RepoRemoveRequest.Builder> spec) {
-    var builder = RepoRemoveRequest.builder();
-    spec.accept(builder);
-    return gateway.repoRemove(builder.build());
+    return gateway.repoRemove(configured(RepoRemoveRequest::builder, spec).build());
   }
 
   public ListResult<String> remove(RepoRemoveRequest request) {
@@ -63,9 +57,7 @@ public final class RepoClient extends NamespaceClient<RepoGateway> {
   }
 
   public RegistryResult registryLogin(Consumer<RegistryLoginRequest.Builder> spec) {
-    var builder = RegistryLoginRequest.builder();
-    spec.accept(builder);
-    return gateway.registryLogin(builder.build());
+    return gateway.registryLogin(configured(RegistryLoginRequest::builder, spec).build());
   }
 
   public RegistryResult registryLogin(RegistryLoginRequest request) {
@@ -73,9 +65,7 @@ public final class RepoClient extends NamespaceClient<RepoGateway> {
   }
 
   public RegistryResult registryLogout(Consumer<RegistryLogoutRequest.Builder> spec) {
-    var builder = RegistryLogoutRequest.builder();
-    spec.accept(builder);
-    return gateway.registryLogout(builder.build());
+    return gateway.registryLogout(configured(RegistryLogoutRequest::builder, spec).build());
   }
 
   public RegistryResult registryLogout(RegistryLogoutRequest request) {

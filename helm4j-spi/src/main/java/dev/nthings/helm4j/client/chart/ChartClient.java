@@ -40,9 +40,7 @@ public final class ChartClient extends NamespaceClient<ChartGateway> {
   }
 
   public ListResult<RepoChartSummary> searchRepo(Consumer<RepoSearchRequest.Builder> spec) {
-    var builder = RepoSearchRequest.builder();
-    spec.accept(builder);
-    return gateway.searchRepo(builder.build());
+    return gateway.searchRepo(configured(RepoSearchRequest::builder, spec).build());
   }
 
   public ListResult<RepoChartSummary> searchRepo(RepoSearchRequest request) {
@@ -50,9 +48,7 @@ public final class ChartClient extends NamespaceClient<ChartGateway> {
   }
 
   public ListResult<HubChartSummary> searchHub(Consumer<HubSearchRequest.Builder> spec) {
-    var builder = HubSearchRequest.builder();
-    spec.accept(builder);
-    return gateway.searchHub(builder.build());
+    return gateway.searchHub(configured(HubSearchRequest::builder, spec).build());
   }
 
   public ListResult<HubChartSummary> searchHub(HubSearchRequest request) {
@@ -62,9 +58,7 @@ public final class ChartClient extends NamespaceClient<ChartGateway> {
   public ShowResult show(ShowMode mode, ChartRef chart, Consumer<ShowRequest.Builder> spec) {
     Objects.requireNonNull(mode, "mode");
     Objects.requireNonNull(chart, "chart");
-    var builder = ShowRequest.builder();
-    spec.accept(builder);
-    return gateway.show(mode, chart, builder.build());
+    return gateway.show(mode, chart, configured(ShowRequest::builder, spec).build());
   }
 
   public ShowResult show(ShowMode mode, ChartRef chart, ShowRequest request) {
@@ -74,9 +68,7 @@ public final class ChartClient extends NamespaceClient<ChartGateway> {
   }
 
   public TemplateResult template(Consumer<TemplateRequest.Builder> spec) {
-    var builder = TemplateRequest.builder();
-    spec.accept(builder);
-    return gateway.template(builder.build());
+    return gateway.template(configured(TemplateRequest::builder, spec).build());
   }
 
   public TemplateResult template(TemplateRequest request) {
@@ -84,9 +76,7 @@ public final class ChartClient extends NamespaceClient<ChartGateway> {
   }
 
   public LintResult lint(Consumer<LintRequest.Builder> spec) {
-    var builder = LintRequest.builder();
-    spec.accept(builder);
-    return gateway.lint(builder.build());
+    return gateway.lint(configured(LintRequest::builder, spec).build());
   }
 
   public LintResult lint(LintRequest request) {
@@ -94,9 +84,7 @@ public final class ChartClient extends NamespaceClient<ChartGateway> {
   }
 
   public PullResult pull(Consumer<PullRequest.Builder> spec) {
-    var builder = PullRequest.builder();
-    spec.accept(builder);
-    return gateway.pull(builder.build());
+    return gateway.pull(configured(PullRequest::builder, spec).build());
   }
 
   public PullResult pull(PullRequest request) {
@@ -104,9 +92,7 @@ public final class ChartClient extends NamespaceClient<ChartGateway> {
   }
 
   public PushResult push(Consumer<PushRequest.Builder> spec) {
-    var builder = PushRequest.builder();
-    spec.accept(builder);
-    return gateway.push(builder.build());
+    return gateway.push(configured(PushRequest::builder, spec).build());
   }
 
   public PushResult push(PushRequest request) {
@@ -114,9 +100,7 @@ public final class ChartClient extends NamespaceClient<ChartGateway> {
   }
 
   public PackageChartResult packageChart(Consumer<PackageChartRequest.Builder> spec) {
-    var builder = PackageChartRequest.builder();
-    spec.accept(builder);
-    return gateway.packageChart(builder.build());
+    return gateway.packageChart(configured(PackageChartRequest::builder, spec).build());
   }
 
   public PackageChartResult packageChart(PackageChartRequest request) {
@@ -124,9 +108,7 @@ public final class ChartClient extends NamespaceClient<ChartGateway> {
   }
 
   public DependencyResult dependency(Consumer<DependencyRequest.Builder> spec) {
-    var builder = DependencyRequest.builder();
-    spec.accept(builder);
-    return gateway.dependency(builder.build());
+    return gateway.dependency(configured(DependencyRequest::builder, spec).build());
   }
 
   public DependencyResult dependency(DependencyRequest request) {
