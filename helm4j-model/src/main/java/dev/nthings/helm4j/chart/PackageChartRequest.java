@@ -2,6 +2,7 @@ package dev.nthings.helm4j.chart;
 
 import java.nio.file.Path;
 
+import dev.nthings.helm4j.auth.TlsOptions;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
 import org.jspecify.annotations.Nullable;
@@ -17,11 +18,7 @@ public record PackageChartRequest(
     @Nullable String key,
     @Nullable String keyring,
     @Nullable String passphraseFile,
-    boolean plainHttp,
-    boolean insecureSkipTlsVerification,
-    @Nullable String certificateFile,
-    @Nullable String keyFile,
-    @Nullable String certificateAuthorityFile) {
+    TlsOptions tls) {
 
   public PackageChartRequest {
     chartPath = chartPath == null ? null : chartPath.toAbsolutePath();
@@ -31,9 +28,7 @@ public record PackageChartRequest(
     key = ModelSupport.normalizeBlankToNull(key);
     keyring = ModelSupport.normalizeBlankToNull(keyring);
     passphraseFile = ModelSupport.normalizeBlankToNull(passphraseFile);
-    certificateFile = ModelSupport.normalizeBlankToNull(certificateFile);
-    keyFile = ModelSupport.normalizeBlankToNull(keyFile);
-    certificateAuthorityFile = ModelSupport.normalizeBlankToNull(certificateAuthorityFile);
+    tls = tls == null ? TlsOptions.none() : tls;
   }
 
   public static Builder builder() {
@@ -50,11 +45,7 @@ public record PackageChartRequest(
     private @Nullable String key;
     private @Nullable String keyring;
     private @Nullable String passphraseFile;
-    private boolean plainHttp;
-    private boolean insecureSkipTlsVerification;
-    private @Nullable String certificateFile;
-    private @Nullable String keyFile;
-    private @Nullable String certificateAuthorityFile;
+    private TlsOptions tls = TlsOptions.none();
 
     private Builder() {}
 
@@ -103,28 +94,8 @@ public record PackageChartRequest(
       return this;
     }
 
-    public Builder plainHttp(boolean value) {
-      this.plainHttp = value;
-      return this;
-    }
-
-    public Builder insecureSkipTlsVerification(boolean value) {
-      this.insecureSkipTlsVerification = value;
-      return this;
-    }
-
-    public Builder certificateFile(String value) {
-      this.certificateFile = value;
-      return this;
-    }
-
-    public Builder keyFile(String value) {
-      this.keyFile = value;
-      return this;
-    }
-
-    public Builder certificateAuthorityFile(String value) {
-      this.certificateAuthorityFile = value;
+    public Builder tls(TlsOptions value) {
+      this.tls = value;
       return this;
     }
 
@@ -139,11 +110,7 @@ public record PackageChartRequest(
           key,
           keyring,
           passphraseFile,
-          plainHttp,
-          insecureSkipTlsVerification,
-          certificateFile,
-          keyFile,
-          certificateAuthorityFile);
+          tls);
     }
   }
 }

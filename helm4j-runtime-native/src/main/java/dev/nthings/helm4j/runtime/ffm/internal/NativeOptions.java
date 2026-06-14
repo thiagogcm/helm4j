@@ -4,6 +4,8 @@ import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import dev.nthings.helm4j.auth.Credentials;
+import dev.nthings.helm4j.auth.TlsOptions;
 import dev.nthings.helm4j.chart.ChartRef;
 import dev.nthings.helm4j.chart.ChartSource;
 import dev.nthings.helm4j.chart.DependencyRequest;
@@ -43,12 +45,9 @@ final class NativeOptions {
     var options = options();
     putIfNonNull(options, "name", request.name());
     putIfNonNull(options, "url", request.url());
-    putIfNonNull(options, "username", request.username());
-    putIfNonNull(options, "password", request.password());
-    putIfNonNull(options, "certFile", request.certificateFile());
-    putIfNonNull(options, "keyFile", request.keyFile());
-    putIfNonNull(options, "caFile", request.certificateAuthorityFile());
-    options.put("insecureSkipTlsVerify", request.insecureSkipTlsVerification());
+    putCredentials(options, request.credentials());
+    putCertFiles(options, request.tls());
+    options.put("insecureSkipTlsVerify", request.tls().insecureSkipTlsVerification());
     options.put("passCredentialsAll", request.passCredentialsToAllHosts());
     options.put("forceUpdate", request.forceUpdate());
     options.put("allowDeprecatedRepos", request.allowDeprecatedRepositories());
@@ -289,11 +288,10 @@ final class NativeOptions {
 
   static Map<String, Object> push(PushRequest request) {
     var options = options();
-    options.put("plainHttp", request.plainHttp());
-    options.put("insecureSkipTlsVerify", request.insecureSkipTlsVerification());
-    putIfNonNull(options, "certFile", request.certificateFile());
-    putIfNonNull(options, "keyFile", request.keyFile());
-    putIfNonNull(options, "caFile", request.certificateAuthorityFile());
+    var tls = request.tls();
+    options.put("plainHttp", tls.plainHttp());
+    options.put("insecureSkipTlsVerify", tls.insecureSkipTlsVerification());
+    putCertFiles(options, tls);
     return options;
   }
 
@@ -310,24 +308,22 @@ final class NativeOptions {
     putIfNonNull(options, "key", request.key());
     putIfNonNull(options, "keyring", request.keyring());
     putIfNonNull(options, "passphraseFile", request.passphraseFile());
-    options.put("plainHttp", request.plainHttp());
-    options.put("insecureSkipTlsVerify", request.insecureSkipTlsVerification());
-    putIfNonNull(options, "certFile", request.certificateFile());
-    putIfNonNull(options, "keyFile", request.keyFile());
-    putIfNonNull(options, "caFile", request.certificateAuthorityFile());
+    var tls = request.tls();
+    options.put("plainHttp", tls.plainHttp());
+    options.put("insecureSkipTlsVerify", tls.insecureSkipTlsVerification());
+    putCertFiles(options, tls);
     return options;
   }
 
   static Map<String, Object> dependency(DependencyRequest request) {
     var options = options();
+    var tls = request.tls();
     options.put("skipRefresh", request.skipRefresh());
     options.put("verify", request.verify());
     putIfNonNull(options, "keyring", request.keyring());
-    options.put("plainHttp", request.plainHttp());
-    options.put("insecureSkipTlsVerify", request.insecureSkipTlsVerification());
-    putIfNonNull(options, "certFile", request.certificateFile());
-    putIfNonNull(options, "keyFile", request.keyFile());
-    putIfNonNull(options, "caFile", request.certificateAuthorityFile());
+    options.put("plainHttp", tls.plainHttp());
+    options.put("insecureSkipTlsVerify", tls.insecureSkipTlsVerification());
+    putCertFiles(options, tls);
     return options;
   }
 
@@ -359,13 +355,11 @@ final class NativeOptions {
 
   static Map<String, Object> registryLogin(RegistryLogin request) {
     var options = options();
-    putIfNonNull(options, "username", request.username());
-    putIfNonNull(options, "password", request.password());
-    putIfNonNull(options, "certFile", request.certificateFile());
-    putIfNonNull(options, "keyFile", request.keyFile());
-    putIfNonNull(options, "caFile", request.certificateAuthorityFile());
-    options.put("insecure", request.insecure());
-    options.put("plainHttp", request.plainHttp());
+    var tls = request.tls();
+    putCredentials(options, request.credentials());
+    putCertFiles(options, tls);
+    options.put("insecure", tls.insecureSkipTlsVerification());
+    options.put("plainHttp", tls.plainHttp());
     return options;
   }
 
@@ -374,18 +368,27 @@ final class NativeOptions {
   }
 
   private static void putChartSource(Map<String, Object> options, ChartSource source) {
+    var tls = source.tls();
     putIfNonNull(options, "repo", source.repositoryUrl());
-    putIfNonNull(options, "username", source.username());
-    putIfNonNull(options, "password", source.password());
-    options.put("plainHttp", source.plainHttp());
-    options.put("insecureSkipTlsVerify", source.insecureSkipTlsVerification());
+    putCredentials(options, source.credentials());
+    options.put("plainHttp", tls.plainHttp());
+    options.put("insecureSkipTlsVerify", tls.insecureSkipTlsVerification());
     putIfNonNull(options, "keyring", source.keyringPath());
-    putIfNonNull(options, "certFile", source.certificateFile());
-    putIfNonNull(options, "keyFile", source.keyFile());
-    putIfNonNull(options, "caFile", source.certificateAuthorityFile());
+    putCertFiles(options, tls);
     options.put("passCredentialsAll", source.passCredentialsToAllHosts());
     options.put("verify", source.verifySignatures());
     options.put("devel", source.includePreReleaseVersions());
+  }
+
+  private static void putCredentials(Map<String, Object> options, Credentials credentials) {
+    putIfNonNull(options, "username", credentials.username());
+    putIfNonNull(options, "password", credentials.password());
+  }
+
+  private static void putCertFiles(Map<String, Object> options, TlsOptions tls) {
+    putIfNonNull(options, "certFile", tls.certificateFile());
+    putIfNonNull(options, "keyFile", tls.keyFile());
+    putIfNonNull(options, "caFile", tls.certificateAuthorityFile());
   }
 
   private static void putApplyStrategy(Map<String, Object> options, ApplyStrategy applyStrategy) {

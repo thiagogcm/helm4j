@@ -206,10 +206,6 @@ final class NativeChartGateway implements ChartGateway {
   @Override
   public TemplateResult template(TemplateRequest request) {
     Objects.requireNonNull(request, "request");
-    if (request.chart() == null) {
-      throw new HelmConfigurationException("Template requires chart reference");
-    }
-
     log.debug(
         "Templating chart: name={}, chart={}",
         request.releaseName(),

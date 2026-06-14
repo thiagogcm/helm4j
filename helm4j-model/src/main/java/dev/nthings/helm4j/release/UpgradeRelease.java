@@ -3,7 +3,6 @@ package dev.nthings.helm4j.release;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Consumer;
 
 import dev.nthings.helm4j.chart.ChartRef;
 import dev.nthings.helm4j.chart.ChartSource;
@@ -57,7 +56,6 @@ public record UpgradeRelease(
   }
 
   public static final class Builder {
-    private final ChartSource.Builder sourceBuilder = ChartSource.builder();
     private @Nullable String releaseName;
     private @Nullable ChartRef chart;
     private @Nullable ChartSource source;
@@ -100,11 +98,6 @@ public record UpgradeRelease(
 
     public Builder source(ChartSource value) {
       this.source = value;
-      return this;
-    }
-
-    public Builder source(Consumer<ChartSource.Builder> consumer) {
-      consumer.accept(sourceBuilder);
       return this;
     }
 
@@ -229,12 +222,10 @@ public record UpgradeRelease(
     }
 
     public UpgradeRelease build() {
-      var resolvedSource =
-          source != null ? source.merge(sourceBuilder.build()) : sourceBuilder.build();
       return new UpgradeRelease(
           releaseName,
           Objects.requireNonNull(chart, "chart"),
-          resolvedSource,
+          source,
           namespace,
           install,
           dryRun,

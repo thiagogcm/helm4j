@@ -13,7 +13,7 @@ import org.jspecify.annotations.Nullable;
 public record RepoChartRef(String value, @Nullable String version) implements ChartRef {
 
   public RepoChartRef {
-    value = ChartRef.requireNonBlank(value, "value");
+    value = ModelSupport.requireNonBlank(value, "value");
     version = ModelSupport.normalizeBlankToNull(version);
   }
 

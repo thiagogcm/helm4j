@@ -58,10 +58,6 @@ final class NativeReleaseGateway implements ReleaseGateway {
   @Override
   public Release install(InstallRelease request) {
     Objects.requireNonNull(request, "request");
-    if (request.chart() == null) {
-      throw new HelmConfigurationException("Install requires chart reference");
-    }
-
     log.debug(
         "Installing release: name={}, chart={}",
         request.releaseName(),
@@ -83,10 +79,6 @@ final class NativeReleaseGateway implements ReleaseGateway {
   @Override
   public Release upgrade(UpgradeRelease request) {
     Objects.requireNonNull(request, "request");
-    if (request.chart() == null) {
-      throw new HelmConfigurationException("Upgrade requires chart reference");
-    }
-
     log.debug(
         "Upgrading release: name={}, chart={}",
         request.releaseName(),

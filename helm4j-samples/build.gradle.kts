@@ -130,10 +130,10 @@ val runJlink by tasks.registering(Exec::class) {
 
 // Native image build. The graalvm-buildtools plugin reads the entry point from
 // the application{} block above, so the same configuration drives `gradle run`
-// and `gradle nativeCompile`. native-image flattens helm4j-native onto the
-// classpath; the HelmGatewayProvider is discovered through the legacy
-// META-INF/services file in that module (a JPMS `provides` declaration is not
-// honoured outside the module layer).
+// and `gradle nativeCompile`. native-image flattens helm4j-runtime-native onto
+// the classpath; the HelmEngineProvider is discovered through the
+// META-INF/services descriptor in that module (a JPMS `provides` declaration is
+// not honoured outside the module layer).
 graalvmNative {
     binaries {
         named("main") {

@@ -14,7 +14,7 @@ import org.jspecify.annotations.Nullable;
 public record OciChartRef(String value, @Nullable String version) implements ChartRef {
 
   public OciChartRef {
-    value = ChartRef.requireNonBlank(value, "value");
+    value = ModelSupport.requireNonBlank(value, "value");
     if (!value.startsWith("oci://")) {
       throw new IllegalArgumentException("OCI chart reference must start with 'oci://'");
     }

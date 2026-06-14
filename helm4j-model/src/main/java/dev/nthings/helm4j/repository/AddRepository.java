@@ -2,6 +2,8 @@ package dev.nthings.helm4j.repository;
 
 import java.time.Duration;
 
+import dev.nthings.helm4j.auth.Credentials;
+import dev.nthings.helm4j.auth.TlsOptions;
 import dev.nthings.helm4j.internal.model.ModelSupport;
 
 import org.jspecify.annotations.Nullable;
@@ -10,12 +12,8 @@ import org.jspecify.annotations.Nullable;
 public record AddRepository(
     @Nullable String name,
     @Nullable String url,
-    @Nullable String username,
-    @Nullable String password,
-    @Nullable String certificateFile,
-    @Nullable String keyFile,
-    @Nullable String certificateAuthorityFile,
-    boolean insecureSkipTlsVerification,
+    Credentials credentials,
+    TlsOptions tls,
     boolean passCredentialsToAllHosts,
     boolean forceUpdate,
     boolean allowDeprecatedRepositories,
@@ -24,11 +22,8 @@ public record AddRepository(
   public AddRepository {
     name = ModelSupport.normalizeBlankToNull(name);
     url = ModelSupport.normalizeBlankToNull(url);
-    username = ModelSupport.normalizeBlankToNull(username);
-    password = ModelSupport.normalizeBlankToNull(password);
-    certificateFile = ModelSupport.normalizeBlankToNull(certificateFile);
-    keyFile = ModelSupport.normalizeBlankToNull(keyFile);
-    certificateAuthorityFile = ModelSupport.normalizeBlankToNull(certificateAuthorityFile);
+    credentials = credentials == null ? Credentials.none() : credentials;
+    tls = tls == null ? TlsOptions.none() : tls;
   }
 
   public static Builder builder() {
@@ -38,12 +33,8 @@ public record AddRepository(
   public static final class Builder {
     private @Nullable String name;
     private @Nullable String url;
-    private @Nullable String username;
-    private @Nullable String password;
-    private @Nullable String certificateFile;
-    private @Nullable String keyFile;
-    private @Nullable String certificateAuthorityFile;
-    private boolean insecureSkipTlsVerification;
+    private Credentials credentials = Credentials.none();
+    private TlsOptions tls = TlsOptions.none();
     private boolean passCredentialsToAllHosts;
     private boolean forceUpdate;
     private boolean allowDeprecatedRepositories;
@@ -61,33 +52,13 @@ public record AddRepository(
       return this;
     }
 
-    public Builder username(String value) {
-      this.username = value;
+    public Builder credentials(Credentials value) {
+      this.credentials = value;
       return this;
     }
 
-    public Builder password(String value) {
-      this.password = value;
-      return this;
-    }
-
-    public Builder certificateFile(String value) {
-      this.certificateFile = value;
-      return this;
-    }
-
-    public Builder keyFile(String value) {
-      this.keyFile = value;
-      return this;
-    }
-
-    public Builder certificateAuthorityFile(String value) {
-      this.certificateAuthorityFile = value;
-      return this;
-    }
-
-    public Builder insecureSkipTlsVerification(boolean value) {
-      this.insecureSkipTlsVerification = value;
+    public Builder tls(TlsOptions value) {
+      this.tls = value;
       return this;
     }
 
@@ -115,12 +86,8 @@ public record AddRepository(
       return new AddRepository(
           name,
           url,
-          username,
-          password,
-          certificateFile,
-          keyFile,
-          certificateAuthorityFile,
-          insecureSkipTlsVerification,
+          credentials,
+          tls,
           passCredentialsToAllHosts,
           forceUpdate,
           allowDeprecatedRepositories,

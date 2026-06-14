@@ -2,7 +2,6 @@ package dev.nthings.helm4j.chart;
 
 import java.nio.file.Path;
 import java.util.Objects;
-import java.util.function.Consumer;
 
 import org.jspecify.annotations.Nullable;
 
@@ -26,7 +25,6 @@ public record PullRequest(
   }
 
   public static final class Builder {
-    private final ChartSource.Builder sourceBuilder = ChartSource.builder();
     private @Nullable ChartRef chart;
     private @Nullable ChartSource source;
     private boolean untar;
@@ -42,11 +40,6 @@ public record PullRequest(
 
     public Builder source(ChartSource value) {
       this.source = value;
-      return this;
-    }
-
-    public Builder source(Consumer<ChartSource.Builder> consumer) {
-      consumer.accept(sourceBuilder);
       return this;
     }
 
@@ -66,11 +59,9 @@ public record PullRequest(
     }
 
     public PullRequest build() {
-      var resolvedSource =
-          source != null ? source.merge(sourceBuilder.build()) : sourceBuilder.build();
       return new PullRequest(
           Objects.requireNonNull(chart, "chart"),
-          resolvedSource,
+          source,
           untar,
           untarDirectory,
           destinationDirectory);

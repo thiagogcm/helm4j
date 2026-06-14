@@ -1,7 +1,6 @@
 package dev.nthings.helm4j.chart;
 
 import java.nio.file.Path;
-import java.util.Objects;
 
 import org.jspecify.annotations.Nullable;
 
@@ -37,15 +36,6 @@ public sealed interface ChartRef permits RepoChartRef, OciChartRef, LocalChartRe
   /** A local filesystem chart reference (directory or packaged archive). */
   static LocalChartRef local(Path value) {
     return new LocalChartRef(value);
-  }
-
-  static String requireNonBlank(String value, String field) {
-    Objects.requireNonNull(value, field);
-    var normalized = value.trim();
-    if (normalized.isEmpty()) {
-      throw new IllegalArgumentException(field + " must not be blank");
-    }
-    return normalized;
   }
 
   /**
