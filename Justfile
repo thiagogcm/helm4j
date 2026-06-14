@@ -74,11 +74,11 @@ jextract: go-build
     --include-function HelmTemplate \
     --include-function HelmLint \
     --include-function HelmVersion \
-    --output helm4j-native/src/main/generated --target-package dev.nthings.helm4j.jextract libhelm4j/libhelm4j.h
+    --output helm4j-runtime-native/src/main/generated --target-package dev.nthings.helm4j.jextract libhelm4j/libhelm4j.h
   # jextract emits a fixed cwd-relative libraryLookup; re-apply the resilient NativeLibrary lookup.
   sed -i \
-    's#SymbolLookup\.libraryLookup("libhelm4j/libhelm4j\.so", LIBRARY_ARENA)#dev.nthings.helm4j.internal.runtime.NativeLibrary.symbolLookup(LIBRARY_ARENA)#' \
-    helm4j-native/src/main/generated/dev/nthings/helm4j/jextract/libhelm4j_h.java
+    's#SymbolLookup\.libraryLookup("libhelm4j/libhelm4j\.so", LIBRARY_ARENA)#dev.nthings.helm4j.runtime.ffm.internal.NativeLibrary.symbolLookup(LIBRARY_ARENA)#' \
+    helm4j-runtime-native/src/main/generated/dev/nthings/helm4j/jextract/libhelm4j_h.java
 
 # Verify Go exports/header/jextract/bridge stay in sync
 check-native-parity:
@@ -92,7 +92,7 @@ check-native-parity:
   trap 'rm -f "$go_exports" "$header_exports" "$jextract_exports" "$bridge_methods" "$expected_bridge_methods"' EXIT
   rg '^//export Helm' libhelm4j/main.go | sed -E 's#^//export (Helm[^[:space:]]+).*#\1#' | sort -u > "$go_exports"
   rg '^extern char\* Helm' libhelm4j/libhelm4j.h | sed -E 's#^extern char\* (Helm[^\(]+)\(.*#\1#' | sort -u > "$header_exports"
-  rg 'public static MemorySegment Helm' helm4j-native/src/main/generated/dev/nthings/helm4j/jextract/libhelm4j_h.java | sed -E 's#^.* (Helm[^\(]+)\(.*#\1#' | grep -Fv '$' | sort -u > "$jextract_exports"
+  rg 'public static MemorySegment Helm' helm4j-runtime-native/src/main/generated/dev/nthings/helm4j/jextract/libhelm4j_h.java | sed -E 's#^.* (Helm[^\(]+)\(.*#\1#' | grep -Fv '$' | sort -u > "$jextract_exports"
   diff -u "$go_exports" "$header_exports"
   diff -u "$go_exports" "$jextract_exports"
   while IFS= read -r symbol; do
@@ -103,6 +103,6 @@ check-native-parity:
       echo "$name" | awk '{print tolower(substr($0,1,1)) substr($0,2)}'
     fi
   done < "$go_exports" | sort -u > "$expected_bridge_methods"
-  rg '^[[:space:]]*byte\[]\s+[a-zA-Z][a-zA-Z0-9]*\(' helm4j-native/src/main/java/dev/nthings/helm4j/internal/runtime/HelmBridge.java | sed -E 's#^[[:space:]]*byte\[]\s+([a-zA-Z][a-zA-Z0-9]*)\(.*#\1#' | sort -u > "$bridge_methods"
+  rg '^[[:space:]]*byte\[]\s+[a-zA-Z][a-zA-Z0-9]*\(' helm4j-runtime-native/src/main/java/dev/nthings/helm4j/runtime/ffm/internal/HelmBridge.java | sed -E 's#^[[:space:]]*byte\[]\s+([a-zA-Z][a-zA-Z0-9]*)\(.*#\1#' | sort -u > "$bridge_methods"
   diff -u "$expected_bridge_methods" "$bridge_methods"
   echo "✓ Native API parity checks passed"

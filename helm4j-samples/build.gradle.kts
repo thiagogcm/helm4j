@@ -12,7 +12,7 @@ java {
         languageVersion = JavaLanguageVersion.of(25)
     }
     // Run as a real JPMS module so the samples exercise the SDK exactly as a modular
-    // consumer would, with helm4j-native discovered via ServiceLoader on the module path.
+    // consumer would, with helm4j-runtime-native discovered via ServiceLoader on the module path.
     modularity.inferModulePath = true
 }
 
