@@ -44,6 +44,7 @@ bin/
 *.hprof
 
 .env
+node_modules/
 
 .notes/
 

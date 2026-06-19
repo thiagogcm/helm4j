@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "Preserve",
+    "moduleResolution": "Bundler",
+    "lib": [
+      "ESNext"
+    ],
+    "types": [
+      "node",
+      "bun-types"
+    ],
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": [
+    "scripts/**/*.ts"
+  ]
+}
