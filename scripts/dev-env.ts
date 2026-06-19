@@ -1,31 +1,25 @@
 #!/usr/bin/env bun
 
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { $ } from "bun";
+import { resolve } from "node:path";
 
-import {
-  ensureRequiredBins,
-  exitCode,
-  lines,
-  run,
-  step,
-  text,
-} from "./lib/process";
+import { ensureBins, lines, step } from "./lib/util";
 import {
   kindNetworkIpv4Subnet,
   metalLbRangeFromSubnet,
   type MetalLbRange,
 } from "./lib/metallb";
 
-const WORKSPACE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const WORKSPACE_ROOT = resolve(import.meta.dir, "..");
 
 const CLUSTER_NAME = "helm4j";
 const KIND_NODE_IMAGE =
   "kindest/node:v1.35.1@sha256:05d7bcdefbda08b4e038f644c4df690cdac3fba8b06f8289f30e10026720a1ab";
 const METALLB_VERSION = "v0.15.3";
+const METALLB_MANIFEST = `https://raw.githubusercontent.com/metallb/metallb/${METALLB_VERSION}/config/manifests/metallb-native.yaml`;
 const ENVOY_IMAGE = "envoyproxy/envoy:v1.38.0";
 const WSL_PROXY_CONTAINER = "wsl2proxy";
-const REQUIRED_BIN = ["kubectl", "kind", "helm"];
+const REQUIRED_BINS = ["kubectl", "kind", "helm"];
 const WSL_PROXY_PORTS = [80, 443, 4317];
 
 async function isWsl2(): Promise<boolean> {
@@ -44,9 +38,9 @@ async function ensureWsl2Prereqs(): Promise<void> {
     process.exit(1);
   }
 
-  const unprivPortStart = (
-    await Bun.file("/proc/sys/net/ipv4/ip_unprivileged_port_start").text()
-  ).trim();
+  const unprivPortStart = await Bun.file(
+    "/proc/sys/net/ipv4/ip_unprivileged_port_start",
+  ).text();
 
   if (Number.parseInt(unprivPortStart, 10) !== 80) {
     console.error(
@@ -61,11 +55,10 @@ async function ensureWsl2Prereqs(): Promise<void> {
 
 async function ensurePortsAvailable(ports: readonly number[]): Promise<void> {
   for (const port of ports) {
-    // -sTCP:LISTEN restricts the match to local listening sockets;
-    // without it, lsof matches outbound connections too (an HTTPS
-    // request from this process to api.anthropic.com:443 would
-    // false-positive on `:443`).
-    if ((await exitCode(["lsof", "-iTCP", `:${port}`, "-sTCP:LISTEN"])) === 0) {
+    // -sTCP:LISTEN limits the match to local listening sockets; without it, lsof
+    // also matches this process's own outbound connections (e.g. on :443).
+    const { exitCode } = await $`lsof -iTCP :${port} -sTCP:LISTEN`.nothrow().quiet();
+    if (exitCode === 0) {
       console.error(
         `Port ${port} is already in use. Please make sure it is available before running this script.`,
       );
@@ -75,18 +68,18 @@ async function ensurePortsAvailable(ports: readonly number[]): Promise<void> {
 }
 
 async function handleExistingCluster(): Promise<void> {
-  const clusters = lines(await text(["kind", "get", "clusters"]));
+  const clusters = lines(await $`kind get clusters`.text());
 
   if (!clusters.includes(CLUSTER_NAME)) {
     return;
   }
 
-  const deleteCluster =
-    prompt(`Cluster ${CLUSTER_NAME} already exists. Do you want to delete it? [y/N] `) ??
-    "";
+  const answer = prompt(
+    `Cluster ${CLUSTER_NAME} already exists. Do you want to delete it? [y/N] `,
+  );
 
-  if (deleteCluster.trim().toLowerCase() === "y") {
-    await run(["kind", "delete", "cluster", "--name", CLUSTER_NAME]);
+  if (answer?.trim().toLowerCase() === "y") {
+    await $`kind delete cluster --name ${CLUSTER_NAME}`;
     return;
   }
 
@@ -95,13 +88,10 @@ async function handleExistingCluster(): Promise<void> {
 }
 
 function renderKindConfig(wsl2: boolean): string {
-  // ClusterTrustBundle + ClusterTrustBundleProjection are needed for the
-  // dev-root-ca CTB projection that every workload mounts under /trust.
-  // Use kind's TOP-LEVEL `featureGates` and `runtimeConfig` fields rather
-  // than kubeadmConfigPatches — kind's JSON-merge of the patches replaces
-  // its own apiServer/kubelet defaults with whatever shape is patched in,
-  // which has historically silently dropped these flags. The top-level
-  // fields wire feature gates into apiserver, kubelet AND etcd consistently.
+  // ClusterTrustBundle + ClusterTrustBundleProjection back the dev-root-ca CTB
+  // projection every workload mounts under /trust. Set them via kind's TOP-LEVEL
+  // featureGates/runtimeConfig, not kubeadmConfigPatches: kind's JSON-merge of
+  // the patches has historically dropped these flags from apiserver/kubelet/etcd.
   let config = `kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 featureGates:
@@ -171,7 +161,7 @@ spec:
 `;
 }
 
-export function renderWsl2ProxyConfig([firstIp]: [string]): string {
+export function renderWsl2ProxyConfig(firstIp: string): string {
   return `static_resources:
   listeners:
     - name: listener_0
@@ -330,52 +320,30 @@ admin:
 }
 
 async function containerExists(name: string): Promise<boolean> {
-  return lines(await text(["docker", "ps", "-a", "--format", "{{.Names}}"])).includes(
-    name,
-  );
+  const names = lines(await $`docker ps -a --format ${"{{.Names}}"}`.text());
+  return names.includes(name);
 }
 
 async function startWsl2Proxy(range: MetalLbRange): Promise<void> {
-  const config = renderWsl2ProxyConfig(range.proxyIps);
+  const config = renderWsl2ProxyConfig(range.firstIp);
 
   await step("Validating WSL2 Envoy proxy config", () =>
-    run([
-      "docker",
-      "run",
-      "--rm",
-      ENVOY_IMAGE,
-      "--mode",
-      "validate",
-      "--config-yaml",
-      config,
-    ]),
+    $`docker run --rm ${ENVOY_IMAGE} --mode validate --config-yaml ${config}`,
   );
 
   if (await containerExists(WSL_PROXY_CONTAINER)) {
     await step(`Removing existing ${WSL_PROXY_CONTAINER} container`, () =>
-      run(["docker", "rm", "-f", WSL_PROXY_CONTAINER]),
+      $`docker rm -f ${WSL_PROXY_CONTAINER}`,
     );
   }
 
   await ensurePortsAvailable(WSL_PROXY_PORTS);
 
-  await run([
-    "docker",
-    "run",
-    "-d",
-    "--rm",
-    "--name",
-    WSL_PROXY_CONTAINER,
-    "--network",
-    "host",
-    ENVOY_IMAGE,
-    "--config-yaml",
-    config,
-  ]);
+  await $`docker run -d --rm --name ${WSL_PROXY_CONTAINER} --network host ${ENVOY_IMAGE} --config-yaml ${config}`;
 }
 
 async function main(): Promise<void> {
-  await ensureRequiredBins(REQUIRED_BIN);
+  ensureBins(REQUIRED_BINS);
 
   const wsl2 = await isWsl2();
   if (wsl2) {
@@ -385,54 +353,26 @@ async function main(): Promise<void> {
   await handleExistingCluster();
 
   await step("Creating Kind cluster", () =>
-    run(
-      ["kind", "create", "cluster", "--name", CLUSTER_NAME, "--config", "-"],
-      { stdin: renderKindConfig(wsl2) },
-    ),
+    $`kind create cluster --name ${CLUSTER_NAME} --config - < ${new Response(renderKindConfig(wsl2))}`,
   );
 
   const range = metalLbRangeFromSubnet(await kindNetworkIpv4Subnet());
 
-  await run([
-    "kubectl",
-    "apply",
-    "-f",
-    `https://raw.githubusercontent.com/metallb/metallb/${METALLB_VERSION}/config/manifests/metallb-native.yaml`,
-  ]);
+  await $`kubectl apply -f ${METALLB_MANIFEST}`;
 
   await step("Waiting MetalLB controller", () =>
-    run([
-      "kubectl",
-      "-n",
-      "metallb-system",
-      "rollout",
-      "status",
-      "deployment",
-      "controller",
-    ]),
+    $`kubectl -n metallb-system rollout status deployment controller`,
   );
 
-  await run(["kubectl", "apply", "-f", "-"], {
-    stdin: renderIpAddressPoolConfig(range),
-  });
-  await run(["kubectl", "apply", "-f", "-"], {
-    stdin: renderL2AdvertisementConfig(),
-  });
+  await $`kubectl apply -f - < ${new Response(renderIpAddressPoolConfig(range))}`;
+  await $`kubectl apply -f - < ${new Response(renderL2AdvertisementConfig())}`;
 
   if (wsl2) {
     await startWsl2Proxy(range);
   }
 
   await step("Waiting MetalLB speaker", () =>
-    run([
-      "kubectl",
-      "-n",
-      "metallb-system",
-      "rollout",
-      "status",
-      "daemonset",
-      "speaker",
-    ]),
+    $`kubectl -n metallb-system rollout status daemonset speaker`,
   );
 }
 
