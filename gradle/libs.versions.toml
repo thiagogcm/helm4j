@@ -4,8 +4,8 @@ jackson = "3.2.0"
 jspecify = "1.0.0"
 junit = "6.1.0"
 log4j2 = "2.26.0"
-slf4j = "2.0.17"
-spotless = "8.6.0"
+slf4j = "2.0.18"
+spotless = "8.7.0"
 versions-plugin = "0.54.0"
 
 [libraries]
