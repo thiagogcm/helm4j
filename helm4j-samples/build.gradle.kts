@@ -21,11 +21,20 @@ dependencies {
     // and put helm4j-runtime-native on the runtime path. See docs/architecture.md.
     implementation(project(":helm4j-client"))
     runtimeOnly(project(":helm4j-runtime-native"))
+
+    // On the compile module path because module-info requires org.slf4j (also transitive at runtime).
+    implementation(libs.slf4j.api)
+
+    // SLF4J backend, discovered at runtime via ServiceLoader. Mirrors the testRuntimeOnly trio in
+    // buildSrc/helm4j.java-conventions.gradle.kts.
+    runtimeOnly(platform(libs.log4j.bom))
+    runtimeOnly(libs.log4j.core)
+    runtimeOnly(libs.log4j.slf4j2.impl)
 }
 
 application {
     mainModule = "dev.nthings.helm4j.samples"
-    mainClass = "dev.nthings.helm4j.samples.HelloHelm"
+    mainClass = "dev.nthings.helm4j.samples.SamplesApp"
     applicationDefaultJvmArgs = listOf("--enable-native-access=dev.nthings.helm4j.runtime.ffm")
 }
 
@@ -38,10 +47,11 @@ tasks.named<JavaExec>("run") {
     systemProperty("helm4j.samples.chart", helloChart.asFile.absolutePath)
 }
 
-// helm4j-runtime is runtimeOnly (not in `requires`), so name it in --add-modules
-// so jlink resolves it and ServiceLoader can find the FFM provider. Native access
-// piggybacks on the `Enable-Native-Access` manifest attribute jlink preserves in
-// the jimage; --add-options is a no-op on JDK 25 jlink.
+// helm4j-runtime-native and the log4j2 backend are runtimeOnly (not in `requires`),
+// so they are named in --add-modules: jlink resolves them and ServiceLoader can find
+// both the FFM HelmEngineProvider and the SLF4J provider. Native access piggybacks on
+// the `Enable-Native-Access` manifest attribute jlink preserves in the jimage;
+// --add-options is a no-op on JDK 25 jlink.
 val jlinkModulesDir = layout.buildDirectory.dir("jlink-modules")
 val jlinkImageDir = layout.buildDirectory.dir("jlink/hello-helm")
 
@@ -85,9 +95,11 @@ val jlink by tasks.registering(Exec::class) {
             "--module-path",
             modulePath,
             "--add-modules",
-            "dev.nthings.helm4j.samples,dev.nthings.helm4j.runtime.ffm",
+            // java.naming is an optional dependency of log4j-core; include it to avoid a JNDI warning.
+            "dev.nthings.helm4j.samples,dev.nthings.helm4j.runtime.ffm," +
+                "org.apache.logging.log4j.core,org.apache.logging.log4j.slf4j2.impl,java.naming",
             "--launcher",
-            "hello-helm=dev.nthings.helm4j.samples/dev.nthings.helm4j.samples.HelloHelm",
+            "hello-helm=dev.nthings.helm4j.samples/dev.nthings.helm4j.samples.SamplesApp",
             "--no-header-files",
             "--no-man-pages",
             "--strip-debug",
@@ -120,7 +132,7 @@ val runJlink by tasks.registering(Exec::class) {
             "-Dhelm4j.samples.chart=${helloChart.asFile.absolutePath}",
             "-Dhelm4j.library.path=${rootProject.projectDir}/libhelm4j",
             "-m",
-            "dev.nthings.helm4j.samples/dev.nthings.helm4j.samples.HelloHelm",
+            "dev.nthings.helm4j.samples/dev.nthings.helm4j.samples.SamplesApp",
         )
     }
 
