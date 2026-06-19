@@ -1,56 +1,49 @@
 # Helm4j
 
-Helm4j is a Java SDK for Helm v4 focused on idiomatic Java APIs and a stable native bridge.
+Helm4j is an experimental Java 25 API for Helm v4. It uses typed requests and results instead of invoking the Helm CLI. The default runtime calls Helm's Go SDK through a native `libhelm4j.so` bridge and Java's Foreign Function & Memory API.
 
-## Requirements
+## Current status
 
-- Java 25+
-- Go 1.26+
-- Helm v4 SDK (bundled via `libhelm4j/go.mod`)
+- Release, chart, repository, registry, and version operations are implemented end to end.
+- Helm is pinned to `helm.sh/helm/v4 v4.2.2`.
+- The native runtime currently targets Linux and is built from source.
+- Artifacts are not published. The project version is `1.0-SNAPSHOT`.
+
+See [feature parity](docs/feature-parity.md) for supported operations and known gaps.
 
 ## Build
 
-Development tasks are exposed through the root `Justfile`.
+Requirements:
 
-```bash
-just --list
-```
+- JDK 25
+- Go 1.26.4 with cgo and a C toolchain
+- `just` 1.40 or newer
+- `ripgrep`
 
-### Build Native Library
-
-```bash
-just go-build
-```
-
-### Build Java SDK
+Build the native library and all Java modules:
 
 ```bash
 just build
 ```
 
-### Run Checks
+Run the full Go, native parity, Java, and coverage checks:
 
 ```bash
 just check
 ```
 
-## Highlights
+Use `just --list` for focused tasks. Regenerating the checked-in FFM bindings also requires `jextract` and `LLVM_HOME`.
 
-- Idiomatic Java SDK for Helm v4 — typed requests, immutable record results, no CLI shelling.
-- Modules split by audience: `helm4j-client` for apps, `helm4j-spi` for runtime providers, `helm4j-model` for shared vocabulary, `helm4j-runtime-native` for the FFM/`libhelm4j` runtime.
-- Runtime discovered via `ServiceLoader`; swap in a process-based, remote, or in-memory engine without touching application code.
-- Throws by default (`HelmException` family); opt into no-throw capture with `HelmResult.capture`.
+## Use the client
 
-## Quick Start
-
-Compile against the client; put a runtime on the runtime path:
+Applications compile against `helm4j-client` and load a runtime provider at runtime. In this repository, `helm4j-samples` uses project dependencies for that split:
 
 ```kotlin
-dependencies {
-    implementation("dev.nthings.helm4j:helm4j-client")
-    runtimeOnly("dev.nthings.helm4j:helm4j-runtime-native")
-}
+implementation(project(":helm4j-client"))
+runtimeOnly(project(":helm4j-runtime-native"))
 ```
+
+A modular application requires only the client module:
 
 ```java
 module my.application {
@@ -58,9 +51,14 @@ module my.application {
 }
 ```
 
+Create one client, use its domain namespaces, and close it with try-with-resources:
+
 ```java
+import dev.nthings.helm4j.HelmClient;
+import dev.nthings.helm4j.chart.ChartRef;
+
 try (var helm = HelmClient.create()) {
-  Release release =
+  var release =
       helm.releases()
           .install(
               b ->
@@ -73,4 +71,22 @@ try (var helm = HelmClient.create()) {
 }
 ```
 
-The five namespaces are `helm.releases()`, `helm.charts()`, `helm.repositories()`, `helm.registries()`, and `helm.system()`. See `helm4j-samples` for an end-to-end walk-through and `docs/architecture.md` for the module design.
+Each operation also accepts a pre-built request. Failures throw a `HelmException`; use `HelmResult.capture(...)` when a value-or-error result is more convenient.
+
+## Run the samples
+
+Build first so `libhelm4j.so` exists, then run the offline examples:
+
+```bash
+./gradlew :helm4j-samples:run --args=offline
+```
+
+Available sample IDs are `system`, `charts`, `repositories`, and `releases`. With no arguments, the runner executes all four; repository examples need network access and release examples need a Kubernetes cluster.
+
+## Documentation
+
+| Document                                 | Purpose                                                 |
+| ---------------------------------------- | ------------------------------------------------------- |
+| [Public API](docs/public-api.md)         | Client entry points, operations, results, and errors    |
+| [Architecture](docs/architecture.md)     | Module boundaries, provider discovery, and native calls |
+| [Feature parity](docs/feature-parity.md) | Implemented Helm operations and current limitations     |
