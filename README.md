@@ -11,6 +11,9 @@ Helm4j is an experimental Java 25 API for Helm v4. It uses typed requests and re
 
 See [feature parity](docs/feature-parity.md) for supported operations and known gaps.
 
+> [!WARNING]
+> This project was developed with the assistance of AI agents and has not undergone thorough testing. Please report any issues you encounter.
+
 ## Build
 
 Requirements:
