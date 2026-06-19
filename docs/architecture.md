@@ -7,10 +7,10 @@ architecture-beta
     group java(cloud)[Java SDK]
 
     service app(internet)[Application] in java
-    service client(server)[helm4j-client] in java
-    service model(database)[helm4j-model] in java
-    service spi(server)[helm4j-spi] in java
-    service runtime(server)[helm4j-runtime-native] in java
+    service client(server)["helm4j-client"] in java
+    service model(database)["helm4j-model"] in java
+    service spi(server)["helm4j-spi"] in java
+    service runtime(server)["helm4j-runtime-native"] in java
     service bridge(disk)[libhelm4j]
     service helm(cloud)[Helm v4 SDK]
 

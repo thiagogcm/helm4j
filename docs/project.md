@@ -29,8 +29,8 @@ The API covers:
 Helm4j is experimental and has not been thoroughly tested. Its API, behavior, and compatibility may change, so it should be evaluated carefully before production use.
 
 - Artifacts are not published and must currently be built from source.
-- The available runtime supports Linux only and requires Java 25.
-- Compatibility currently targets Helm v4.2.2.
+- The available runtime supports Linux only and requires Java 25+.
+- Compatibility currently targets Helm v4.
 - Selecting a Kubernetes context through the client is not yet supported; operations use the normal active context.
 - Chart dependency support is limited to listing dependencies.
 - Chart creation and verification, repository indexing, and Helm plugins are not exposed.
